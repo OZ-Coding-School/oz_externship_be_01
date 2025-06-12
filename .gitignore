@@ -1,4 +1,5 @@
 .python-version
+*.env
 .env
 envs/
 .DS_Store
@@ -7,3 +8,5 @@ __pycache__/
 .dmypy.json
 htmlcov/
 .coverage
+.venv/
+venv/
