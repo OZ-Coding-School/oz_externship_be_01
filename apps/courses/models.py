@@ -12,7 +12,7 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     class Meta:
@@ -33,7 +33,7 @@ class Generation(models.Model):
         unique_together = ("course", "number")
         db_table = "generations"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.course.name} - {self.number}기"
 
 
@@ -47,7 +47,7 @@ class Subject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.course.name} - {self.title}"
 
     class Meta:
@@ -64,5 +64,5 @@ class EnrollmentRequest(models.Model):
         unique_together = ("user", "generation")
         db_table = "enrollment_requests"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user.name} requested to enrollment in  {self.generation}"
