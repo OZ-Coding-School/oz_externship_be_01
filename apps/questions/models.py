@@ -10,6 +10,9 @@ class QuestionCategory(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    class Meta:
+        db_table = "question_categories"
+
 
 class Question(models.Model):
     category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, related_name="questions")
@@ -23,6 +26,9 @@ class Question(models.Model):
     def __str__(self) -> str:
         return self.title
 
+    class Meta:
+        db_table = "questions"
+
 
 class QuestionAIAnswer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="ai_answers")
@@ -33,6 +39,9 @@ class QuestionAIAnswer(models.Model):
     def __str__(self) -> str:
         return f"AI Answer for {self.question.title}"
 
+    class Meta:
+        db_table = "question_ai_answers"
+
 
 class QuestionImage(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="images")
@@ -42,6 +51,9 @@ class QuestionImage(models.Model):
 
     def __str__(self) -> str:
         return f"Image for {self.question.title}"
+
+    class Meta:
+        db_table = "question_images"
 
 
 class Answer(models.Model):
@@ -55,6 +67,9 @@ class Answer(models.Model):
     def __str__(self) -> str:
         return f"Answer by {self.author.username} for {self.question.title}"
 
+    class Meta:
+        db_table = "answers"
+
 
 class AnswerImage(models.Model):
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name="images")
@@ -64,6 +79,9 @@ class AnswerImage(models.Model):
 
     def __str__(self) -> str:
         return f"Image for Answer {self.answer.id} by {self.answer.author.username}"
+
+    class Meta:
+        db_table = "answer_images"
 
 
 class AnswerComment(models.Model):
@@ -75,3 +93,6 @@ class AnswerComment(models.Model):
 
     def __str__(self) -> str:
         return f"Comment by {self.author.username} on Answer {self.answer.id}"
+
+    class Meta:
+        db_table = "answer_comments"
