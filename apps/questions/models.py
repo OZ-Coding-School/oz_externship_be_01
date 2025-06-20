@@ -1,85 +1,77 @@
-"""
-Table question_categories {
-  id bigint [primary key, not null]
-  parent_id bigint [not null]
-  name varchar(15) [not null]
-  created_at datetime
-  updated_at datetime
-}
-Ref: question_categories.parent_id > question_categories.id
-Ref: questions.category_id > question_categories.id
-"""
+from django.db import models
 
-"""
-Table questions {
-  id bigint [primary key, not null]
-  category_id bigint [not null]
-  author_id bigint
-  title varchar(50) [not null]
-  content text [not null]
-  view_count bigint [not null, default: 0]
-  created_at datetime
-  updated_at datetime
-}
-Ref: questions.author_id > user.id
-"""
 
-"""
-Table question_ai_answers {
-  id bigint [primary key, not null]
-  question_id bigint [not null]
-  content text [not null]
-  created_at datetime
-  updated_at datetime
-}
-Ref: question_ai_answers.question_id - questions.id
-"""
+class QuestionCategory(models.Model):
+    parent = models.ForeignKey("self", on_delete=models.CASCADE, related_name="subcategories", null=True, blank=True)
+    name = models.CharField(max_length=15)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-"""
-Table question_images {
-  id bigint [primary key, not null]
-  question_id bigint [not null]
-  img_url varchar(255) [not null]
-  created_at datetime
-  updated_at datetime
-}
-Ref: question_images.question_id > questions.id
-"""
+    def __str__(self) -> str:
+        return self.name
 
-"""
-Table answers {
-  id bigint [primary key, not null]
-  question_id bigint [not null]
-  author_id bigint [not null]
-  content text [not null]
-  is_adopted boolean [default: false]
-  created_at datetime
-  updated_at datetime
-}
-Ref: answers.question_id > questions.id
-Ref: answers.author_id > user.id
-"""
 
-"""
-Table answer_images {
-  id bigint [primary key, not null]
-  answer_id bigint [not null]
-  img_url varchar(255) [not null]
-  created_at datetime
-  updated_at datetime
-}
-Ref: answer_images.answer_id > answers.id
-"""
+class Question(models.Model):
+    category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, related_name="questions")
+    author = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="questions")
+    title = models.CharField(max_length=50)
+    content = models.TextField()
+    view_count = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-"""
-Table answer_comments {
-  id bigint [primary key, not null]
-  answer_id bigint [not null]
-  author_id bigint [not null]
-  content text [not null]
-  created_at datetime
-  updated_at datetime
-}
-Ref: answer_comments.author_id > user.id
-Ref: answer_comments.answer_id > answers.id
-"""
+    def __str__(self) -> str:
+        return self.title
+
+
+class QuestionAIAnswer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="ai_answers")
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"AI Answer for {self.question.title}"
+
+
+class QuestionImage(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="images")
+    img_url = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"Image for {self.question.title}"
+
+
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
+    author = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="answers")
+    content = models.TextField()
+    is_adopted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"Answer by {self.author.username} for {self.question.title}"
+
+
+class AnswerImage(models.Model):
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name="images")
+    img_url = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"Image for Answer {self.answer.id} by {self.answer.author.username}"
+
+
+class AnswerComment(models.Model):
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="answer_comments")
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"Comment by {self.author.username} on Answer {self.answer.id}"
