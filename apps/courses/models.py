@@ -1,6 +1,8 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
+
 User = get_user_model()
+
 
 class Course(models.Model):
     name = models.CharField(max_length=30, unique=True)
@@ -14,7 +16,7 @@ class Course(models.Model):
         return self.name
 
     class Meta:
-        db_table = 'courses'
+        db_table = "courses"
 
 
 class Generation(models.Model):
