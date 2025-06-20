@@ -1,14 +1,15 @@
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
 
+
 class User(AbstractBaseUser):
     class Role(models.TextChoices):
-        ADMIN = 'ADMIN', '어드민'
-        GENERAL = 'GENERAL', '일반회원'
-        STUDENT = 'STUDENT', '수강생'
-        TA = 'TA', '조교' # Training_Assistant
-        OM = 'OM', '운영매니저' # Operation_Manager
-        LC = 'LC', '러닝코치' # Learning_Coach
+        ADMIN = "ADMIN", "어드민"
+        GENERAL = "GENERAL", "일반회원"
+        STUDENT = "STUDENT", "수강생"
+        TA = "TA", "조교"  # Training_Assistant
+        OM = "OM", "운영매니저"  # Operation_Manager
+        LC = "LC", "러닝코치"  # Learning_Coach
 
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=30)
@@ -20,7 +21,7 @@ class User(AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
 
     class Meta:
-        db_table = 'users'
+        db_table = "users"

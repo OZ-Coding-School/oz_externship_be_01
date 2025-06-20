@@ -35,9 +35,7 @@ THIRD_PARTY_APPS = [
     "django_filters",
 ]
 
-CUSTOM_APPS = [
-    'apps.users'
-]
+CUSTOM_APPS = ["apps.users"]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
@@ -131,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = "users.User"
 
 # djangorestframework-simplejwt 관련 설정
 SIMPLE_JWT = {
