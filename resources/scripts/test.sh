@@ -14,7 +14,7 @@ poetry run dmypy run -- .
 echo "OK"
 
 echo "${COLOR_BLUE}Starting Django Test with coverage${COLOR_NC}"
-poetry run coverage run manage.py test
+poetry run coverage run manage.py tests
 poetry run coverage report -m
 poetry run coverage html
 
