@@ -138,7 +138,7 @@ jobs:
         run: |
           poetry run python manage.py migrate
 
-      # run test
+      # run tests
       - name: Test python project
         run: |
           poetry run coverage run manage.py test
