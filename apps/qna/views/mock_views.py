@@ -7,6 +7,10 @@ from rest_framework.views import APIView
 
 class MockQuestionUpdateView(APIView):
     def patch(self, request: Request, question_id: int) -> Response:
+        # 질문이 100개라고 가정
+        if question_id >= 100:
+            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
         return Response(
             {
                 "id": question_id,
@@ -24,6 +28,13 @@ class MockQuestionUpdateView(APIView):
 
 class MockQuestionDetailView(APIView):
     def get(self, request: Request, question_id: int) -> Response:
+        # 질문이 100개라고 가정
+        if question_id >= 100:
+            return Response(
+                {"detail": "해당 질문이 존재하지 않습니다."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         return Response(
             {
                 "id": question_id,
@@ -70,6 +81,15 @@ class MockQuestionDetailView(APIView):
 
 class MockQuestionListView(APIView):
     def get(self, request: Request) -> Response:
+        page = request.query_params.get("page", "1")
+
+        # 패이지가 5개로 가정, 숫자 아닌거 확인 후 처리.
+        if not page.isdigit() or int(page) < 1 or int(page) > 5:
+            return Response(
+                {"detail": "잘못된 페이지 번호입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return Response(
             {
                 "count": 32,
@@ -102,6 +122,17 @@ class MockQuestionCreateView(APIView):
     def post(self, request: Request) -> Response:
 
         data = request.data
+
+        if len(data.get("image_urls", [])) > 5:
+            return Response(
+                {"detail": "이미지는 최대 5개까지 업로드할 수 있습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if data.get("category_id") in [None, 0]:
+            return Response(
+                {"detail": "소분류 카테고리만 선택 가능합니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(
             {
