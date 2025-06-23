@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
                 (
                     "answer",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="comments", to="questions.answer"
+                        on_delete=django.db.models.deletion.CASCADE, related_name="comments", to="qna.answer"
                     ),
                 ),
                 (
@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
                 (
                     "answer",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="images", to="questions.answer"
+                        on_delete=django.db.models.deletion.CASCADE, related_name="images", to="qna.answer"
                     ),
                 ),
             ],
@@ -92,20 +92,20 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="questions",
+                        related_name="qna",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                "db_table": "questions",
+                "db_table": "qna",
             },
         ),
         migrations.AddField(
             model_name="answer",
             name="question",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name="answers", to="questions.question"
+                on_delete=django.db.models.deletion.CASCADE, related_name="answers", to="qna.question"
             ),
         ),
         migrations.CreateModel(
@@ -118,7 +118,7 @@ class Migration(migrations.Migration):
                 (
                     "question",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="ai_answers", to="questions.question"
+                        on_delete=django.db.models.deletion.CASCADE, related_name="ai_answers", to="qna.question"
                     ),
                 ),
             ],
@@ -140,7 +140,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="subcategories",
-                        to="questions.questioncategory",
+                        to="qna.questioncategory",
                     ),
                 ),
             ],
@@ -152,7 +152,7 @@ class Migration(migrations.Migration):
             model_name="question",
             name="category",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name="questions", to="questions.questioncategory"
+                on_delete=django.db.models.deletion.CASCADE, related_name="qna", to="qna.questioncategory"
             ),
         ),
         migrations.CreateModel(
@@ -165,7 +165,7 @@ class Migration(migrations.Migration):
                 (
                     "question",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, related_name="images", to="questions.question"
+                        on_delete=django.db.models.deletion.CASCADE, related_name="images", to="qna.question"
                     ),
                 ),
             ],
