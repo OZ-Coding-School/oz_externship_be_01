@@ -1,17 +1,24 @@
-# apps/tests/views/test_admin_view.py
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from apps.tests.serializers import CodeValidationRequestSerializer
 
 
 @api_view(["POST"])
-def mock_validate_code_admin(request):
-    """
-    ✅ 관리자용 참가코드 검증 모의 API
-    """
-    deployment_id = request.data.get("deployment_id")
-    access_code = request.data.get("access_code")
+@extend_schema(
+    methods=["POST"],
+    description=" 관리자용 참가코드 검증 모의 API",
+    request=CodeValidationRequestSerializer,
+    responses={200: dict, 400: dict},
+)
+def test_validate_code_admin(request):
+    serializer = CodeValidationRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    deployment_id = serializer.validated_data["deployment_id"]
+    access_code = serializer.validated_data["access_code"]
 
     if deployment_id == 999 and access_code == "ADMIN123":
         return Response({

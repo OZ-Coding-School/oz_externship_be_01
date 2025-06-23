@@ -1,10 +1,9 @@
-# apps/tests/urls.py
-
+# 예: tssts/urls.py
 from django.urls import path
-from .views.test_user_view import mock_validate_code_user
-from .views.test_admin_view import mock_validate_code_admin
+from .views.test_admin_view import test_validate_code_admin
+from .views.test_user_view import test_validate_code_user
 
 urlpatterns = [
-    path("mock/user/validate-code/", mock_validate_code_user, name="mock-user-code"),
-    path("mock/admin/validate-code/", mock_validate_code_admin, name="mock-admin-code"),
+    path("test-validate-code-admin/", test_validate_code_admin),
+    path("test-validate-code-user/", test_validate_code_user),
 ]
