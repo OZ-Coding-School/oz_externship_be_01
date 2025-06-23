@@ -35,7 +35,7 @@ THIRD_PARTY_APPS = [
     "django_filters",
 ]
 
-CUSTOM_APPS = ["apps.users", "apps.courses", "apps.questions", "apps.tests"]
+CUSTOM_APPS = ["apps.users", "apps.courses", "apps.questions", "apps.tests" ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
 
