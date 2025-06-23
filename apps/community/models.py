@@ -19,7 +19,7 @@ class PostCategory(models.Model):
 # 게시글
 class Post(models.Model):
     category = models.ForeignKey(PostCategory, on_delete=models.CASCADE, related_name="posts")
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="authored_posts")
     title = models.CharField(max_length=50)
     content = models.TextField()
     view_count = models.PositiveIntegerField(default=0)
@@ -64,7 +64,7 @@ class PostImage(models.Model):
 
 # 댓글
 class Comment(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)  # 댓글 단 게시글
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")  # 댓글 단 게시글
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
