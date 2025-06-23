@@ -79,8 +79,10 @@ class Comment(models.Model):
 
 # 댓글 태그
 class CommentTags(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)  # 태그된 댓글
-    tagged_user = models.ForeignKey(Comment, on_delete=models.CASCADE)  # 태그된 사용자
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="tag")  # 태그된 댓글
+    tagged_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tagged_in_comments"
+    )  # 태그된 사용자
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
