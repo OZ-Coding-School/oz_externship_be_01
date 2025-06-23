@@ -1,17 +1,28 @@
-# apps/tests/views/test_user_view.py
-
+from rest_framework import serializers
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+class CodeValidationRequestSerializer(serializers.Serializer):
+    deployment_id = serializers.IntegerField()
+    access_code = serializers.CharField()
 
+@extend_schema(
+    tags=["test"],
+    methods=["POST"],
+    description="사용자용 참가코드 검증 모의 API",
+    request=CodeValidationRequestSerializer,
+    responses={200: dict, 400: dict},
+)
 @api_view(["POST"])
-def mock_validate_code_user(request):
-    """
-     사용자용 참가코드 검증 모의 API
-    """
-    deployment_id = request.data.get("deployment_id")
-    access_code = request.data.get("access_code")
+def test_validate_code_user(request):
+    serializer = CodeValidationRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    deployment_id = serializer.validated_data["deployment_id"]
+    access_code = serializer.validated_data["access_code"]
 
     if deployment_id == 100 and access_code == "USER123":
         return Response({
