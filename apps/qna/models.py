@@ -17,8 +17,8 @@ class QuestionCategory(models.Model):
 
 
 class Question(models.Model):
-    category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, related_name="qna")
-    author = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="qna")
+    category = models.ForeignKey(QuestionCategory, on_delete=models.CASCADE, related_name="questions")
+    author = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="questions")
     title = models.CharField(max_length=50)
     content = models.TextField()
     view_count = models.BigIntegerField(default=0)
@@ -29,7 +29,7 @@ class Question(models.Model):
         return self.title
 
     class Meta:
-        db_table = "qna"
+        db_table = "questions"
 
 
 class QuestionAIAnswer(models.Model):
