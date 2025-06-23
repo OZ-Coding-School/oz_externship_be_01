@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps import users
+
 
 class QuestionCategory(models.Model):
     parent = models.ForeignKey("self", on_delete=models.CASCADE, related_name="subcategories", null=True, blank=True)
@@ -65,7 +67,7 @@ class Answer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        return f"Answer by {self.author.username} for {self.question.title}"
+        return f"Answer by {self.author.nickname} for {self.question.title}"
 
     class Meta:
         db_table = "answers"
@@ -78,7 +80,7 @@ class AnswerImage(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        return f"Image for Answer {self.answer.id} by {self.answer.author.username}"
+        return f"Image for Answer {self.answer.id} by {self.answer.author.nickname}"
 
     class Meta:
         db_table = "answer_images"
@@ -92,7 +94,7 @@ class AnswerComment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
-        return f"Comment by {self.author.username} on Answer {self.answer.id}"
+        return f"Comment by {self.author.nickname} on Answer {self.answer.id}"
 
     class Meta:
         db_table = "answer_comments"
