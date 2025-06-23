@@ -19,7 +19,7 @@ class PostCategory(models.Model):
 # 게시글
 class Post(models.Model):
     category = models.ForeignKey(PostCategory, on_delete=models.CASCADE, related_name="posts")
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="authored_posts")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
     title = models.CharField(max_length=50)
     content = models.TextField()
     view_count = models.PositiveIntegerField(default=0)
@@ -66,7 +66,7 @@ class PostImage(models.Model):
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")  # 댓글 단 게시글
     author = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="authored_comments"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="post_comments"
     )  # 댓글 작성자
     content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -81,7 +81,7 @@ class Comment(models.Model):
 
 # 댓글 태그
 class CommentTags(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="tag")  # 태그된 댓글
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="tags")  # 태그된 댓글
     tagged_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tagged_in_comments"
     )  # 태그된 사용자
