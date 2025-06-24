@@ -1,8 +1,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from apps.tests.serializers import CodeValidationRequestSerializer
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
-from apps.tests.serializers import CodeValidationRequestSerializer
 
 
 @api_view(["POST"])
@@ -31,3 +31,19 @@ def test_validate_code_admin(request):
     return Response({
         "detail": "유효하지 않은 참가코드입니다."
     }, status=status.HTTP_400_BAD_REQUEST)
+
+# MOCK API 삭제 코드
+@api_view(["DELETE"])
+@extend_schema(
+    methods=["DELETE"],
+    description="쪽지시험 배포 삭제 MOCK API",
+    responses={204: None, 403 : {"detail": "권환 업음"}, 404 : {"detail": "존재하지 않음"}}
+)
+def mock_delete_mini_test_deployment(request, deployment_id):
+    if deployment_id == 999:
+        return Response(status = status.HTTP_204_NO_CONTENT)
+
+    return Response(
+        {"detail": "존재하지 않는 배포입니다."},
+        status=status.HTTP_403_FORBIDDEN
+    )
