@@ -76,3 +76,16 @@ class CommentUpdateAPIView(APIView):
         }
 
         return Response(mock_response, status=status.HTTP_200_OK)
+
+
+# 댓글 삭제
+class CommentDeleteDeleteAPIView(APIView):
+    def delete(self, request: Request, comment_id: int) -> Response:
+
+        if comment_id == 0:
+            return Response({"detail": "존재하지 않는 댓글입니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment_id == 99:
+            return Response({"detail": "해당 댓글을 삭제할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({"detail": "댓글이 삭제 되었습니다."}, status=status.HTTP_200_OK)
