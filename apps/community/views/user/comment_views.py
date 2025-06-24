@@ -54,3 +54,25 @@ class CommentCreateAPIView(APIView):
             "content": content,
         }
         return Response(mock_response, status=status.HTTP_201_CREATED)
+
+
+# 댓글 수정
+class CommentUpdateAPIView(APIView):
+    def patch(self, request: Request, comment_id: int) -> Response:
+        content = request.data.get("content")
+
+        if comment_id == 99:
+            return Response({"detail": "해당 댓글을 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        if not content:
+            return Response({"detail": "변경할 내용이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        mock_response = {
+            "id": comment_id,
+            "post_id": 45,
+            "user": {"id": 7, "nickname": "정아"},
+            "content": content,
+            "updated_at": "2025-06-20T14:05:00Z",
+        }
+
+        return Response(mock_response, status=status.HTTP_200_OK)
