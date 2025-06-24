@@ -1,4 +1,4 @@
-# 쪽지시험 응시내역 목록 조회
+# 쪽지 시험 응시 내역 목록 조회
 from rest_framework import serializers
 
 

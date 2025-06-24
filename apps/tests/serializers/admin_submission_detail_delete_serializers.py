@@ -1,4 +1,4 @@
-# 쪽지시험 응시내역 상세 조회 및 삭제
+# 쪽지 시험 응시 내역 상세 조회 및 삭제
 from rest_framework import serializers
 
 
