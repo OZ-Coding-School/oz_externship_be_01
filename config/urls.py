@@ -23,6 +23,5 @@ if settings.DEBUG:
         ]
 
 urlpatterns += [
-    path("api/v1/", include("apps.tests.urls")),
-
+    path("api/v1/", include(("apps.tests.urls", "tests"), namespace="tests")),
 ]
