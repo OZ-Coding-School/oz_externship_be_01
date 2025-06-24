@@ -28,7 +28,6 @@ urlpatterns = [
     path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
     path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
     path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
-]
     path("test/submissions/start/", test_user_view.post_test_submission_start),
     path("test/submissions/<int:submission_id>/submit/", test_user_view.post_test_submission_submit),
     path("test/submissions/<int:submission_id>/result/", test_user_view.get_test_submission_result),
