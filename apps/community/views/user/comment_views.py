@@ -38,3 +38,19 @@ class CommentListAPIView(APIView):
         }
 
         return Response(mock_response, status=status.HTTP_200_OK)
+
+
+# 댓글 작성
+class CommentCreateAPIView(APIView):
+    def post(self, request: Request) -> Response:
+        content = request.data.get("content")
+        if not content:
+            return Response({"detail": "내용이 비어 있습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        mock_response = {
+            "id": 45,
+            "post_id": 123,
+            "user": {"id": 7, "nickname": "태연123"},
+            "content": content,
+        }
+        return Response(mock_response, status=status.HTTP_201_CREATED)
