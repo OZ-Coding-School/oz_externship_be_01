@@ -38,4 +38,3 @@ class CommentListAPIView(APIView):
         }
 
         return Response(mock_response, status=status.HTTP_200_OK)
-
