@@ -1,13 +1,15 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.request import Request
+from rest_framework.views import APIView
+
 
 # 공지사항 등록
 class NoticeCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         user = request.user
 
         # 관리자 권한 체크
@@ -25,16 +27,10 @@ class NoticeCreateAPIView(APIView):
 
         # 필수 항목 검증
         if not title or not content or not category_id or is_notice is not True:
-            return Response(
-                {"detail": "제목과 내용은 필수 항목입니다."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"detail": "제목과 내용은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 성공 Mock 응답 반환
         return Response(
-            {
-                "message": "공지사항이 성공적으로 등록되었습니다.",
-                "created_post_id": 1203  # Mock ID
-            },
-            status=status.HTTP_200_OK
+            {"message": "공지사항이 성공적으로 등록되었습니다.", "created_post_id": 1203},  # Mock ID
+            status=status.HTTP_200_OK,
         )
