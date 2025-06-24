@@ -30,7 +30,6 @@ class User(AbstractBaseUser):
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
 
     class Meta:
         db_table = "users"
