@@ -4,50 +4,75 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.tests.serializers.admin_submission_detail_delete_serializers import (
+    SubmissionDetailSerializer,
+)
+from apps.tests.serializers.admin_submission_serializers import (
+    SubmissionListResponseSerializer,
+)
 
 
 # 쪽지시험 응시내역 목록 조회 MockAPI
-@extend_schema(tags=["Tests/Admin"])
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def admin_test_submissions(request: Request) -> Response:
-    mock_data = {
-        "count": 2,
-        "next": None,
-        "previous": None,
-        "results": [
-            {
-                "submission_id": 101,
-                "student": {"nickname": "codeMaster", "name": "홍길동", "generation": "프론트엔드 5기"},
-                "test": {"title": "HTML 기초 테스트", "subject_title": "웹프로그래밍"},
-                "score": 85,
-                "cheating_count": 1,
-                "started_at": "2025-06-21T09:01:00",
-                "submitted_at": "2025-06-21T09:29:00",
-            },
-            {
-                "submission_id": 102,
-                "student": {"nickname": "devStar", "name": "김영희", "generation": "백엔드 4기"},
-                "test": {"title": "JavaScript 테스트", "subject_title": "프론트엔드"},
-                "score": 92,
-                "cheating_count": 0,
-                "started_at": "2025-06-20T13:00:00",
-                "submitted_at": "2025-06-20T13:29:00",
-            },
-        ],
-    }
+class AdminTestSubmissionsView(APIView):
+    permission_classes = [AllowAny]
 
-    return Response({"data": mock_data, "message": "쪽지시험 응시내역 목록 조회 완료"}, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=["Tests/Admin"],
+        responses={
+            200: SubmissionListResponseSerializer,
+            400: {"message": "유효하지 않은 데이터입니다."},
+        },
+    )
+    def get(self, request: Request) -> Response:
+        mock_data = {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "submission_id": 101,
+                    "student": {"nickname": "codeMaster", "name": "홍길동", "generation": "프론트엔드 5기"},
+                    "test": {"title": "HTML 기초 테스트", "subject_title": "웹프로그래밍"},
+                    "score": 85,
+                    "cheating_count": 1,
+                    "started_at": "2025-06-21T09:01:00",
+                    "submitted_at": "2025-06-21T09:29:00",
+                },
+                {
+                    "submission_id": 102,
+                    "student": {"nickname": "devStar", "name": "김영희", "generation": "백엔드 4기"},
+                    "test": {"title": "JavaScript 테스트", "subject_title": "프론트엔드"},
+                    "score": 92,
+                    "cheating_count": 0,
+                    "started_at": "2025-06-20T13:00:00",
+                    "submitted_at": "2025-06-20T13:29:00",
+                },
+            ],
+        }
+
+        serializer = SubmissionListResponseSerializer(data=mock_data)
+        if not serializer.is_valid():
+            return Response(
+                {"message": "유효하지 않은 데이터입니다.", "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"data": mock_data, "message": "쪽지시험 응시내역 목록 조회 완료"}, status=status.HTTP_200_OK)
 
 
 # 쪽지시험 응시내역 상세 조회 및 삭제 MockAPI
-@extend_schema(tags=["Tests/Admin"])
-@api_view(["GET", "DELETE"])
-@permission_classes([AllowAny])
-def admin_test_submissions_detail(request: Request, submission_id: int) -> Response:
-    if request.method == "GET":
+class AdminTestSubmissionDetailDeleteView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Tests/Admin"],
+        responses={200: SubmissionDetailSerializer, 400: {"message": "유효하지 않은 데이터입니다."}},
+    )
+    def get(self, request: Request, submission_id: int) -> Response:
         mock_data = {
-            "submission_id": 1,
+            "submission_id": submission_id,
             "test_title": "HTML/CSS 기초",
             "subject_title": "웹프로그래밍",
             "duration_time": 30,
@@ -81,17 +106,18 @@ def admin_test_submissions_detail(request: Request, submission_id: int) -> Respo
                 },
             ],
         }
-        return Response({"data": mock_data, "message": "쪽지시험 응시내역 상세 조회 완료"}, status=status.HTTP_200_OK)
 
-    elif request.method == "DELETE":
+        serializer = SubmissionDetailSerializer(data=mock_data)
+        if serializer.is_valid():
+            return Response(
+                {"data": serializer.data, "message": "쪽지시험 응시내역 상세 조회 완료"}, status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"message": "유효하지 않은 데이터입니다.", "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def delete(self, request: Request, submission_id: int) -> Response:
+        # 실제 삭제 로직 있으면 여기서 처리
         return Response({"message": f"쪽지시험 응시내역 {submission_id} 삭제 완료"}, status=status.HTTP_200_OK)
-
-    return Response({"detail": "Method Not Allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-# 쪽지시험 응시내역 삭제 MockAPI
-# @extend_schema(tags=["Tests/Admin"])
-# @api_view(["DELETE"])
-# @permission_classes([AllowAny])
-# def admin_test_submissions_delete(request, submission_id):
-#     return Response({"message": f"쪽지시험 응시내역 {submission_id} 삭제 완료"}, status=status.HTTP_200_OK)
