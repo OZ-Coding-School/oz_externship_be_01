@@ -1,5 +1,7 @@
-from rest_framework import serializers
 from typing import Any
+
+from rest_framework import serializers
+
 
 class SignupSerializer(serializers.Serializer[Any]):
     email = serializers.EmailField()
