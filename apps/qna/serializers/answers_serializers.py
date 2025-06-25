@@ -5,13 +5,13 @@ from rest_framework import serializers
 from apps.qna.models import Answer, AnswerComment, AnswerImage
 
 
-class AnswerImageSerializer(serializers.ModelSerializer):
+class AnswerImageSerializer(serializers.ModelSerializer[AnswerImage]):
     class Meta:
         model = AnswerImage
         fields = ["img_url"]
 
 
-class AnswerCreateSerializer(serializers.ModelSerializer):
+class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
     images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
 
     class Meta:
@@ -25,7 +25,7 @@ class AnswerCreateSerializer(serializers.ModelSerializer):
         return answer
 
 
-class AnswerUpdateSerializer(serializers.ModelSerializer):
+class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     delete_image_ids = serializers.CharField(required=False)
 
@@ -40,7 +40,7 @@ class AnswerUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class AnswerCommentCreateSerializer(serializers.ModelSerializer):
+class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):
     class Meta:
         model = AnswerComment
         fields = ["content"]
