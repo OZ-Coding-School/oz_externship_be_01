@@ -1,14 +1,15 @@
-from types import SimpleNamespace
+from datetime import datetime
 from typing import Any
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
+from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ...users.models import User
-from ..models import Question, QuestionCategory
+from ..models import Question, QuestionCategory, QuestionImage
 from ..serializers.questions_serializers import (
     QuestionCreateSerializer,
     QuestionDetailSerializer,
@@ -63,6 +64,7 @@ class QuestionDetailView(APIView):
 # 3. 새 질문 생성 (POST)
 class QuestionCreateView(APIView):
     permission_classes = [permissions.AllowAny]
+    parser_classes = [MultiPartParser]
 
     @extend_schema(
         request=QuestionCreateSerializer,
@@ -71,9 +73,31 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request) -> Response:
-        serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
+        serializer = QuestionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
+        question = Question(
+            id=1,
+            category=QuestionCategory(
+                id=serializer.validated_data["category_id"],
+                name="예시 카테고리",
+            ),
+            title=serializer.validated_data["title"],
+            content=serializer.validated_data["content"],
+            author=User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock.png"),
+            view_count=10,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+        question_images = [
+            QuestionImage(
+                id=i,
+                img_url=f"/media/{image.name}",
+            )
+            for i, image in enumerate(serializer.validated_data["image_files"])
+        ]
+        response_data = QuestionCreateSerializer(question).data
+        response_data["image_urls"] = [image.img_url for image in question_images]
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 # 4. 질문 부분 수정 (PATCH)
