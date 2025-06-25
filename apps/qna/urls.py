@@ -17,9 +17,9 @@ from apps.qna.views.questions_views import (
 urlpatterns = [
     # questions
     path("questions/", QuestionListView.as_view(), name="question-list"),
-    path("questions/", QuestionCreateView.as_view(), name="question-create"),
+    path("questions/create/", QuestionCreateView.as_view(), name="question-create"),
     path("questions/<int:question_id>/", QuestionDetailView.as_view(), name="question-detail"),
-    path("questions/<int:question_id>/", QuestionUpdateView.as_view(), name="question-update"),
+    path("questions/<int:question_id>/update/", QuestionUpdateView.as_view(), name="question-update"),
     # answer
     path("questions/<int:question_id>/answers/", AnswerCreateView.as_view()),
     path("questions/<int:question_id>/answers/<int:answer_id>/", AnswerUpdateView.as_view()),
