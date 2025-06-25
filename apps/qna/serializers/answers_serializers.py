@@ -5,12 +5,6 @@ from rest_framework import serializers
 from apps.qna.models import Answer, AnswerComment, AnswerImage
 
 
-class AnswerImageSerializer(serializers.ModelSerializer[AnswerImage]):
-    class Meta:
-        model = AnswerImage
-        fields = ["img_url"]
-
-
 class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
     images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
 
