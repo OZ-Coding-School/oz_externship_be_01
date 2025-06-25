@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from typing import cast
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -5,8 +8,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.community.models import Post, PostCategory
 from apps.community.serializers.notice_serializers import (
-    NoticeCreateRequestSerializer,
+    NoticeCreateSerializer,
     NoticeResponseSerializer,
 )
 
@@ -16,7 +20,7 @@ class NoticeCreateAPIView(APIView):
     permission_classes = [AllowAny]  # 실제 api 경우 IsAuthenticated
 
     @extend_schema(
-        request=NoticeCreateRequestSerializer,
+        request=NoticeCreateSerializer,
         responses={201: NoticeResponseSerializer},
         summary="공지사항 등록",
         description="공지사항을 등록합니다. 저장되진 않으며 Swagger 문서 확인용입니다.",
@@ -24,13 +28,13 @@ class NoticeCreateAPIView(APIView):
     )
     def post(self, request: Request) -> Response:
         # 요청 데이터 유효성 검사
-        serializer = NoticeCreateRequestSerializer(data=request.data)
+        serializer = NoticeCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         # category.name 동적 대응
         category_id = serializer.validated_data["category_id"]
-        # 실제 DB 조회 생략 → category는 가상의 값으로
-        mock_category = f"카테고리 {category_id}"
+        # 실제 DB 조회 생략 → category는 가상의 값
+        mock_category = PostCategory(id=category_id, name=f"카테고리 {category_id}")
 
         # 가상으로 응답할 데이터 (실제 DB 저장은 생략)
         notice_post = {
@@ -41,7 +45,7 @@ class NoticeCreateAPIView(APIView):
             "is_visible": serializer.validated_data.get("is_visible", True),
             "category": {
                 "id": category_id,
-                "name": mock_category,
+                "name": mock_category.name,
             },
             "attachments": serializer.validated_data.get("attachments", []),
             "images": serializer.validated_data.get("images", []),
@@ -49,4 +53,6 @@ class NoticeCreateAPIView(APIView):
             "updated_at": "2025-06-24T18:00:00Z",
         }
 
-        return Response(notice_post, status=status.HTTP_201_CREATED)
+        mock_instance = cast(Post, SimpleNamespace(**notice_post))
+        resp_serializer = NoticeResponseSerializer(instance=mock_instance)
+        return Response(resp_serializer.data, status=status.HTTP_201_CREATED)
