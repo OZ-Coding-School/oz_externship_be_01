@@ -1,36 +1,52 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.community.serializers.notice_serializers import (
+    NoticeCreateRequestSerializer,
+    NoticeResponseSerializer,
+)
 
-# 공지사항 등록
+
+# 공지 사항 등록
 class NoticeCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]  # 실제 api 경우 IsAuthenticated
 
+    @extend_schema(
+        request=NoticeCreateRequestSerializer,
+        responses={201: NoticeResponseSerializer},
+        summary="공지사항 등록",
+        description="공지사항을 등록합니다. 저장되진 않으며 Swagger 문서 확인용입니다.",
+        tags=["Admin - 커뮤니티 공지사항"],
+    )
     def post(self, request: Request) -> Response:
-        user = request.user
+        # 요청 데이터 유효성 검사
+        serializer = NoticeCreateRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        # 관리자 권한 체크
-        if getattr(user, "role", None) != "ADMIN":
-            return Response({"detail": "관리자 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        # category.name 동적 대응
+        category_id = serializer.validated_data["category_id"]
+        # 실제 DB 조회 생략 → category는 가상의 값으로
+        mock_category = f"카테고리 {category_id}"
 
-        # 요청 본문 필드 추출
-        title = request.data.get("title")
-        content = request.data.get("content")
-        category_id = request.data.get("category_id")
-        is_notice = request.data.get("is_notice")
-        is_visible = request.data.get("is_visible", True)
-        attachments = request.data.get("attachments", [])
-        images = request.data.get("images", [])
+        # 가상으로 응답할 데이터 (실제 DB 저장은 생략)
+        notice_post = {
+            "id": 10,
+            "title": serializer.validated_data["title"],
+            "content": serializer.validated_data["content"],
+            "is_notice": serializer.validated_data["is_notice"],
+            "is_visible": serializer.validated_data.get("is_visible", True),
+            "category": {
+                "id": category_id,
+                "name": mock_category,
+            },
+            "attachments": serializer.validated_data.get("attachments", []),
+            "images": serializer.validated_data.get("images", []),
+            "created_at": "2025-06-24T18:00:00Z",
+            "updated_at": "2025-06-24T18:00:00Z",
+        }
 
-        # 필수 항목 검증
-        if not title or not content or not category_id or is_notice is not True:
-            return Response({"detail": "제목과 내용은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 성공 Mock 응답 반환
-        return Response(
-            {"message": "공지사항이 성공적으로 등록되었습니다.", "created_post_id": 1203},  # Mock ID
-            status=status.HTTP_200_OK,
-        )
+        return Response(notice_post, status=status.HTTP_201_CREATED)
