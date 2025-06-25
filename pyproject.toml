@@ -47,6 +47,7 @@ python_version = 3.12
 strict = true
 exclude = ["migrations", "manage.py"]
 
+
 [tool.django-stubs]
 django_settings_module = "config.settings.local"
 
