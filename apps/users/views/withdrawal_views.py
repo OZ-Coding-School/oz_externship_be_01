@@ -22,7 +22,7 @@ User = get_user_model()
 class UserDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request:Request)->Response:
+    def post(self, request: Request) -> Response:
         serializer = UserDeleteSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -30,11 +30,11 @@ class UserDeleteView(APIView):
             user = request.user
 
             # soft delete view 에서 바로 처리
-            user.is_deleted = True # type: ignore[attr-defined]
-            user.is_active = False # type: ignore[attr-defined]
-            user.deleted_reason = serializer.validated_data.get("reason") # type: ignore[attr-defined]
-            user.deleted_detail = serializer.validated_data.get("detail") # type: ignore[attr-defined]
-            user.deleted_at = timezone.now() # type: ignore[attr-defined]
+            user.is_deleted = True  # type: ignore[attr-defined]
+            user.is_active = False  # type: ignore[attr-defined]
+            user.deleted_reason = serializer.validated_data.get("reason")  # type: ignore[attr-defined]
+            user.deleted_detail = serializer.validated_data.get("detail")  # type: ignore[attr-defined]
+            user.deleted_at = timezone.now()  # type: ignore[attr-defined]
             user.save()
 
             return Response({"message": "탈퇴 완료되었습니다."}, status=status.HTTP_200_OK)
@@ -44,7 +44,7 @@ class UserDeleteView(APIView):
 
 # 회원 복구 Mock API
 class UserRestoreView(APIView):
-    def post(self, request:Request)->Response:
+    def post(self, request: Request) -> Response:
         serializer = UserRestoreSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -57,11 +57,11 @@ class UserRestoreView(APIView):
                 return Response({"error": "탈퇴된 계정을 찾을 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
             if verification_code == "123456":  # 임의 코드
-                user.is_deleted = False # type: ignore[attr-defined]
-                user.is_active = True # type: ignore[attr-defined]
-                user.deleted_reason = "" # type: ignore[attr-defined]
-                user.deleted_detail = "" # type: ignore[attr-defined]
-                user.deleted_at = None # type: ignore[attr-defined]
+                user.is_deleted = False  # type: ignore[attr-defined]
+                user.is_active = True  # type: ignore[attr-defined]
+                user.deleted_reason = ""  # type: ignore[attr-defined]
+                user.deleted_detail = ""  # type: ignore[attr-defined]
+                user.deleted_at = None  # type: ignore[attr-defined]
                 user.save()
 
                 return Response({"message": "계정 복구 완료"}, status=status.HTTP_200_OK)
