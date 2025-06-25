@@ -1,7 +1,8 @@
 from typing import Any
 
 from rest_framework import serializers
-from apps.qna.models import Answer, AnswerImage, AnswerComment
+
+from apps.qna.models import Answer, AnswerComment, AnswerImage
 
 
 class AnswerImageSerializer(serializers.ModelSerializer):
@@ -11,9 +12,7 @@ class AnswerImageSerializer(serializers.ModelSerializer):
 
 
 class AnswerCreateSerializer(serializers.ModelSerializer):
-    images = serializers.ListField(
-        child=serializers.ImageField(), write_only=True, required=False
-    )
+    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
 
     class Meta:
         model = Answer
@@ -27,9 +26,7 @@ class AnswerCreateSerializer(serializers.ModelSerializer):
 
 
 class AnswerUpdateSerializer(serializers.ModelSerializer):
-    images = serializers.ListField(
-        child=serializers.ImageField(), write_only=True, required=False
-    )
+    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     delete_image_ids = serializers.CharField(required=False)
 
     class Meta:

@@ -1,15 +1,16 @@
-from rest_framework.request import Request
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.qna.models import Question, Answer
+from apps.qna.models import Answer, Question
 from apps.qna.serializers.answers_serializers import (
+    AnswerCommentCreateSerializer,
     AnswerCreateSerializer,
     AnswerUpdateSerializer,
-    AnswerCommentCreateSerializer,
 )
+
 
 class AnswerCreateView(APIView):
     serializer_class = AnswerCreateSerializer

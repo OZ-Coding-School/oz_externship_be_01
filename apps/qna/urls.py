@@ -1,9 +1,10 @@
 from django.urls import path
+
 from apps.qna.views.answers_views import (
-    AnswerCreateView,
-    AnswerUpdateView,
     AdoptAnswerView,
     AnswerCommentCreateView,
+    AnswerCreateView,
+    AnswerUpdateView,
 )
 
 app_name = "qna"
