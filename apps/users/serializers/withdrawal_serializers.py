@@ -1,5 +1,6 @@
-from rest_framework import serializers
 from typing import Any
+
+from rest_framework import serializers
 
 # 회원탈퇴 및 회원 복구 API
 
