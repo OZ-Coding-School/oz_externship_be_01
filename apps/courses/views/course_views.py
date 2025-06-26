@@ -2,9 +2,11 @@ from typing import Any
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.courses.models import Course
 
 from apps.courses.serializers.course_serializers import (
     CourseListSerializer,
@@ -13,10 +15,15 @@ from apps.courses.serializers.course_serializers import (
 
 
 class CourseListCreateView(APIView):
+    permission_classes = [AllowAny]
 
-    @extend_schema(summary="과정 목록 조회", responses=CourseListSerializer(many=True))
+    @extend_schema(
+        summary="과정 목록 조회",
+        responses=CourseListSerializer(many=True),
+        tags=["course"]
+    )
     def get(self, request: Request) -> Response:
-        mock_courses: list[dict[str, Any]] = [
+        mock_courses_data: list[dict[str, Any]] = [
             {
                 "id": 1,
                 "name": "AI 백엔드 심화과정",
@@ -36,11 +43,13 @@ class CourseListCreateView(APIView):
                 "updated_at": None,
             },
         ]
-        serializer = CourseListSerializer(data=mock_courses, many=True)
-        serializer.is_valid()
+
+        mock_courses: list[Course] = [Course(**data) for data in mock_courses_data]
+
+        serializer = CourseListSerializer(instance=mock_courses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(summary="과정 등록", request=CourseSerializer, responses=CourseSerializer)
+    @extend_schema(summary="과정 등록", request=CourseSerializer, responses=CourseSerializer, tags=["course"])
     def post(self, request: Request) -> Response:
         serializer = CourseSerializer(data=request.data)
         if serializer.is_valid():
@@ -53,8 +62,9 @@ class CourseListCreateView(APIView):
 
 
 class CourseDetailView(APIView):
+    permission_classes = [AllowAny]
 
-    @extend_schema(summary="과정 상세 조회", responses=CourseSerializer)
+    @extend_schema(summary="과정 상세 조회", responses=CourseSerializer, tags=["course"])
     def get(self, request: Request, course_id: int) -> Response:
         mock_course: dict[str, Any] = {
             "id": course_id,
@@ -69,7 +79,7 @@ class CourseDetailView(APIView):
         serializer.is_valid()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @extend_schema(summary="과정 수정", request=CourseSerializer, responses=CourseSerializer)
+    @extend_schema(summary="과정 수정", request=CourseSerializer, responses=CourseSerializer, tags=["course"])
     def patch(self, request: Request, course_id: int) -> Response:
         serializer = CourseSerializer(data=request.data, partial=True)
         if serializer.is_valid():
@@ -87,6 +97,6 @@ class CourseDetailView(APIView):
             return Response(mock_response, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @extend_schema(summary="과정 삭제", responses={204: None})
+    @extend_schema(summary="과정 삭제", responses={200: CourseSerializer}, tags=["course"])
     def delete(self, request: Request, course_id: int) -> Response:
-        return Response({"detail": f"Course {course_id} has been deleted."}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": f"{course_id}번 과정이 삭제되었습니다."}, status=status.HTTP_200_OK)
