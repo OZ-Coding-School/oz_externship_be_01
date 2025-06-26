@@ -22,3 +22,6 @@ if settings.DEBUG:
             path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
             path("api/v1/", include("apps.users.urls")),
         ]
+
+
+urlpatterns += [path("api/v1/", include("apps.tests.urls", namespace="tests"))]
