@@ -4,37 +4,53 @@ from rest_framework import serializers
 
 from apps.qna.models import Answer, AnswerComment, AnswerImage
 
-
-class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
-    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+class AnswerListSerializer(serializers.ModelSerializer[Answer]):
+    author = serializers.SerializerMethodField()
 
     class Meta:
         model = Answer
-        fields = ["content", "images"]
+        fields = [
+            "id",
+            "question_id",
+            "author",
+            "content",
+            "is_adopted",
+            "created_at",
+            "updated_at",
+        ]
 
-    def create(self, validated_data: dict[str, Any]) -> Answer:
-        images = validated_data.pop("images", [])
-        # answer 모델에 직접 이미지를 저장하지 않기 때문에 validate_data에서 일단 꺼내서 answer create
-        answer = Answer.objects.create(**validated_data)
-        return answer
+    def get_author(self, obj):
+        return {
+            "id": obj.author.id,
+            "nickname": obj.author.nickname,
+            "profile_image": getattr(obj.author, "profile_image_url", ""),
+            "role": getattr(obj.author, "role", ""),
+        }
+
+
+class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
+    image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    image_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
+
+    class Meta:
+        model = Answer
+        fields = ["content", "image_files", "image_urls"]
 
 
 class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
-    images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
-    delete_image_ids = serializers.CharField(required=False)
+    image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    image_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
+
 
     class Meta:
         model = Answer
-        fields = ["content", "images", "delete_image_ids"]
+        fields = ["content", "image_files", "image_urls"]
 
-    def update(self, instance: Answer, validated_data: dict[str, Any]) -> Answer:
-        # 컨텐츠 업데이트만 구현, 이미지 수정, 삭제는 나중에
-        instance.content = validated_data.get("content", instance.content)
-        instance.save()
-        return instance
 
 
 class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):
+
+    # TODO : 답변 id, 댓글 id(몇번째 댓글인지) 추가 예정
     class Meta:
         model = AnswerComment
         fields = ["content"]
