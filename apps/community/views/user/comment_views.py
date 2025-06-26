@@ -12,6 +12,7 @@ from apps.community.models import Comment, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
+    CommentUpdateSerializer,
     User,
 )
 
@@ -108,3 +109,40 @@ class CommentCreateAPIView(APIView):
             "content": serializer.validated_data["content"],
         }
         return Response(mock_response, status=status.HTTP_201_CREATED)
+
+
+class CommentUpdateAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="댓글 수정",
+        summary="댓글 수정",
+        description="댓글 내용을 수정합니다.",
+        tags=["댓글"],
+        request=CommentUpdateSerializer,
+        responses={
+            200: CommentResponseSerializer,
+            400: OpenApiResponse(description="변경할 내용이 없습니다."),
+            403: OpenApiResponse(description="해당 댓글을 수정할 권한이 없습니다."),
+        },
+    )
+    def patch(self, request: Request, comment_id: int) -> Response:
+        serializer = CommentUpdateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if comment_id == 99:
+            return Response({"detail": "해당 댓글을 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        content = serializer.validated_data["content"]
+
+        mock_response = {
+            "id": comment_id,
+            "post_id": 45,
+            "user": {"id": 7, "nickname": "정아"},
+            "content": content,
+            "updated_at": "2025-06-20T14:05:00Z",
+        }
+
+        return Response(mock_response, status=status.HTTP_200_OK)
