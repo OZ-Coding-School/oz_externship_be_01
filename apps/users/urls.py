@@ -12,7 +12,6 @@ from apps.users.views.admin_user_views import (
 urlpatterns = [
     path("api/users/delete/", UserDeleteView.as_view(), name="user-delete"),
     path("api/users/restore/", UserRestoreView.as_view(), name="user-restore"),
-
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
