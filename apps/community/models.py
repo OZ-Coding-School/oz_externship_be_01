@@ -23,6 +23,8 @@ class Post(models.Model):
     title = models.CharField(max_length=50)
     content = models.TextField()
     view_count = models.PositiveIntegerField(default=0)
+    likes_count = models.PositiveIntegerField(default=0)
+    comment_count = models.PositiveIntegerField(default=0)
     is_visible = models.BooleanField(default=True)  # 게시글 노출 여부
     is_notice = models.BooleanField(default=False)  # 공지 여부
     created_at = models.DateTimeField(auto_now_add=True)
