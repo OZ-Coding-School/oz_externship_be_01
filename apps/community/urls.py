@@ -16,19 +16,23 @@ from apps.community.views.user.comment_views import (
     CommentListAPIView,
     CommentUpdateAPIView,
 )
+from apps.community.views.admin.post_views import AdminPostListView
+
 
 urlpatterns = [
+    # admin
+    path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),
+    path("admin/categories/", AdminCategoryListAPIView.as_view(), name="admin_category_list"),
     path(
         "admin/categories/<int:category_id>/",
         AdminCommunityCategoryDetailAPIView.as_view(),
         name="admin_category_detail",
     ),
-    path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
-    path("comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view()),
-    path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
-    path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
-    path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
-    path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
+    path(
+        "admin/categories/<int:category_id>/rename/",
+        AdminCategoryRenameAPIView.as_view(),
+        name="admin_category_rename",
+    ),
     path(
         "admin/community/category/<int:category_id>/on/", CategoryStatusOnAPIView.as_view(), name="category-status-on"
     ),
@@ -37,11 +41,12 @@ urlpatterns = [
         CategoryStatusOffAPIView.as_view(),
         name="category-status-off",
     ),
-    path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),
-    path("admin/categories/", AdminCategoryListAPIView.as_view(), name="admin_category_list"),
-    path(
-        "admin/categories/<int:category_id>/rename/",
-        AdminCategoryRenameAPIView.as_view(),
-        name="admin_category_rename",
-    ),
+    path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
+    path("admin/posts/", AdminPostListView.as_view(), name="admin-posts-list"),
+    path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view()),
+    # user
+    path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
+    path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
+    path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
+    path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
 ]
