@@ -5,10 +5,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.serializers.community_serializer import (
-    CommentDeleteResponseSerializer,
-)
-
 # 1, 2, 3번 댓글만 존재하는걸로 임의로 결정?
 mock_existing_ids = range(1, 4)
 
@@ -21,7 +17,6 @@ class AdminCommentDeleteAPIView(APIView):
         operation_id="admin_comment_delete",
         summary="관리자 댓글 삭제",
         description="1, 2, 3번 댓글만 존재하는 것으로 간주하고 그 외 ID는 삭제 실패로 처리.",
-        responses={200: CommentDeleteResponseSerializer, 404: CommentDeleteResponseSerializer},
     )
     def delete(self, request: Request, comment_id: int) -> Response:
         if comment_id not in mock_existing_ids:
