@@ -1,9 +1,11 @@
-from rest_framework import serializers
 from datetime import date
-from apps.courses.models import Generation, Course
+
+from rest_framework import serializers
+
+from apps.courses.models import Course, Generation
 
 
-#기수 등록
+# 기수 등록
 class GenerationCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -11,14 +13,12 @@ class GenerationCreateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "course",
-            'number',
-            'max_student',
-            'start_date',
-            'end_date',
-            'status',
+            "number",
+            "max_student",
+            "start_date",
+            "end_date",
+            "status",
         ]
-
-
 
         read_only_fields = ("id",)
 
@@ -28,7 +28,8 @@ class GenerationCreateSerializer(serializers.ModelSerializer):
         if start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
 
-#기수 목록
+
+# 기수 목록
 class GenerationListSerializer(serializers.ModelSerializer):
 
     course_name = serializers.CharField(source="course.name", read_only=True)
@@ -37,17 +38,17 @@ class GenerationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Generation
         fields = [
-            'id',
-            'course',
-            'course_name',
-            'number',
-            'max_student',
-            'registered_students',
-            'start_date',
-            'end_date',
-            'status',
-            'created_at',
-            'updated_at',
+            "id",
+            "course",
+            "course_name",
+            "number",
+            "max_student",
+            "registered_students",
+            "start_date",
+            "end_date",
+            "status",
+            "created_at",
+            "updated_at",
         ]
 
         read_only_fields = [
@@ -59,7 +60,8 @@ class GenerationListSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-#기수 상세 조회
+
+# 기수 상세 조회
 class GenerationDetailSerializer(serializers.ModelSerializer):
     course_name = serializers.CharField(source="course.name", read_only=True)
     course_tag = serializers.CharField(source="course.tag", read_only=True)
@@ -69,41 +71,42 @@ class GenerationDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Generation
         fields = [
-            'id',
-            'course',
-            'course_name',
-            'course_tag',
-            'course_description',
-            'number',
-            'registered_students',
-            'max_student',
-            'start_date',
-            'end_date',
-            'status',
-            'created_at',
-            'updated_at',
+            "id",
+            "course",
+            "course_name",
+            "course_tag",
+            "course_description",
+            "number",
+            "registered_students",
+            "max_student",
+            "start_date",
+            "end_date",
+            "status",
+            "created_at",
+            "updated_at",
         ]
 
         read_only_fields = fields
 
-#기수 수정
+
+# 기수 수정
 class GenerationUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Generation
         fields = [
-            'start_date',
-            'end_date',
+            "start_date",
+            "end_date",
         ]
 
     def validate(self, attrs):
-        start = attrs.get("start_date",getattr(self.instance,"start_date",None))
-        end = attrs.get("end_date",getattr(self.instance,"end_date",None))
+        start = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end = attrs.get("end_date", getattr(self.instance, "end_date", None))
         if start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
 
 
-#과정 - 기수 대시보드
+# 과정 - 기수 대시보드
 class GenerationTrendSerializer(serializers.ModelSerializer):
     course_name = serializers.IntegerField(source="course.name", read_only=True)
     course_id = serializers.CharField(source="course.id", read_only=True)
@@ -113,12 +116,13 @@ class GenerationTrendSerializer(serializers.ModelSerializer):
     class Meta:
         model = Generation
         fields = [
-            'course_name',
-            'course_id',
-            'labels',
-            'data',
+            "course_name",
+            "course_id",
+            "labels",
+            "data",
         ]
         read_only_fields = fields
+
 
 class MonthlyGenerationSerializer(serializers.ModelSerializer):
     course_id = serializers.IntegerField(source="course.id", read_only=True)
@@ -129,12 +133,13 @@ class MonthlyGenerationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Generation
         fields = [
-            'course_id',
-            'course_name',
-            'labels',
-            'data',
+            "course_id",
+            "course_name",
+            "labels",
+            "data",
         ]
         read_only_fields = fields
+
 
 class OngoingSerializer(serializers.ModelSerializer):
     labels = serializers.ListField(child=serializers.IntegerField())
@@ -143,6 +148,6 @@ class OngoingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Generation
         fields = [
-            'labels',
-            'data',
+            "labels",
+            "data",
         ]
