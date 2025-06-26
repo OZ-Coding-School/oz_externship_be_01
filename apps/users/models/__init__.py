@@ -3,6 +3,7 @@ from .permissions import (
     PermissionsStudent,
     PermissionsTrainingAssistant,
 )
+from .social_user import SocialUser
 from .student_enrollment import StudentEnrollmentRequest
 from .user import User
 
@@ -12,4 +13,5 @@ __all__ = [
     "PermissionsTrainingAssistant",
     "PermissionsStaff",
     "StudentEnrollmentRequest",
+    "SocialUser",
 ]
