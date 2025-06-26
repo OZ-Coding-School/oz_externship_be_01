@@ -10,6 +10,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -88,6 +89,8 @@ class SubjectListCreateAPIView(APIView):
     """
     (Admin) 과목 목록 조회 (GET) 및 등록 (POST) API.
     """
+
+    permission_classes = [AllowAny]
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 목록 조회",
@@ -404,6 +407,8 @@ class SubjectDetailAPIView(APIView):
     """
     (Admin) 등록된 수강 과목 상세 조회 (GET), 수정 (PATCH), 삭제 (DELETE) API.
     """
+
+    permission_classes = [AllowAny]
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 상세 조회",
