@@ -15,8 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # apps.courses.models에서 실제 Subject, Course 모델 임포트 (타입 힌트용)
-from apps.courses.models import Subject, Course
-
+from apps.courses.models import Course, Subject
 from apps.courses.serializers.subject_serializers import (
     SubjectDetailSerializer,
     SubjectListSerializer,
@@ -60,20 +59,20 @@ class MockSubject:
     pk: int
 
     def __init__(self, **kwargs: Any) -> None:
-        self.id = kwargs.get('id', 0)
-        self.title = kwargs.get('title', '')
-        self.number_of_days = kwargs.get('number_of_days', 0)
-        self.number_of_hours = kwargs.get('number_of_hours', 0)
-        self.course_name = kwargs.get('course_name', '')
-        self.status = kwargs.get('status', False)
-        self.created_at = kwargs.get('created_at', datetime.datetime.now().isoformat(timespec='seconds') + 'Z')
-        self.updated_at = kwargs.get('updated_at', datetime.datetime.now().isoformat(timespec='seconds') + 'Z')
-        self.thumbnail_img_url = kwargs.get('thumbnail_img_url', '')
+        self.id = kwargs.get("id", 0)
+        self.title = kwargs.get("title", "")
+        self.number_of_days = kwargs.get("number_of_days", 0)
+        self.number_of_hours = kwargs.get("number_of_hours", 0)
+        self.course_name = kwargs.get("course_name", "")
+        self.status = kwargs.get("status", False)
+        self.created_at = kwargs.get("created_at", datetime.datetime.now().isoformat(timespec="seconds") + "Z")
+        self.updated_at = kwargs.get("updated_at", datetime.datetime.now().isoformat(timespec="seconds") + "Z")
+        self.thumbnail_img_url = kwargs.get("thumbnail_img_url", "")
 
         self.pk = self.id
 
-        course_id = kwargs.get('course_id')
-        course_name = kwargs.get('course_name')
+        course_id = kwargs.get("course_id")
+        course_name = kwargs.get("course_name")
 
         if course_id is not None and course_name is not None:
             self.course = MockCourse(id=course_id, name=course_name)
@@ -201,28 +200,52 @@ class SubjectListCreateAPIView(APIView):
         """
         dummy_data: List[Dict[str, Any]] = [
             {
-                "id": 1, "title": "데이터베이스 개론", "number_of_days": 4, "number_of_hours": 16,
-                "course_id": 101, "course_name": "데이터베이스 심화 과정", "status": True,
-                "created_at": "2025-06-23T10:30:00Z", "updated_at": "2025-06-23T10:30:00Z",
-                "thumbnail_img_url": "http://example.com/db_intro.jpg"
+                "id": 1,
+                "title": "데이터베이스 개론",
+                "number_of_days": 4,
+                "number_of_hours": 16,
+                "course_id": 101,
+                "course_name": "데이터베이스 심화 과정",
+                "status": True,
+                "created_at": "2025-06-23T10:30:00Z",
+                "updated_at": "2025-06-23T10:30:00Z",
+                "thumbnail_img_url": "http://example.com/db_intro.jpg",
             },
             {
-                "id": 2, "title": "SQL 활용", "number_of_days": 3, "number_of_hours": 12,
-                "course_id": 101, "course_name": "데이터베이스 심화 과정", "status": False,
-                "created_at": "2025-06-23T11:00:00Z", "updated_at": "2025-06-23T11:00:00Z",
-                "thumbnail_img_url": "http://example.com/sql_util.jpg"
+                "id": 2,
+                "title": "SQL 활용",
+                "number_of_days": 3,
+                "number_of_hours": 12,
+                "course_id": 101,
+                "course_name": "데이터베이스 심화 과정",
+                "status": False,
+                "created_at": "2025-06-23T11:00:00Z",
+                "updated_at": "2025-06-23T11:00:00Z",
+                "thumbnail_img_url": "http://example.com/sql_util.jpg",
             },
             {
-                "id": 3, "title": "Python 프로그래밍 기초", "number_of_days": 5, "number_of_hours": 20,
-                "course_id": 102, "course_name": "웹 개발 입문", "status": True,
-                "created_at": "2025-06-24T09:00:00Z", "updated_at": "2025-06-24T09:00:00Z",
-                "thumbnail_img_url": "http://example.com/python_intro.jpg"
+                "id": 3,
+                "title": "Python 프로그래밍 기초",
+                "number_of_days": 5,
+                "number_of_hours": 20,
+                "course_id": 102,
+                "course_name": "웹 개발 입문",
+                "status": True,
+                "created_at": "2025-06-24T09:00:00Z",
+                "updated_at": "2025-06-24T09:00:00Z",
+                "thumbnail_img_url": "http://example.com/python_intro.jpg",
             },
             {
-                "id": 4, "title": "자료구조 알고리즘", "number_of_days": 7, "number_of_hours": 28,
-                "course_id": 103, "course_name": "컴퓨터공학 심화", "status": True,
-                "created_at": "2025-06-24T10:00:00Z", "updated_at": "2025-06-24T10:00:00Z",
-                "thumbnail_img_url": "http://example.com/data_algo.jpg"
+                "id": 4,
+                "title": "자료구조 알고리즘",
+                "number_of_days": 7,
+                "number_of_hours": 28,
+                "course_id": 103,
+                "course_name": "컴퓨터공학 심화",
+                "status": True,
+                "created_at": "2025-06-24T10:00:00Z",
+                "updated_at": "2025-06-24T10:00:00Z",
+                "thumbnail_img_url": "http://example.com/data_algo.jpg",
             },
         ]
 
@@ -348,7 +371,11 @@ class SubjectListCreateAPIView(APIView):
 
         now: str = datetime.datetime.now().isoformat(timespec="seconds") + "Z"
 
-        dummy_course_names: Dict[int, str] = {101: "데이터베이스 심화 과정", 102: "웹 개발 입문", 103: "컴퓨터공학 심화"}
+        dummy_course_names: Dict[int, str] = {
+            101: "데이터베이스 심화 과정",
+            102: "웹 개발 입문",
+            103: "컴퓨터공학 심화",
+        }
         requested_course_id: Optional[int] = request.data.get("course_id")
 
         # requested_course_id가 None일 경우를 명시적으로 처리하여 arg-type 오류 해결 (360번 오류 해결)
