@@ -1,6 +1,7 @@
+from typing import Any
+
 from rest_framework import serializers
 
-from typing import Any
 from apps.qna.models import Answer, Question, QuestionCategory
 
 
