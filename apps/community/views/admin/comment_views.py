@@ -28,5 +28,5 @@ class AdminCommentDeleteAPIView(APIView):
             serializer = CommentDeleteResponseSerializer({"detail": "해당 댓글이 존재하지 않습니다."})
             return Response(serializer.data, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = CommentDeleteResponseSerializer({"detail": "댓글 삭제에 성공하였습니다."})
+        serializer = CommentDeleteResponseSerializer({"detail": "댓글이 삭제되었습니다."})
         return Response(serializer.data, status=status.HTTP_200_OK)
