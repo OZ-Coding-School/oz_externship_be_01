@@ -1,26 +1,36 @@
-from typing import Any, Dict
+from datetime import date
 
-from django.contrib.auth import get_user_model
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.users.models import User
 from apps.users.serializers.admin_user_serializers import (
+    AdminUserListSerializer,
     AdminUserRoleUpdateSerializer,
     AdminUserSerializer,
     PaginatedAdminUserListSerializer,
 )
 
-User = get_user_model()
+
+class AdminUserListPaginator(PageNumberPagination):
+    page_size = 5
+    page_query_param = "page"
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 # 어드민 유저 목록 조회
 class AdminUserListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminUserSerializer
+    pagination_class = AdminUserListPaginator
 
     @extend_schema(
         summary="어드민 회원 목록 조회",
@@ -34,40 +44,38 @@ class AdminUserListView(APIView):
             200: PaginatedAdminUserListSerializer,
             400: OpenApiResponse(description="잘못된 요청입니다."),
         },
+        tags=["Admin - 회원 관리"],
     )
     def get(self, request: Request) -> Response:
-        mock_response: Dict[str, Any] = {
-            "count": 2,
-            "next": None,
-            "previous": None,
-            "results": [
-                {
-                    "id": 1,
-                    "email": "admin@example.com",
-                    "name": "홍길동",
-                    "nickname": "hongkildong",
-                    "birthday": "1998-08-16",
-                    "role": "ADMIN",
-                    "is_active": True,
-                    "joined_at": "2024-01-01T10:00:00Z",
-                    "withdrawal_requested_at": None,
-                },
-                {
-                    "id": 2,
-                    "email": "student@example.com",
-                    "name": "김수강",
-                    "nickname": "learner_kim",
-                    "birthday": "2000-01-05",
-                    "role": "STUDENT",
-                    "is_active": True,
-                    "joined_at": "2024-02-10T15:30:00Z",
-                    "withdrawal_requested_at": None,
-                },
-            ],
-        }
+        mock_user_list = [
+            User(
+                id=1,
+                email="admin@example.com",
+                name="홍길동",
+                nickname="hongkildong",
+                birthday=date(1998, 8, 16),
+                role="ADMIN",
+                is_active=True,
+                created_at=timezone.now(),
+            ),
+            User(
+                id=2,
+                email="student@example.com",
+                name="김수강",
+                nickname="learner_kim",
+                birthday=date(2000, 1, 5),
+                role="STUDENT",
+                is_active=True,
+                created_at=timezone.now(),
+            ),
+        ]
 
-        serializer = PaginatedAdminUserListSerializer(instance=mock_response)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        paginator = AdminUserListPaginator()
+        page = paginator.paginate_queryset(mock_user_list, request)  # type:ignore
+
+        serializer = AdminUserListSerializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
 
 
 # 어드민 회원 상세 조회
@@ -78,11 +86,30 @@ class AdminUserDetailView(APIView):
     @extend_schema(
         summary="어드민 회원 상세 조회",
         description="어드민이 전체 유저 상세 정보를 조회합니다.",
-        responses={200: AdminUserSerializer, 400: OpenApiResponse(description="존재하지 않는 유저입니다.")},
+        responses={
+            200: AdminUserSerializer,
+            400: OpenApiResponse(description="잘못된 요청입니다."),
+            404: OpenApiResponse(description="존재하지 않는 유저입니다."),
+        },
+        tags=["Admin - 회원 관리"],
     )
     def get(self, request: Request, user_id: int) -> Response:
-        data = {"id": user_id}
-        serializer = AdminUserSerializer(instance=data)
+        mock_user = User(
+            id=user_id,
+            email="admin@example.com",
+            name="홍길동",
+            nickname="hongkildong",
+            birthday=date(1998, 8, 16),
+            gender="MALE",
+            phone_number="010-0000-0000",
+            self_introduction="안녕하세요",
+            profile_image_url="",
+            role="ADMIN",
+            is_active=True,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        serializer = AdminUserSerializer(instance=mock_user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -98,19 +125,51 @@ class AdminUserUpdateView(APIView):
         responses={
             200: OpenApiResponse(description="수정된 유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
             400: OpenApiResponse(description="잘못된 요청입니다."),
+            404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
+        tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        modifiable_fields = ["name", "nickname", "phone_number", "self_introduction", "profile_image_url", "is_active"]
+        # 수정 가능한 필드 정의
+        modifiable_fields = {
+            "name",
+            "gender",
+            "nickname",
+            "phone_number",
+            "is_active",
+            "profile_image_url",
+            "self_introduction",
+        }
+
+        mock_user = User(
+            id=user_id,
+            email="admin@example.com",
+            name="홍길동",
+            nickname="hongkildong",
+            birthday=date(1998, 8, 16),
+            gender="MALE",
+            phone_number="010-0000-0000",
+            self_introduction="안녕하세요",
+            profile_image_url="",
+            role="ADMIN",
+            is_active=True,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+
+        # request.data에서 허용된 필드만 추려서 새 dict 구성
+        valid_data = {k: v for k, v in request.data.items() if k in modifiable_fields}
 
         serializer = self.serializer_class(
-            data=request.data, partial=True, fields=modifiable_fields, context={"request": request}
+            instance=mock_user,
+            data=valid_data,
+            partial=True,
         )
         serializer.is_valid(raise_exception=True)
 
-        updated_user_data = {"id": user_id, **serializer.validated_data}
-        response_serializer = self.serializer_class(instance=updated_user_data)
+        updated_mock_user = serializer.update(mock_user, serializer.validated_data)
 
+        response_serializer = self.serializer_class(instance=updated_mock_user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
@@ -122,15 +181,15 @@ class AdminUserDeleteView(APIView):
         summary="어드민 회원 삭제",
         description="어드민이 특정 회원을 삭제합니다.",
         responses={
-            204: OpenApiResponse(description=""),
-            404: OpenApiResponse(description="해당 사용자를 찾을 수 없습니다."),
+            204: OpenApiResponse(description="삭제 성공"),
+            404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
+        tags=["Admin - 회원 관리"],
     )
     def delete(self, request: Request, user_id: int) -> Response:
         if not isinstance(user_id, int) or user_id <= 0:
             return Response({"detail": "해당 사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 삭제 동작 없이 삭제 성공 응답만 반환
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -146,16 +205,31 @@ class AdminUserRoleUpdateView(APIView):
         responses={
             200: OpenApiResponse(description="유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
             400: OpenApiResponse(description="유효하지 않은 권한입니다."),
+            404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
+        tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer = self.serializer_class(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        validated_role = serializer.validated_data["role"]
+        validated_role = serializer.validated_data.get("role")
 
-        user = User(id=user_id, role=validated_role)
+        mock_user = User(
+            id=user_id,
+            email="admin@example.com",
+            name="홍길동",
+            nickname="hongkildong",
+            birthday=date(1998, 8, 16),
+            gender="MALE",
+            phone_number="010-0000-0000",
+            self_introduction="안녕하세요",
+            profile_image_url="",
+            role=validated_role,
+            is_active=True,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
 
-        # 응답 직렬화 (전체 유저 정보)
-        response_serializer = AdminUserSerializer(instance=user)
+        response_serializer = AdminUserSerializer(instance=mock_user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)

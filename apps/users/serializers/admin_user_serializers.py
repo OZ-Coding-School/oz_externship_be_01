@@ -9,7 +9,9 @@ from apps.users.models import User
 class AdminUserListSerializer(serializers.ModelSerializer[User]):
     # 실제 DB는 created_at이지만 의미를 명확히 하기 위해 응답 필드명을 분리
     joined_at = serializers.DateTimeField(source="created_at", read_only=True)
-    withdrawal_requested_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    withdrawal_requested_at = serializers.DateTimeField(
+        source="withdrawals.created_at", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = User
