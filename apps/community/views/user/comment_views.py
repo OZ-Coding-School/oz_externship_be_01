@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.community.models import Comment, Post
 from apps.community.serializers.comment_serializer import (
+    CommentCreateSerializer,
     CommentResponseSerializer,
     User,
 )
@@ -79,3 +80,31 @@ class CommentListAPIView(APIView):
         # paginated_comments = paginator.paginate_queryset(comments, data)
         #
         # return paginator.get_paginated_response(paginated_comments)
+
+
+class CommentCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="댓글 작성",
+        summary="댓글 작성",
+        description="게시글에 댓글을 작성합니다.",
+        request=CommentCreateSerializer,
+        responses={
+            201: {"id": 45, "post_id": 123, "user": {"id": 7, "nickname": "태연123"}, "content": "입력한 댓글 내용"},
+            400: {"detail": "내용이 비어 있습니다."},
+        },
+        tags=["댓글"],
+    )
+    def post(self, request: Request, post_id: int) -> Response:
+        serializer = CommentCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        mock_response = {
+            "id": 45,
+            "post_id": post_id,
+            "user": {"id": 7, "nickname": "태연123"},
+            "content": serializer.validated_data["content"],
+        }
+        return Response(mock_response, status=status.HTTP_201_CREATED)
