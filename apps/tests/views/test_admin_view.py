@@ -2,7 +2,7 @@ import datetime
 
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import permissions, status
+from rest_framework import parsers, permissions, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -175,9 +175,11 @@ class AdminTestListView(APIView):
     summary="쪽지시험 생성 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
+    request={"multipart/form-data": TestCreateSerializer},
 )
 class AdminTestCreateAPIView(APIView):
     permission_classes = [AllowAny]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
     serializer_class = TestCreateSerializer
 
     def post(self, request: Request) -> Response:
@@ -190,7 +192,7 @@ class AdminTestCreateAPIView(APIView):
                 id=3,
                 title=serializer.validated_data.get("title"),
                 subject_id=subject_id,
-                thumbnail_img_url=serializer.validated_data.get("thumbnail_img_url"),
+                thumbnail_img_url="https://oz.com/sample_thumbnail.jpg",
                 created_at=timezone.now(),
                 updated_at=timezone.now(),
             )

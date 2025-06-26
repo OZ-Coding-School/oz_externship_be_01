@@ -81,10 +81,20 @@ class TestListSerializer(serializers.ModelSerializer[Test]):
 # 쪽지시험 생성
 class TestCreateSerializer(serializers.ModelSerializer[Test]):
     subject_id = serializers.IntegerField()
+    thumbnail_file = serializers.ImageField(write_only=True, required=True)
+    thumbnail_img_url = serializers.URLField(read_only=True)
 
     class Meta:
         model = Test
-        fields = ("id", "title", "subject_id", "thumbnail_img_url", "created_at", "updated_at")
+        fields = (
+            "id",
+            "title",
+            "subject_id",
+            "thumbnail_file",
+            "thumbnail_img_url",
+            "created_at",
+            "updated_at",
+        )
         read_only_fields = ("id", "created_at", "updated_at")
 
     def create(self, validated_data: Dict[str, Any]) -> Test:
