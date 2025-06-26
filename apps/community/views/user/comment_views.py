@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Any
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -15,6 +16,9 @@ from apps.community.serializers.comment_serializer import (
     CommentUpdateSerializer,
     User,
 )
+
+mock_existing_ids = range(1, 4)
+unauthorized_ids = [99]
 
 
 # 댓글 조희
@@ -146,3 +150,28 @@ class CommentUpdateAPIView(APIView):
         }
 
         return Response(mock_response, status=status.HTTP_200_OK)
+
+
+class CommentDeleteAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="댓글 삭제",
+        summary="댓글 삭제",
+        description="댓글을 삭제합니다.",
+        tags=["댓글"],
+        responses={
+            200: OpenApiResponse(description="댓글이 삭제되었습니다."),
+            403: OpenApiResponse(description="해당 댓글을 삭제할 권한이 없습니다."),
+            404: OpenApiResponse(description="존재하지 않는 댓글입니다."),
+        },
+    )
+    def delete(self, request: Request, comment_id: int) -> Response:
+
+        if comment_id not in mock_existing_ids:
+            return Response({"detail": "해당 댓글이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment_id in unauthorized_ids:
+            return Response({"detail": "해당 댓글을 삭제할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({"detail": "댓글이 삭제 되었습니다."}, status=status.HTTP_200_OK)
