@@ -7,7 +7,7 @@ class StudentEnrollmentRequest(models.Model):
         APPROVED = "APPROVED", "승인"
         REJECTED = "REJECTED", "거절"
 
-    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="enrollment_requests")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="enrollment_requests")
     generation = models.ForeignKey("courses.Generation", on_delete=models.CASCADE, related_name="enrollment_requests")
     status = models.CharField(max_length=20, choices=EnrollmentStatus.choices, default=EnrollmentStatus.PENDING)
     accepted_at = models.DateTimeField(null=True, blank=True)

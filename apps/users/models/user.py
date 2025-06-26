@@ -23,7 +23,7 @@ class User(AbstractBaseUser):
     name = models.CharField(max_length=30)
     nickname = models.CharField(max_length=10, unique=True)
     phone_number = models.CharField(max_length=20, unique=True)
-    gender = models.CharField(max_length=6, choices=Gender.choices,default=Gender.MALE)
+    gender = models.CharField(max_length=6, choices=Gender.choices, default=Gender.MALE)
     birthday = models.DateField(default=date(2000, 1, 1))
     self_introduction = models.CharField(max_length=255, null=True)
     profile_image_url = models.CharField(max_length=255, null=True)

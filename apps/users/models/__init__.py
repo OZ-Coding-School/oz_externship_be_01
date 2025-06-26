@@ -1,10 +1,10 @@
-from .user import User
 from .permissions import (
+    PermissionsStaff,
     PermissionsStudent,
     PermissionsTrainingAssistant,
-    PermissionsStaff,
 )
 from .student_enrollment import StudentEnrollmentRequest
+from .user import User
 
 __all__ = [
     "User",
