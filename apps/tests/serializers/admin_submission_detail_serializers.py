@@ -3,7 +3,10 @@ from rest_framework import serializers
 
 from apps.courses.models import Generation, Subject
 from apps.tests.models import Test, TestDeployment, TestSubmission
-from apps.tests.serializers.admin_submission_serializers import CourseSerializer, StudentSerializer
+from apps.tests.serializers.admin_submission_serializers import (
+    CourseSerializer,
+    StudentSerializer,
+)
 
 
 class GenerationSerializer(serializers.ModelSerializer[Generation]):

@@ -3,8 +3,7 @@ from rest_framework import serializers
 
 from apps.courses.models import Course, Generation, Subject
 from apps.tests.models import Test, TestDeployment, TestSubmission
-from apps.users.models import PermissionsStudent
-from apps.users.models import User
+from apps.users.models import PermissionsStudent, User
 
 
 class UserSerializer(serializers.ModelSerializer[User]):
