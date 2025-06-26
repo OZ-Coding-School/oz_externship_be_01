@@ -1,10 +1,10 @@
 from django.urls import path
 
 from apps.qna.views.admin_views import (
+    AdminAnswerDeleteView,
     AdminCategoryCreateView,
     AdminCategoryDeleteView,
     AdminQuestionDeleteView,
-    AdminAnswerDeleteView
 )
 
 app_name = "qna"
