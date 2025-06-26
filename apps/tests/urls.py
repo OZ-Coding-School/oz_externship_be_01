@@ -8,11 +8,10 @@ from .views.admin_test_views import (
     AdminTestUpdateAPIView,
 )
 
-from .views.test_admin_view import (
-    create_test_questions,
-    delete_test_questions,
-    list_test_questions,
-    update_test_questions,
+from apps.tests.views.test_admin_view import (
+    TestQuestionCreateView,
+    TestQuestionListView,
+    TestQuestionUpdateDeleteView,
 )
 
 app_name = "tests"
@@ -23,8 +22,7 @@ urlpatterns = [
     path("admin/tests/<int:test_id>/", AdminTestDetailAPIView.as_view(), name="test-detail"),
     path("admin/tests/", AdminTestListView.as_view(), name="admin-test-list"),
     path("admin/tests/create", AdminTestCreateAPIView.as_view(), name="test-create"),
-    path("test-questions/", create_test_questions, name="create-test-questions"),
-    path("test-questions/<int:question_id>/", update_test_questions, name="update-test-questions"),
-    path("test-questions/<int:question_id>/delete/", delete_test_questions, name="delete-test-questions"),
-    path("test-questions/list/", list_test_questions, name="list-test-questions"),
+    path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
+    path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
+    path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
 ]
