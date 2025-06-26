@@ -26,11 +26,16 @@ urlpatterns = [
     path(
         "admin/test-submissions/",
         test_admin_view.AdminTestSubmissionsView.as_view(),
-        name="admin_submission_detail_or_delete",
-    ),  # 쪽지 시험 응시 내역 목록 조회
+        name="admin_submission_List",
+    ),  # 쪽지 시험 응시 내역 전체 목록 조회
     path(
-        "admin/test-submissions/<int:submission_id>/",
-        test_admin_view.AdminTestSubmissionDetailDeleteView.as_view(),
-        name="admin_submission_detail_or_delete",
-    ),  # 쪽지 시험 응시 내역 상세 조회 및 삭제
+        "admin/test-submissions/<int:submission_id>",
+        test_admin_view.AdminTestSubmissionDetailView.as_view(),
+        name="admin_submission_detail",
+    ),  # 쪽지 시험 응시 내역 상세 조회
+    path(
+        "admin/test-submissions/<int:submission_id>/delete",
+        test_admin_view.AdminTestSubmissionDeleteView.as_view(),
+        name="admin_submission_delete",
+    ),  # 쪽지 시험 응시 내역 삭제
 ]

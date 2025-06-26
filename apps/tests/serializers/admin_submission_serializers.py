@@ -1,8 +1,9 @@
-# 쪽지 시험 응시 내역 목록 조회
+# 쪽지 시험 응시 내역 전체 목록 조회
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation, Subject, User
 from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.users.models.permissions import PermissionsStudent
 
 
 class UserSerializer(serializers.ModelSerializer):  # type: ignore
@@ -11,8 +12,22 @@ class UserSerializer(serializers.ModelSerializer):  # type: ignore
         fields = ["id", "name", "nickname"]
 
 
-class GenerationSerializer(serializers.ModelSerializer):  # type: ignore
+class StudentSerializer(serializers.ModelSerializer):  # type: ignore
     user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = PermissionsStudent
+        fields = ["id", "user"]
+
+
+class CourseSerializer(serializers.ModelSerializer):  # type: ignore
+    class Meta:
+        model = Course
+        fields = ["id", "name"]
+
+
+class GenerationSerializer(serializers.ModelSerializer):  # type: ignore
+    course = CourseSerializer(read_only=True)
 
     class Meta:
         model = Generation
@@ -20,7 +35,6 @@ class GenerationSerializer(serializers.ModelSerializer):  # type: ignore
 
 
 class SubjectSerializer(serializers.ModelSerializer):  # type: ignore
-    generation = GenerationSerializer(read_only=True)
 
     class Meta:
         model = Subject
@@ -37,20 +51,23 @@ class TestSerializer(serializers.ModelSerializer):  # type: ignore
 
 class TestDeploymentSerializer(serializers.ModelSerializer):  # type: ignore
     test = TestSerializer(read_only=True)
+    generation = GenerationSerializer(read_only=True)
 
     class Meta:
         model = TestDeployment
-        fields = ["id", "generation"]
+        fields = ["id", "test", "generation"]
 
 
-class TestStartSerializer(serializers.ModelSerializer):  # type: ignore
+class TestListSerializer(serializers.ModelSerializer):  # type: ignore
     deployment = TestDeploymentSerializer(read_only=True)
+    student = StudentSerializer(read_only=True)
 
     class Meta:
         model = TestSubmission
         fields = [
             "id",
-            # "student",
+            "deployment",
+            "student",
             "cheating_count",
             "started_at",
         ]
