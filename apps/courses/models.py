@@ -42,7 +42,7 @@ class Subject(models.Model):
     title = models.CharField(max_length=30, unique=True)
     number_of_days = models.PositiveSmallIntegerField()
     number_of_hours = models.PositiveSmallIntegerField()
-    thumbnail_img_url = models.URLField(unique=True)
+    thumbnail_img_url = models.URLField()
     status = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
