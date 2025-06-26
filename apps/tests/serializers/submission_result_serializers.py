@@ -1,0 +1,29 @@
+from rest_framework import serializers
+
+from apps.tests.models import Test, TestDeployment, TestQuestion, TestSubmission
+
+
+class TestSerializer(serializers.ModelSerializer):  # type: ignore
+    class Meta:
+        model = Test
+        fields = ["id", "title", "thumbnail_img_url"]
+
+
+class TestDeploymentSerializer(serializers.ModelSerializer):  # type: ignore
+    test = TestSerializer(read_only=True)
+
+    class Meta:
+        model = TestDeployment
+        fields = [
+            "id",
+            "test",
+            "questions_snapshot_json",
+        ]
+
+
+class TestResultSerializer(serializers.ModelSerializer):  # type: ignore
+    deployment = TestDeploymentSerializer(read_only=True)
+
+    class Meta:
+        model = TestSubmission
+        fields = ["id", "deployment", "cheating_count", "answers_json"]

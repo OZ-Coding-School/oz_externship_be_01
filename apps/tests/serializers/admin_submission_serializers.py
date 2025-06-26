@@ -1,30 +1,56 @@
 # 쪽지 시험 응시 내역 목록 조회
 from rest_framework import serializers
 
-
-class StudentSerializer(serializers.Serializer):  # type: ignore
-    nickname = serializers.CharField()
-    name = serializers.CharField()
-    generation = serializers.CharField()
+from apps.courses.models import Course, Generation, Subject, User
+from apps.tests.models import Test, TestDeployment, TestSubmission
 
 
-class TestInfoSerializer(serializers.Serializer):  # type: ignore
-    title = serializers.CharField()
-    subject_title = serializers.CharField()
+class UserSerializer(serializers.ModelSerializer):  # type: ignore
+    class Meta:
+        model = User
+        fields = ["id", "name", "nickname"]
 
 
-class SubmissionSerializer(serializers.Serializer):  # type: ignore
-    submission_id = serializers.IntegerField()
-    student = StudentSerializer()
-    test = TestInfoSerializer()
-    score = serializers.IntegerField()
-    cheating_count = serializers.IntegerField()
-    started_at = serializers.DateTimeField()
-    submitted_at = serializers.DateTimeField()
+class GenerationSerializer(serializers.ModelSerializer):  # type: ignore
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Generation
+        fields = ["id", "course", "number"]
 
 
-class SubmissionListResponseSerializer(serializers.Serializer):  # type: ignore
-    count = serializers.IntegerField()
-    next = serializers.CharField(allow_null=True)
-    previous = serializers.CharField(allow_null=True)
-    results = SubmissionSerializer(many=True)
+class SubjectSerializer(serializers.ModelSerializer):  # type: ignore
+    generation = GenerationSerializer(read_only=True)
+
+    class Meta:
+        model = Subject
+        fields = ["id", "title"]
+
+
+class TestSerializer(serializers.ModelSerializer):  # type: ignore
+    subject = SubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ["id", "subject", "title"]
+
+
+class TestDeploymentSerializer(serializers.ModelSerializer):  # type: ignore
+    test = TestSerializer(read_only=True)
+
+    class Meta:
+        model = TestDeployment
+        fields = ["id", "generation"]
+
+
+class TestStartSerializer(serializers.ModelSerializer):  # type: ignore
+    deployment = TestDeploymentSerializer(read_only=True)
+
+    class Meta:
+        model = TestSubmission
+        fields = [
+            "id",
+            # "student",
+            "cheating_count",
+            "started_at",
+        ]
