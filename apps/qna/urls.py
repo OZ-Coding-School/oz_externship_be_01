@@ -9,10 +9,10 @@ from apps.qna.views.answers_views import (
 )
 
 from apps.qna.views.admin_views import (
+    AdminAnswerDeleteView,
     AdminCategoryCreateView,
     AdminCategoryDeleteView,
     AdminQuestionDeleteView,
-    AdminAnswerDeleteView
 )
 
 from apps.qna.views.questions_views import (
