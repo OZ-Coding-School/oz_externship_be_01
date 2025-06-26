@@ -1,31 +1,26 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.tests.serializers.admin_submission_detail_delete_serializers import (
-    SubmissionDetailSerializer,
-)
-from apps.tests.serializers.admin_submission_serializers import (
-    SubmissionListResponseSerializer,
-)
+from apps.tests.models import TestSubmission
+from apps.tests.serializers.admin_submission_serializers import TestStartSerializer
 
 
-# 쪽지시험 응시내역 목록 조회 MockAPI
+# 쪽지시험 응시내역 목록 조회
+@extend_schema(tags=["Tests/Admin"])
 class AdminTestSubmissionsView(APIView):
     permission_classes = [AllowAny]
+    serializers_class = TestStartSerializer
 
-    @extend_schema(
-        tags=["Tests/Admin"],
-        responses={
-            200: SubmissionListResponseSerializer,
-            400: {"message": "유효하지 않은 데이터입니다."},
-        },
-    )
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, submission_id: int) -> Response:
+        # mock_data = TestSubmission(
+        #     id=1,
+        #     cheating_count=2,
+        #     started_at="2025-06-26T09:01:00",
+        # )
         mock_data = {
             "count": 2,
             "next": None,
@@ -52,24 +47,15 @@ class AdminTestSubmissionsView(APIView):
             ],
         }
 
-        serializer = SubmissionListResponseSerializer(data=mock_data)
-        if not serializer.is_valid():
-            return Response(
-                {"message": "유효하지 않은 데이터입니다.", "errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+        serializer = TestStartSerializer(instance=mock_data)
         return Response({"data": mock_data, "message": "쪽지시험 응시내역 목록 조회 완료"}, status=status.HTTP_200_OK)
 
 
 # 쪽지시험 응시내역 상세 조회 및 삭제 MockAPI
+@extend_schema(tags=["Tests/Admin"])
 class AdminTestSubmissionDetailDeleteView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        tags=["Tests/Admin"],
-        responses={200: SubmissionDetailSerializer, 400: {"message": "유효하지 않은 데이터입니다."}},
-    )
     def get(self, request: Request, submission_id: int) -> Response:
         mock_data = {
             "submission_id": submission_id,
@@ -107,7 +93,7 @@ class AdminTestSubmissionDetailDeleteView(APIView):
             ],
         }
 
-        serializer = SubmissionDetailSerializer(data=mock_data)
+        serializer = TestStartSerializer(data=mock_data)
         if serializer.is_valid():
             return Response(
                 {"data": serializer.data, "message": "쪽지시험 응시내역 상세 조회 완료"}, status=status.HTTP_200_OK

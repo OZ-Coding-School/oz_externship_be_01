@@ -8,10 +8,12 @@ app_name = "tests"
 
 urlpatterns = [
     path(
-        "test/submissions/start/", test_user_view.TestSubmissionStartView.as_view(), name="submission_start"
+        "test/submissions/<int:test_id>/start/",
+        test_user_view.TestSubmissionStartView.as_view(),
+        name="submission_start",
     ),  # 쪽지 시험 응시
     path(
-        "test/submissions/<int:submission_id>/submit/",
+        "test/submissions/<int:deployment_id>/submit/",
         test_user_view.TestSubmissionSubmitView.as_view(),
         name="submission_submit",
     ),  # 쪽지 시험 제출
