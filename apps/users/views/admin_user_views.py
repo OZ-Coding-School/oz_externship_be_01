@@ -4,6 +4,7 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -116,6 +117,7 @@ class AdminUserDetailView(APIView):
 class AdminUserUpdateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminUserSerializer
+    parser_classes = [MultiPartParser]
 
     @extend_schema(
         summary="어드민 회원 정보 수정",
@@ -129,17 +131,6 @@ class AdminUserUpdateView(APIView):
         tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        # 수정 가능한 필드 정의
-        modifiable_fields = {
-            "name",
-            "gender",
-            "nickname",
-            "phone_number",
-            "is_active",
-            "profile_image_url",
-            "self_introduction",
-        }
-
         mock_user = User(
             id=user_id,
             email="admin@example.com",
@@ -149,26 +140,31 @@ class AdminUserUpdateView(APIView):
             gender="MALE",
             phone_number="010-0000-0000",
             self_introduction="안녕하세요",
-            profile_image_url="",
+            profile_image_url="media/users/profile_images/example.png",
             role="ADMIN",
             is_active=True,
             created_at=timezone.now(),
             updated_at=timezone.now(),
         )
 
-        # request.data에서 허용된 필드만 추려서 새 dict 구성
-        valid_data = {k: v for k, v in request.data.items() if k in modifiable_fields}
-
         serializer = self.serializer_class(
             instance=mock_user,
-            data=valid_data,
+            data=request.data,
             partial=True,
         )
         serializer.is_valid(raise_exception=True)
+        mock_user.name = serializer.validated_data.get("name")
+        mock_user.gender = serializer.validated_data.get("gender")
+        mock_user.phone_number = serializer.validated_data.get("phone_number")
+        profile_img_file = serializer.validated_data.get("profile_image_file")
+        mock_user.profile_image_url = (
+            f"media/users/profile_images/{profile_img_file}"
+            if profile_img_file is not None
+            else mock_user.profile_image_url
+        )
+        mock_user.self_introduction = serializer.validated_data.get("self_introduction")
 
-        updated_mock_user = serializer.update(mock_user, serializer.validated_data)
-
-        response_serializer = self.serializer_class(instance=updated_mock_user)
+        response_serializer = self.serializer_class(instance=mock_user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
