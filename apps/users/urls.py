@@ -1,6 +1,5 @@
 from django.urls import path
 from apps.users.views.withdrawal_views import UserDeleteView, UserRestoreView
-
 from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
