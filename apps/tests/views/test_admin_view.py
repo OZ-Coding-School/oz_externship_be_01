@@ -99,7 +99,7 @@ class AdminTestUpdateAPIView(APIView):
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
 )
-class TestDetailAPIView(APIView):
+class AdminTestDetailAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = TestDetailSerializer
 
@@ -176,7 +176,7 @@ class AdminTestListView(APIView):
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
 )
-class TestCreateAPIView(APIView):
+class AdminTestCreateAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = TestCreateSerializer
 
