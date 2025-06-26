@@ -89,8 +89,8 @@ for key, value in DATABASES.items():
             raise ValueError(f"Database {key} is empty")
 
 # Redis Settings
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT")
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 
 if not REDIS_HOST or not REDIS_PORT:
     raise ValueError("REDIS_HOST and REDIS_PORT must be set")
