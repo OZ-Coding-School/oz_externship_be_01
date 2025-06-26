@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -32,6 +34,10 @@ class Generation(models.Model):
     class Meta:
         unique_together = ("course", "number")
         db_table = "generations"
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(args, kwargs)
+        self.registered_students = None
 
     def __str__(self) -> str:
         return f"{self.course.name} - {self.number}기"
