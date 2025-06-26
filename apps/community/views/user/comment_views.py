@@ -31,7 +31,7 @@ class CommentListAPIView(APIView):
             ),
         },
     )
-    def get(self, request:Request, post_id:int) -> Response:
+    def get(self, request: Request, post_id: int) -> Response:
 
         if not post_id:
             return Response({"detail": "post_id는 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -45,7 +45,8 @@ class CommentListAPIView(APIView):
         )
 
         mock_comment2 = Comment(
-            id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16))
+            id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16)
+        )
 
         results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
 
