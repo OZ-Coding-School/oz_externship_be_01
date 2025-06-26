@@ -10,7 +10,7 @@ from apps.community.serializers.community_serializer import (
 )
 
 # 1, 2, 3번 댓글만 존재하는걸로 임의로 결정?
-mock_existing_ids = [i for i in range(1, 4)]
+mock_existing_ids = range(1, 4)
 
 
 class AdminCommentDeleteAPIView(APIView):
@@ -25,8 +25,6 @@ class AdminCommentDeleteAPIView(APIView):
     )
     def delete(self, request: Request, comment_id: int) -> Response:
         if comment_id not in mock_existing_ids:
-            serializer = CommentDeleteResponseSerializer({"detail": "해당 댓글이 존재하지 않습니다."})
-            return Response(serializer.data, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "해당 댓글이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = CommentDeleteResponseSerializer({"detail": "댓글을 삭제하셨습니다."})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
