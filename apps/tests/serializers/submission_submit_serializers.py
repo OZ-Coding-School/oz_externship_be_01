@@ -4,7 +4,7 @@ from rest_framework import serializers
 from apps.tests.models import TestSubmission
 
 
-class TestSubmitSerializer(serializers.ModelSerializer):  # type: ignore
+class TestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
 
     class Meta:
         model = TestSubmission
