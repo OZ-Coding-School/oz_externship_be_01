@@ -12,7 +12,7 @@ def two_weeks_later() -> date:
 
 class Withdrawal(models.Model):
     class Reason(models.TextChoices):
-        TOO_EXPENSIVE = "TOO_EXPENSIVE", "너무 비쌈"
+        TOO_EXPENSIVE = "TOO_EXPENSIVE", "비쌈"
         NOT_SATISFIED = "NOT_SATISFIED", "불만족"
         ETC = "ETC", "기타"
 
