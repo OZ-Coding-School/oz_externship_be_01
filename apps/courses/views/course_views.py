@@ -17,11 +17,7 @@ from apps.courses.serializers.course_serializers import (
 class CourseListCreateView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        summary="과정 목록 조회",
-        responses=CourseListSerializer(many=True),
-        tags=["course"]
-    )
+    @extend_schema(summary="과정 목록 조회", responses=CourseListSerializer(many=True), tags=["course"])
     def get(self, request: Request) -> Response:
         mock_courses_data: list[dict[str, Any]] = [
             {
