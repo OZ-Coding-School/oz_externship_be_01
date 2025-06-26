@@ -1,11 +1,14 @@
+from typing import Any
 from rest_framework import serializers
-# 참가코드 구현
-class CodeValidationRequestSerializer(serializers.Serializer):
+from rest_framework.serializers import Serializer
+
+
+class CodeValidationRequestSerializer(Serializer[Any]):
     deployment_id = serializers.IntegerField()
     access_code = serializers.CharField(max_length=64)
 
-# 쪽지시험 배포 생성
-class DeploymentCreateSerializer(serializers.Serializer):
+
+class DeploymentCreateSerializer(Serializer[Any]):
     test_id = serializers.IntegerField()
     generation_id = serializers.IntegerField()
     duration_time = serializers.IntegerField()
@@ -13,8 +16,7 @@ class DeploymentCreateSerializer(serializers.Serializer):
     close_at = serializers.DateTimeField()
 
 
-# 배포 목록 조회용
-class DeploymentListSerializer(serializers.Serializer):
+class DeploymentListSerializer(Serializer[Any]):
     deployment_id = serializers.IntegerField()
     test_title = serializers.CharField()
     subject_title = serializers.CharField()
@@ -23,35 +25,35 @@ class DeploymentListSerializer(serializers.Serializer):
     average_score = serializers.FloatField()
     status = serializers.CharField()
     created_at = serializers.DateTimeField()
-# 배포 상세 조회용
-class TestSerializer(serializers.Serializer):
+
+
+class TestSerializer(Serializer[Any]):
     test_id = serializers.IntegerField()
     test_title = serializers.CharField()
     subject_title = serializers.CharField()
     question_count = serializers.IntegerField()
 
 
-class DeploymentSerializer(serializers.Serializer):
+class DeploymentSerializer(Serializer[Any]):
     deployment_id = serializers.IntegerField()
     access_url = serializers.URLField()
     access_code = serializers.CharField()
-    course_title = serializers.CharField()  # 모델 필드명 반영
+    course_title = serializers.CharField()
     generation_title = serializers.CharField()
-    duration_time = serializers.IntegerField()  # 모델 필드명 반영
-    open_at = serializers.DateTimeField()       # 모델 필드명 반영
-    close_at = serializers.DateTimeField()      # 모델 필드명 반영
+    duration_time = serializers.IntegerField()
+    open_at = serializers.DateTimeField()
+    close_at = serializers.DateTimeField()
     status = serializers.CharField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
 
-
-class SubmissionStatsSerializer(serializers.Serializer):
+class SubmissionStatsSerializer(Serializer[Any]):
     total_participants = serializers.IntegerField()
-    not_participated = serializers.IntegerField()   # 필드명 통일
+    not_participated = serializers.IntegerField()
 
 
-class DeploymentDetailSerializer(serializers.Serializer):
+class DeploymentDetailSerializer(Serializer[Any]):
     test = TestSerializer()
     deployment = DeploymentSerializer()
     submission_stats = SubmissionStatsSerializer()
