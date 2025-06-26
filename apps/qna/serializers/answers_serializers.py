@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.qna.models import Answer, AnswerComment, AnswerImage
 
+
 class AnswerListSerializer(serializers.ModelSerializer[Answer]):
     author = serializers.SerializerMethodField()
 
@@ -19,7 +20,7 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
             "updated_at",
         ]
 
-    def get_author(self, obj):
+    def get_author(self, obj: Answer) -> dict[str, Any]:
         return {
             "id": obj.author.id,
             "nickname": obj.author.nickname,
@@ -41,11 +42,9 @@ class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
     image_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
 
-
     class Meta:
         model = Answer
         fields = ["content", "image_files", "image_urls"]
-
 
 
 class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):

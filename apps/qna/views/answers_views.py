@@ -2,18 +2,19 @@ from datetime import datetime
 
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import status, permissions
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import permissions, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.qna.models import Answer, Question, QuestionCategory, AnswerImage
+from apps.qna.models import Answer, AnswerImage, Question, QuestionCategory
 from apps.qna.serializers.answers_serializers import (
     AnswerCommentCreateSerializer,
     AnswerCreateSerializer,
-    AnswerUpdateSerializer, AnswerListSerializer,
+    AnswerListSerializer,
+    AnswerUpdateSerializer,
 )
 from apps.users.models import User
 
@@ -38,7 +39,7 @@ class AnswerCreateView(APIView):
             title="더미 질문 제목",
             content="더미 질문 내용",
             author=User(id=1, nickname="oz_student"),
-            category=QuestionCategory(id=2, name="더미")
+            category=QuestionCategory(id=2, name="더미"),
         )
 
         dummy_answer = Answer(
@@ -53,11 +54,11 @@ class AnswerCreateView(APIView):
 
         dummy_answer_images = [
             AnswerImage(
-            id = i,
-            answer = dummy_answer,
-            img_url=f'/media/{image.name}',
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+                id=i,
+                answer=dummy_answer,
+                img_url=f"/media/{image.name}",
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
             )
             for i, image in enumerate(serializer.validated_data["image_files"])
         ]
@@ -78,7 +79,7 @@ class AnswerUpdateView(APIView):
         description="질문에 대한 답변 수정",
         tags=["answer"],
     )
-    def put(self, request: Request, question_id:int, answer_id: int) -> Response:
+    def put(self, request: Request, question_id: int, answer_id: int) -> Response:
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -87,7 +88,7 @@ class AnswerUpdateView(APIView):
             title="더미 질문 제목",
             content="더미 질문 내용",
             author=User(id=1, nickname="oz_student"),
-            category=QuestionCategory(id=2, name="더미")
+            category=QuestionCategory(id=2, name="더미"),
         )
 
         dummy_answer = Answer(
@@ -102,11 +103,11 @@ class AnswerUpdateView(APIView):
 
         dummy_answer_images = [
             AnswerImage(
-                id = i,
-                answer = dummy_answer,
-                img_url=f'/media/{image.name}',
+                id=i,
+                answer=dummy_answer,
+                img_url=f"/media/{image.name}",
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
             for i, image in enumerate(serializer.validated_data["image_files"])
         ]
@@ -123,18 +124,8 @@ class AdoptAnswerView(APIView):
         description="답변 채택",
         tags=["answer"],
         parameters=[
-            OpenApiParameter(
-                name="question_id",
-                type=int,
-                location=OpenApiParameter.PATH,
-                description="질문 ID"
-            ),
-            OpenApiParameter(
-                name="answer_id",
-                type=int,
-                location=OpenApiParameter.PATH,
-                description="채택할 답변 ID"
-            ),
+            OpenApiParameter(name="question_id", type=int, location=OpenApiParameter.PATH, description="질문 ID"),
+            OpenApiParameter(name="answer_id", type=int, location=OpenApiParameter.PATH, description="채택할 답변 ID"),
         ],
         responses={200: OpenApiTypes.OBJECT},
     )
