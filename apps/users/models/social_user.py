@@ -1,5 +1,7 @@
 from django.db import models
-from apps.users.models import User
+
+from apps.users.models.user import User
+
 
 class SocialUser(models.Model):
     class Provider(models.TextChoices):
