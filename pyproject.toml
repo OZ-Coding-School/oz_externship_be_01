@@ -46,6 +46,7 @@ plugins = ["mypy_django_plugin.main"]
 python_version = 3.12
 strict = true
 exclude = ["migrations", "manage.py"]
+python_path = "."
 
 [tool.django-stubs]
 django_settings_module = "config.settings.local"
