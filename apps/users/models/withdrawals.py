@@ -27,4 +27,4 @@ class Withdrawal(models.Model):
         db_table = "withdrawals"
 
     def __str__(self) -> str:
-        return f"{self.user.email} - {self.get_reason_display()}"
+        return f"{self.user.email} - {self.get_reason_display()}" # type: ignore[attr-defined]
