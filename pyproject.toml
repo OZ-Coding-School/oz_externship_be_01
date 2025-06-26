@@ -19,6 +19,7 @@ dependencies = [
     "django-redis (>=5.4.0,<6.0.0)",
     "djangorestframework-simplejwt (>=5.5.0,<6.0.0)",
     "django-filter (>=25.1,<26.0)",
+    "pillow (>=11.2.1,<12.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
