@@ -1,3 +1,4 @@
+# 쪽지 시험 결과 조회
 from rest_framework import serializers
 
 from apps.tests.models import Test, TestDeployment, TestQuestion, TestSubmission

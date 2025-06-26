@@ -1,3 +1,4 @@
+# 쪽지 시험 제출
 from rest_framework import serializers
 
 from apps.tests.models import TestSubmission

@@ -14,7 +14,7 @@ from apps.tests.serializers.submission_start_serializers import (
 from apps.tests.serializers.submission_submit_serializers import TestSubmitSerializer
 
 
-# 쪽지시험 응시 API
+# 쪽지 시험 응시
 @extend_schema(tags=["Tests"])
 class TestSubmissionStartView(APIView):
     permission_classes = [AllowAny]
@@ -64,7 +64,7 @@ class TestSubmissionStartView(APIView):
         )
 
         # 유효성 검증
-        # request.data에 access_code가 없으면 에러
+        # request.data에 access_code가 없으면 에러 반환
         if "access_code" not in data:
             return Response({"message": "시험 코드를 입력해 주세요."}, status=400)
 
@@ -72,12 +72,11 @@ class TestSubmissionStartView(APIView):
         if mock_data.access_code != data.get("access_code"):
             return Response({"message": "등록 되지 않은 시험 코드 입니다."}, status=403)
 
-        # serializer로 직렬화 후 응답
         serializer = self.serializer_class(mock_data)
         return Response({"message": "쪽지시험 응시 시작 완료", "data": serializer.data}, status=status.HTTP_200_OK)
 
 
-# 쪽지 시험 제출 API
+# 쪽지 시험 제출
 @extend_schema(
     tags=["Tests"],
     request=TestSubmitSerializer,
@@ -114,7 +113,7 @@ class TestSubmissionSubmitView(APIView):
         return Response({"message": "쪽지시험 제출 완료", "data": serializer.data}, status=status.HTTP_200_OK)
 
 
-# 쪽지 시험 결과 조회 API
+# 쪽지 시험 결과 조회
 class TestSubmissionResultView(APIView):
     permission_classes = [AllowAny]
     serializer_class = TestResultSerializer
@@ -168,5 +167,5 @@ class TestSubmissionResultView(APIView):
             ),
         )
 
-        serializer = TestResultSerializer(instance=mock_data)
+        serializer = self.serializer_class(instance=mock_data)
         return Response({"message": "쪽지시험 결과 조회 완료", "data": serializer.data}, status=status.HTTP_200_OK)
