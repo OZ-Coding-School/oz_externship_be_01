@@ -30,6 +30,9 @@ class AdminUserListSerializer(serializers.ModelSerializer[User]):
 
 # 상세, 수정 등 기본 시리얼라이저
 class AdminUserSerializer(serializers.ModelSerializer[User]):
+    profile_image_file = serializers.ImageField(write_only=True)
+    profile_image_url = serializers.URLField(read_only=True)
+
     class Meta:
         model = User
         fields = "__all__"
@@ -42,6 +45,11 @@ class AdminUserSerializer(serializers.ModelSerializer[User]):
             "email",
             "role",
         ]
+
+    # def validate(self, attrs):
+    #     img_file = attrs.pop("profile_image_file")
+    #     # 여기에 이미지 저장 로직.
+    #     return super().validate(attrs)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # 사용자가 fields 키워드로 필드 제한할 수 있도록 허용
