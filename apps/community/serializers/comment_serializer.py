@@ -41,3 +41,11 @@ class CommentCreateSerializer(serializers.ModelSerializer[Any]):
     class Meta:
         model = Comment
         fields = ["content"]
+
+
+class CommentUpdateSerializer(CommentCreateSerializer):
+
+    def validate(self, value: Any) -> Any:
+        if not value:
+            raise serializers.ValidationError("변경할 내용이 없습니다.")
+        return value
