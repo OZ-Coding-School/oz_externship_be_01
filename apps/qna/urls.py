@@ -6,7 +6,6 @@ from apps.qna.views.answers_views import (
     AnswerCreateView,
     AnswerUpdateView,
 )
-
 from apps.qna.views.questions_views import (
     QuestionCreateView,
     QuestionDetailView,
