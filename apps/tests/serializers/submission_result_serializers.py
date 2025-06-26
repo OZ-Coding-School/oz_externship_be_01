@@ -4,13 +4,13 @@ from rest_framework import serializers
 from apps.tests.models import Test, TestDeployment, TestQuestion, TestSubmission
 
 
-class TestSerializer(serializers.ModelSerializer):  # type: ignore
+class TestSerializer(serializers.ModelSerializer[Test]):
     class Meta:
         model = Test
         fields = ["id", "title", "thumbnail_img_url"]
 
 
-class TestDeploymentSerializer(serializers.ModelSerializer):  # type: ignore
+class TestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
     test = TestSerializer(read_only=True)
 
     class Meta:
@@ -22,7 +22,7 @@ class TestDeploymentSerializer(serializers.ModelSerializer):  # type: ignore
         ]
 
 
-class TestResultSerializer(serializers.ModelSerializer):  # type: ignore
+class TestResultSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = TestDeploymentSerializer(read_only=True)
 
     class Meta:

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from apps.tests.models import Test, TestDeployment
 
 
-class TestSerializer(serializers.ModelSerializer):  # type: ignore
+class TestSerializer(serializers.ModelSerializer[Test]):
     class Meta:
         model = Test
         fields = [
@@ -14,7 +14,7 @@ class TestSerializer(serializers.ModelSerializer):  # type: ignore
         ]
 
 
-class TestStartSerializer(serializers.ModelSerializer):  # type: ignore
+class TestStartSerializer(serializers.ModelSerializer[TestDeployment]):
     test = TestSerializer(read_only=True)
     access_code = serializers.CharField(write_only=True)
 
