@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views.test_admin_view import (
+from .views.admin_test_views import (
     AdminTestCreateAPIView,
     AdminTestDeleteAPIView,
     AdminTestDetailAPIView,
