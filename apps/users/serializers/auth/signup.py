@@ -20,6 +20,7 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
             "password_confirm",
             "name",
             "nickname",
+            "gender",
             "phone_number",
             "birthday",
             "self_introduction",
