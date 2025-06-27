@@ -1,9 +1,7 @@
 from datetime import datetime
-from typing import Any
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import serializers, status
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -13,8 +11,9 @@ from apps.community.models import Comment, CommentTags, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
+    CommentTagSerializer,
     CommentUpdateSerializer,
-    User, CommentTagSerializer,
+    User,
 )
 
 mock_existing_ids = range(1, 4)
@@ -58,7 +57,10 @@ class CommentListAPIView(APIView):
         mock_comment2_tags = [CommentTags(tagged_user=user1, comment=mock_comment1)]
 
         results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
-        tag_serializer = [CommentTagSerializer(mock_comment1_tags, many=True), CommentTagSerializer(mock_comment2_tags, many=True)]
+        tag_serializer = [
+            CommentTagSerializer(mock_comment1_tags, many=True),
+            CommentTagSerializer(mock_comment2_tags, many=True),
+        ]
 
         for data, serializer in zip(results, tag_serializer):
             data["tagged_users"] = serializer.data
