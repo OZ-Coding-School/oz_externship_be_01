@@ -9,8 +9,9 @@ from drf_spectacular.views import (
 urlpatterns: list[URLPattern | URLResolver] = [
     path("api/v1/qna/", include("apps.qna.urls")),
     path("api/v1/community/", include("apps.community.urls")),
-    path("api/v1/admin/course/", include("apps.courses.urls")),
+    path("api/v1/admin/", include("apps.courses.urls")),
     path("api/v1/", include("apps.users.urls")),
+    path("api/v1/", include("apps.tests.urls", namespace="tests")),
 ]
 
 if settings.DEBUG:
@@ -22,6 +23,3 @@ if settings.DEBUG:
             path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
             path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         ]
-
-
-urlpatterns += [path("api/v1/", include("apps.tests.urls", namespace="tests"))]
