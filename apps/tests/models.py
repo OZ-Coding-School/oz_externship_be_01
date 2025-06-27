@@ -67,9 +67,9 @@ class TestDeployment(models.Model):
 
 
 class TestSubmission(models.Model):
-    # TODO: PermissionsStudent 모델 merge 후 student 필드 주석 해제
+
     # ERD 기준: student_id
-    # student = models.ForeignKey("users.PermissionsStudent", on_delete=models.CASCADE, related_name="test_submissions")
+    student = models.ForeignKey("users.PermissionsStudent", on_delete=models.CASCADE, related_name="test_submissions")
 
     # ERD 기준: deployment_id
     deployment = models.ForeignKey(TestDeployment, on_delete=models.CASCADE, related_name="submissions")
