@@ -36,7 +36,7 @@ class CategoryListResponseSerializer(ModelSerializer[PostCategory]):
         fields = ["id", "name", "status", "created_at", "updated_at"]
 
 
-class CategoryUpdateRequestSerializer(ModelSerializer[PostCategory]):
+class CommunityCategoryUpdateAPIView(ModelSerializer[PostCategory]):
     class Meta:
         model = PostCategory
         fields = ["id", "name", "status", "updated_at"]
