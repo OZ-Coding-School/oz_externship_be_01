@@ -12,7 +12,7 @@ from apps.courses.models import Subject
 
 # 내부 앱 - models
 from apps.tests.models import Test, TestQuestion
-from apps.tests.serializers.admin_crud_serializers import (
+from apps.tests.serializers.test_serializers import (
     AdminTestUpdateSerializer,
     TestCreateSerializer,
     TestDetailSerializer,
@@ -22,7 +22,7 @@ from apps.tests.serializers.admin_crud_serializers import (
 
 
 @extend_schema(
-    tags=["Admin | Test CRUD"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 삭제 API",
     description=(
         "관리자 또는 스태프 권한으로 특정 쪽지시험(Test)을 삭제합니다.\n"
@@ -54,7 +54,7 @@ class AdminTestDeleteAPIView(APIView):
 
 # (admin)쪽지시험 수정
 @extend_schema(
-    tags=["Admin | Test CRUD"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 수정 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
@@ -94,7 +94,7 @@ class AdminTestUpdateAPIView(APIView):
 
 # (admin)쪽지시험 상세조회
 @extend_schema(
-    tags=["Admin | Test CRUD"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 상세조회 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
@@ -139,7 +139,7 @@ class AdminTestDetailAPIView(APIView):
 
 # (admin)쪽지시험 목록조회
 @extend_schema(
-    tags=["Admin | Test CRUD"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 목록조회 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
@@ -171,7 +171,7 @@ class AdminTestListView(APIView):
 
 
 @extend_schema(
-    tags=["Admin | Test CRUD"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 생성 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
