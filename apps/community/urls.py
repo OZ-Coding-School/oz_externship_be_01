@@ -5,6 +5,7 @@ from apps.community.views.admin.category_views import (
     AdminCommunityCategoryCreateAPIView,
     AdminCommunityCategoryDetailAPIView,
     AdminCommunityCategoryStatusUpdateAPIView,
+    AdminCategoryListAPIView,
     AdminCommunityCategoryUpdateAPIView,
 )
 from apps.community.views.admin.comment_views import AdminCommentDeleteAPIView
@@ -35,9 +36,5 @@ urlpatterns = [
         AdminCommunityCategoryUpdateAPIView.as_view(),
         name="admin_category_update",
     ),
-    path(
-        "admin/categories/<int:category_id>/update/",
-        AdminCommunityCategoryUpdateAPIView.as_view(),
-        name="admin_category_update",
-    ),
+    path("admin/categories/<int:category_id>/update/", AdminCommunityCategoryUpdateAPIView.as_view(), name="admin_category_update"),
 ]
