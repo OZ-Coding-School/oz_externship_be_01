@@ -14,7 +14,7 @@ from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
     CommentUpdateSerializer,
-    User,
+    User, CommentTagSerializer,
 )
 
 mock_existing_ids = range(1, 4)
@@ -54,10 +54,14 @@ class CommentListAPIView(APIView):
             id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16)
         )
 
-        mock_comment1.tags = [CommentTags(tagged_user=user2)]  # type: ignore
-        mock_comment2.tags = [CommentTags(tagged_user=user1)]  # type: ignore
+        mock_comment1_tags = [CommentTags(tagged_user=user2, comment=mock_comment2)]
+        mock_comment2_tags = [CommentTags(tagged_user=user1, comment=mock_comment1)]
 
         results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
+        tag_serializer = [CommentTagSerializer(mock_comment1_tags, many=True), CommentTagSerializer(mock_comment2_tags, many=True)]
+
+        for data, serializer in zip(results, tag_serializer):
+            data["tagged_users"] = serializer.data
 
         return Response(
             {"count": 23, "next": f"/api/v1/comments/?post_id={post_id}&page=2", "previous": None, "results": results},
