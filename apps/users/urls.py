@@ -8,11 +8,19 @@ from apps.users.views.admin_user_views import (
     AdminUserRoleUpdateView,
     AdminUserUpdateView,
 )
+from apps.users.views.profile_views import (
+    NicknameCheckView,
+    UserProfileUpdateView,
+    UserProfileView,
+)
 from apps.users.views.withdrawal_views import UserDeleteView, UserRestoreView
 
 urlpatterns = [
     path("users/delete/", UserDeleteView.as_view(), name="user-delete"),
     path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
+    path("profile/", UserProfileView.as_view(), name="user-profile"),
+    path("profile/update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
+    path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
