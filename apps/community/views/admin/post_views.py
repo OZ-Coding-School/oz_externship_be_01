@@ -8,10 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.community.serializers.post_pagination_serializers import AdminPostPaginationSerializer
-from apps.community.serializers.post_serializers import PostDetailSerializer
+from apps.community.serializers.post_serializers import PostDetailSerializer, PostUpdateSerializer
 from urllib.parse import urlencode
 
-# 어드민 게시글 목록 조회 (Mock data)
+# Mock data
+mock_post_cache = []
 def mock_posts(total=30) -> List[SimpleNamespace]:
     posts = []
     for i in range(1, total + 1):
@@ -24,6 +25,25 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
         author = SimpleNamespace(id=auth_id, pk=auth_id,
                                  nickname=f'user_{auth_id}',
                                  profile_image_url=f'https://cdn.example.com/user_{auth_id}.jpg')
+        comments = [
+            {
+                "id": i,
+                "author": {
+                    "id": i+1,
+                    "nickname": "jjang_admin",
+                    "profile_image_url": "https://example.com/profile.jpg"
+                },
+                "content": f"@zizon_admin 댓글입니다.{i}",
+                "created_at": "2025-06-20T13:00:00Z",
+                "tagged_users": [
+                    {
+                        "id": 1,
+                        "nickname": "zizon_admin",
+                        "profile_image_url": "https://example.com/profile.jpg"
+                    }
+                ]
+            }
+        ]
 
         post_dict = {
             'id': i,
@@ -31,9 +51,25 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
             'category': {'id': category_id, 'name': f'카테고리 {category_id}'},
             'author': author,
             'title': f'게시글 제목 {i}',
+            'content': f'게시글 내용입니다. ID: {i}',
             'view_count': i * 5,
             'likes_count': i % 3,
-            'comment_count': i % 1,
+            'attachments': [
+                {
+                    "id": i,
+                    "file_url": "https://example.com/file.pdf",
+                    "file_name": "example.pdf"
+                }
+            ],
+            'images': [
+                {
+                    "id": i,
+                    "image_url": "https://example.com/image.jpg",
+                    "image_name": "example.jpg"
+                }
+            ],
+            'comment_count': len(comments),
+            'comments': comments,
             'is_notice': is_notice,
             'is_visible': is_visible,
             'created_at': f"2025-06-{(i % 28) + 1:02d}T00:00:00Z",
@@ -41,6 +77,14 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
         }
         posts.append(SimpleNamespace(**post_dict))
     return posts
+
+# ID 기반으로 전체 포스트 정보 반환
+def get_post_by_id(post_id: int) -> SimpleNamespace:
+    posts = mock_posts()
+    for post in posts:
+        if post.id == post_id:
+            return post
+    raise ValueError(f"Post with id {post_id} not found")
 
 # 어드민 게시글 목록 조회
 class AdminPostListView(APIView):
@@ -118,57 +162,48 @@ class AdminPostDetailView(APIView):
         tags=['Community - 게시글'],
     )
     def get(self, request: Request, post_id: int) -> Response:
-        category_id = 1
-        mock_data = {
-            "id": post_id,
-            "category": {"id": category_id, "name": f"카테고리 {category_id}"},
-            "author": {
-                "id": 1,
-                "nickname": "zizon_admin",
-                "profile_image_url": "https://example.com/profile.jpg"
-            },
-            "title": "관리자용 상세 게시글",
-            "content": "이 게시글은 관리자 전용 조회입니다.",
-            "view_count": 154,
-            "likes_count": 12,
-            "comment_count": 3,
-            "is_visible": True,
-            "is_notice": False,
-            "attachments": [
-                {
-                    "id": 1,
-                    "file_url": "https://example.com/file.pdf",
-                    "file_name": "example.pdf"
-                }
-            ],
-            "images": [
-                {
-                    "id": 1,
-                    "file_url": "https://example.com/file.jpg",
-                    "file_name": "example.jpg"
-                }
-            ],
-            "comments": [
-                {
-                    "id": 201,
-                    "author": {
-                        "id": 2,
-                        "nickname": "jjang_admin",
-                    },
-                    "content": "@zizon_admin 댓글입니다.",
-                    "created_at": "2025-06-20T13:00:00Z",
-                    "tagged_users": [
-                        {
-                            "id": 1,
-                            "nickname": "zizon_admin",
-                            "profile_image_url": "https://example.com/profile.jpg"
-                        }
-                    ]
-                }
-            ],
-            "created_at": "2025-06-20T12:00:00Z",
-            "updated_at": "2025-06-20T12:00:00Z"
-        }
-
-        serializer = PostDetailSerializer(instance=SimpleNamespace(**mock_data))
+        post = get_post_by_id(post_id)
+        serializer = PostDetailSerializer(instance=post)
         return Response(serializer.data)
+
+# 어드민 게시글 수정
+class AdminPostUpdateView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="게시글 수정 (Mock)",
+        description="관리자 페이지에서 게시글 정보를 수정하는 mock API입니다. 실제 저장은 되지 않습니다.",
+        request=PostUpdateSerializer,
+        responses={200: PostDetailSerializer},
+        tags=["Community - 게시글"],
+    )
+    def patch(self, request: Request, post_id: int) -> Response:
+        serializer = PostUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        original_post = get_post_by_id(post_id)
+        original_category_id = original_post.category["id"]
+        category_id = validated.get("category", original_category_id)
+
+        mock_response = {
+            "id": post_id,
+            "category": {
+                "id": category_id,
+                "name": "공지사항" if category_id == 1 else f"카테고리 {category_id}"
+            },
+            "author": original_post.author,
+            "title": validated.get("title", original_post.title),
+            "content": validated.get("content", original_post.content),
+            "view_count": original_post.view_count,
+            "likes_count": original_post.likes_count,
+            "comment_count": original_post.comment_count,
+            "is_visible": validated.get("is_visible", original_post.is_visible),
+            "is_notice": original_post.is_notice,
+            "attachments": validated.get("attachments", original_post.attachments),
+            "images": original_post.images,
+            "comments": original_post.comments,
+            "created_at": original_post.created_at,
+            "updated_at": "2025-06-27T15:00:00Z",
+        }
+        return Response(PostDetailSerializer(instance=SimpleNamespace(**mock_response)).data)
