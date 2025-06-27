@@ -8,16 +8,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.community.serializers.post_pagination_serializers import AdminPostPaginationSerializer
+from apps.community.serializers.post_serializers import PostDetailSerializer
+from urllib.parse import urlencode
 
-
+# 어드민 게시글 목록 조회 (Mock data)
 def mock_posts(total=30) -> List[SimpleNamespace]:
     posts = []
     for i in range(1, total + 1):
         is_notice = (i == 1)
         is_visible = (i != 2)
 
-        cat_id = i % 5 + 1
-        category = SimpleNamespace(id=cat_id, pk=cat_id, name=f'카테고리 {cat_id}')
+        category_id = i % 5 + 1
 
         auth_id = i + 1
         author = SimpleNamespace(id=auth_id, pk=auth_id,
@@ -27,7 +28,7 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
         post_dict = {
             'id': i,
             'pk': i,
-            'category': category,
+            'category': {'id': category_id, 'name': f'카테고리 {category_id}'},
             'author': author,
             'title': f'게시글 제목 {i}',
             'view_count': i * 5,
@@ -36,16 +37,17 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
             'is_notice': is_notice,
             'is_visible': is_visible,
             'created_at': f"2025-06-{(i % 28) + 1:02d}T00:00:00Z",
+            'updated_at': f"2025-06-{(i % 28) + 1:02d}T00:00:00Z",
         }
         posts.append(SimpleNamespace(**post_dict))
     return posts
 
-
+# 어드민 게시글 목록 조회
 class AdminPostListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        summary='게시글 목록 조회',
+        summary='admin 게시글 목록 조회',
         description='사용자 화면용 게시글 목록을 조건 없이 mock 데이터로 반환합니다.',
         responses={200: AdminPostPaginationSerializer},
         tags=['Community - 게시글'],
@@ -91,7 +93,6 @@ class AdminPostListView(APIView):
 
         query_params['size'] = size
         query_params['page'] = page + 1
-        from urllib.parse import urlencode
         next_url = f'{base_url}?{urlencode(query_params)}' if end < total else None
 
         query_params['page'] = page - 1
@@ -104,4 +105,70 @@ class AdminPostListView(APIView):
             'results': current_page_posts,
         }
         serializer = AdminPostPaginationSerializer(instance=payload)
+        return Response(serializer.data)
+
+# 어드민 게시글 상세 조회
+class AdminPostDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary='admin 게시글 상세 조회',
+        description='관리자 페이지에서 게시글 상세 정보를 mock 데이터로 반환합니다.',
+        responses={200: PostDetailSerializer},
+        tags=['Community - 게시글'],
+    )
+    def get(self, request: Request, post_id: int) -> Response:
+        category_id = 1
+        mock_data = {
+            "id": post_id,
+            "category": {"id": category_id, "name": f"카테고리 {category_id}"},
+            "author": {
+                "id": 1,
+                "nickname": "zizon_admin",
+                "profile_image_url": "https://example.com/profile.jpg"
+            },
+            "title": "관리자용 상세 게시글",
+            "content": "이 게시글은 관리자 전용 조회입니다.",
+            "view_count": 154,
+            "likes_count": 12,
+            "comment_count": 3,
+            "is_visible": True,
+            "is_notice": False,
+            "attachments": [
+                {
+                    "id": 1,
+                    "file_url": "https://example.com/file.pdf",
+                    "file_name": "example.pdf"
+                }
+            ],
+            "images": [
+                {
+                    "id": 1,
+                    "file_url": "https://example.com/file.jpg",
+                    "file_name": "example.jpg"
+                }
+            ],
+            "comments": [
+                {
+                    "id": 201,
+                    "author": {
+                        "id": 2,
+                        "nickname": "jjang_admin",
+                    },
+                    "content": "@zizon_admin 댓글입니다.",
+                    "created_at": "2025-06-20T13:00:00Z",
+                    "tagged_users": [
+                        {
+                            "id": 1,
+                            "nickname": "zizon_admin",
+                            "profile_image_url": "https://example.com/profile.jpg"
+                        }
+                    ]
+                }
+            ],
+            "created_at": "2025-06-20T12:00:00Z",
+            "updated_at": "2025-06-20T12:00:00Z"
+        }
+
+        serializer = PostDetailSerializer(instance=SimpleNamespace(**mock_data))
         return Response(serializer.data)
