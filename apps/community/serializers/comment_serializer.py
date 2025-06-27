@@ -1,10 +1,9 @@
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractUser
 from rest_framework import serializers
 
-from apps.community.models import Comment, Post
+from apps.community.models import Comment, CommentTags, Post
 
 User = get_user_model()
 
@@ -15,18 +14,21 @@ class UserCommentSerializer(serializers.ModelSerializer[Any]):
         fields = ("id", "nickname")
 
 
+class CommentTagSerializer(serializers.ModelSerializer[Any]):
+    tagged_user = UserCommentSerializer(read_only=True)
+
+    class Meta:
+        model = CommentTags
+        fields = ["tagged_user"]
+
+
 class CommentResponseSerializer(serializers.ModelSerializer[Any]):
     author = UserCommentSerializer(read_only=True)
+    tagged_users = CommentTagSerializer(source="tags", many=True, read_only=True)
 
     class Meta:
         model = Comment
-        fields = (
-            "id",
-            "author",
-            "content",
-            "created_at",
-            "updated_at",
-        )
+        fields = ("id", "author", "content", "created_at", "updated_at", "tagged_users")
         read_only_fields = ("created_at", "updated_at")
 
 

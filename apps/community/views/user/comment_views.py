@@ -1,18 +1,17 @@
 from datetime import datetime
-from typing import Any
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import serializers, status
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Comment, Post
+from apps.community.models import Comment, CommentTags, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
+    CommentTagSerializer,
     CommentUpdateSerializer,
     User,
 )
@@ -44,8 +43,8 @@ class CommentListAPIView(APIView):
 
         user1 = User(id=5, nickname="유저1")
         user2 = User(id=6, nickname="유저2")
-
         post = Post(id=post_id)
+
         mock_comment1 = Comment(
             id=1, post=post, author=user1, content="@tae 좋은 글 감사합니다!", created_at=datetime(2025, 6, 20, 13, 15)
         )
@@ -54,7 +53,17 @@ class CommentListAPIView(APIView):
             id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16)
         )
 
+        mock_comment1_tags = [CommentTags(tagged_user=user2, comment=mock_comment2)]
+        mock_comment2_tags = [CommentTags(tagged_user=user1, comment=mock_comment1)]
+
         results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
+        tag_serializer = [
+            CommentTagSerializer(mock_comment1_tags, many=True),
+            CommentTagSerializer(mock_comment2_tags, many=True),
+        ]
+
+        for data, serializer in zip(results, tag_serializer):
+            data["tagged_users"] = serializer.data
 
         return Response(
             {"count": 23, "next": f"/api/v1/comments/?post_id={post_id}&page=2", "previous": None, "results": results},
