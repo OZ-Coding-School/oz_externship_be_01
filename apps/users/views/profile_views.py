@@ -1,4 +1,3 @@
-from django.contrib.auth.models import AnonymousUser
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -103,6 +102,8 @@ class UserProfileUpdateView(APIView):
 
 # 닉네임 중복 확인
 class NicknameCheckView(APIView):
+    permission_classes = [AllowAny]
+
     @extend_schema(
         request=NicknameCheckSerializer,
         description="(Mock) 닉네임 중복 확인 API",
