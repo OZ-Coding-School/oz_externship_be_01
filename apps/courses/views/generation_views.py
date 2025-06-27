@@ -3,8 +3,8 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.courses.models import Course, Generation
@@ -23,7 +23,7 @@ class GenerationCreateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
 
-    def post(self, request:Request) -> Response:
+    def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
 
@@ -36,7 +36,7 @@ class GenerationListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
 
-    def get(self, request:Request) -> Response:
+    def get(self, request: Request) -> Response:
         queryset = Generation.objects.select_related("course").annotate(registered_students=Count("students"))
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -47,7 +47,7 @@ class GenerationDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
 
-    def get(self, request:Request, pk:int) -> Response:
+    def get(self, request: Request, pk: int) -> Response:
         try:
             gen = Generation.objects.select_related("course").annotate(registered_students=Count("students")).get(pk=pk)
         except Generation.DoesNotExist:
@@ -60,7 +60,7 @@ class GenerationUpdateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
 
-    def patch(self, request:Request, pk:int) -> Response    :
+    def patch(self, request: Request, pk: int) -> Response:
         try:
             gen = Generation.objects.get(pk=pk)
         except Generation.DoesNotExist:
@@ -75,9 +75,9 @@ class GenerationUpdateView(APIView):
 class GenerationDeleteView(APIView):
     permission_classes = [AllowAny]
 
-    def delete(self,request:Request, pk:int) -> Response:
+    def delete(self, request: Request, pk: int) -> Response:
         try:
-            gen = Generation.objects.annotate(registered_students=Coalesce(Count("students"),0)).get(pk=pk)
+            gen = Generation.objects.annotate(registered_students=Coalesce(Count("students"), 0)).get(pk=pk)
         except Generation.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -94,21 +94,21 @@ class GenerationTrendView(APIView):
 
     def get(
         self,
-        request:Request,
-    )->Response:
+        request: Request,
+    ) -> Response:
         payload = {"course_id": 101, "course_name": "백엔드", "labels": [1, 2, 3, 4], "people_count": [25, 30, 28, 32]}
         serializer = self.serializer_class(data=payload)
         if serializer.is_valid(raise_exception=True):
-            return  Response(serializer.data, status=status.HTTP_200_OK)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MonthlygenerationView(APIView):
     permission_classes = [AllowAny]
     serializer_class = MonthlyGenerationSerializer
 
-    def get(self, request:Request) -> Response:
+    def get(self, request: Request) -> Response:
         payload = {
             "course_id": 101,
             "course_name": "백엔드",
@@ -119,18 +119,19 @@ class MonthlygenerationView(APIView):
         serializer = self.serializer_class(data=payload)
         if serializer.is_valid():
             return Response(serializer.data, status=status.HTTP_200_OK)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OngoingGenerationView(APIView):
     permission_classes = [AllowAny]
     serializer_class = OngoingSerializer
 
-    def get(self, request:Request) -> Response:
+    def get(self, request: Request) -> Response:
         payload = {"labels": ["백엔드", "프론트", "풀스택"], "people_count": [25, 30, 30]}
         serializer = self.serializer_class(data=payload)
         if serializer.is_valid():
             return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)

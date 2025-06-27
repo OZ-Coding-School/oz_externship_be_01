@@ -32,6 +32,7 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
         return attrs
 
+
 # 기수 목록
 class GenerationListSerializer(serializers.ModelSerializer[Generation]):
     permission_classes = (AllowAny,)
@@ -111,6 +112,7 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
         if start and end and start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
         return attrs
+
 
 # 과정 - 기수 대시보드
 class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
