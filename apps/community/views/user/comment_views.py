@@ -9,7 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Comment, Post
+from apps.community.models import Comment, CommentTags, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
@@ -44,8 +44,8 @@ class CommentListAPIView(APIView):
 
         user1 = User(id=5, nickname="유저1")
         user2 = User(id=6, nickname="유저2")
-
         post = Post(id=post_id)
+
         mock_comment1 = Comment(
             id=1, post=post, author=user1, content="@tae 좋은 글 감사합니다!", created_at=datetime(2025, 6, 20, 13, 15)
         )
@@ -53,6 +53,9 @@ class CommentListAPIView(APIView):
         mock_comment2 = Comment(
             id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16)
         )
+
+        mock_comment1.tags = [CommentTags(tagged_user=user2)]  # type: ignore
+        mock_comment2.tags = [CommentTags(tagged_user=user1)]  # type: ignore
 
         results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
 
