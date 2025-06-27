@@ -10,8 +10,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("api/v1/qna/", include("apps.qna.urls")),
     path("api/v1/community/", include("apps.community.urls")),
     path("api/v1/admin/", include("apps.courses.urls")),
-    path("api/v1/", include("apps.users.urls")),
-    path("api/v1/", include("apps.tests.urls", namespace="tests")),
     path("api/v1/auth/", include("apps.users.urls")),
 ]
 

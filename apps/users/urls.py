@@ -5,14 +5,7 @@ from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
 from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
 
-urlpatterns = [
-    path("email/send-code", SendEmailCodeView.as_view(), name="send_email_code"),
-    path("email/verify-code", VerifyEmailCodeView.as_view(), name="verify_email_code"),
-    path("login/email", EmailLoginAPIView.as_view(), name="email_login"),
-    path("signup", SignUpAPIView.as_view(), name="sign_up"),
-    path("login/kakao", KakaoLoginAPIView.as_view(), name="kakao_login"),
-    path("login/naver", NaverLoginAPIView.as_view(), name="naver_login"),
-]
+
 from django.urls import path
 
 from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
@@ -31,6 +24,15 @@ from apps.users.views.profile_views import (
 from apps.users.views.withdrawal_views import UserDeleteView, UserRestoreView
 
 urlpatterns = [
+    # auth 관련 url
+    path("email/send-code", SendEmailCodeView.as_view(), name="send_email_code"),
+    path("email/verify-code", VerifyEmailCodeView.as_view(), name="verify_email_code"),
+    path("login/email", EmailLoginAPIView.as_view(), name="email_login"),
+    path("signup", SignUpAPIView.as_view(), name="sign_up"),
+    path("login/kakao", KakaoLoginAPIView.as_view(), name="kakao_login"),
+    path("login/naver", NaverLoginAPIView.as_view(), name="naver_login"),
+
+
     path("users/delete/", UserDeleteView.as_view(), name="user-delete"),
     path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
     path("profile/", UserProfileView.as_view(), name="user-profile"),
