@@ -29,12 +29,10 @@ class CategoryStatusUpdateResponseSerializer(ModelSerializer[PostCategory]):
         model = PostCategory
         fields = ["categoies_id", "name", "status"]
 
-
 class CategoryListResponseSerializer(ModelSerializer[PostCategory]):
     class Meta:
         model = PostCategory
         fields = ["id", "name", "status", "created_at", "updated_at"]
-
 
 class CategoryUpdateRequestSerializer(ModelSerializer[PostCategory]):
     class Meta:
