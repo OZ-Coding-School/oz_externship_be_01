@@ -105,7 +105,7 @@ jobs:
       - name: Check for test functions
         id: check-tests
         run: |
-          if grep -r "def test_" apps/*/tests.py apps/*/tests/test_*.py --include="*.py" 2>/dev/null | grep -q .; then
+          if find apps -type f \( -name "tests.py" -o -name "test_*.py" \) -exec grep -q "def test_" {} +; then
             echo "has_tests=true" >> $GITHUB_OUTPUT
           else
             echo "has_tests=false" >> $GITHUB_OUTPUT
