@@ -35,4 +35,7 @@ urlpatterns = [
         AdminCommunityCategoryUpdateAPIView.as_view(),
         name="admin_category_update",
     ),
+    path(
+        "/admin/categories/<category_id>/", AdminCommunityCategoryDetailAPIView.as_view(), name="admin_category_detail"
+    ),
 ]
