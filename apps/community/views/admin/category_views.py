@@ -123,20 +123,17 @@ class AdminCategoryListAPIView(APIView):
         summary="카테고리 목록 조회",
         description="카테고리 목록을 조회합니다.",
     )
-    def get(
-        self,
-        request: Request,
-    ) -> Response:
+    def get(self, request: Request,) -> Response:
         if not mock_data_by_id:
             return Response({"detail": "조회한 카테고리가 존재하지 않습니다."}, status=status.HTTP_403_FORBIDDEN)
         return Response(list(mock_data_by_id.values()), status=status.HTTP_200_OK)
-
+    
     # serializer = CategoryListResponseSerializer(instance=mock_data_by_id)
     # serializer.is_valid(raise_exception=True)
     # return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# 커뮤니티 게시판 카테고리 수정
+#커뮤니티 게시판 카테고리 수정 
 class AdminCommunityCategoryUpdateAPIView(APIView):
     permission_classes = [AllowAny]
 
