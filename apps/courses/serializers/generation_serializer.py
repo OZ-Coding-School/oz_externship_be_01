@@ -9,7 +9,7 @@ from apps.courses.models import Generation
 
 # 기수 등록
 class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
+    course = serializers.IntegerField()
 
     class Meta:
         model = Generation
@@ -128,7 +128,7 @@ class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
             "course_name",
             "course_id",
             "labels",
-            "data",
+            "people_count",
         ]
         read_only_fields = fields
 
@@ -146,7 +146,7 @@ class MonthlyGenerationSerializer(serializers.ModelSerializer[Generation]):
             "course_id",
             "course_name",
             "labels",
-            "data",
+            "people_count",
         ]
         read_only_fields = fields
 
@@ -160,5 +160,5 @@ class OngoingSerializer(serializers.ModelSerializer[Generation]):
         model = Generation
         fields = [
             "labels",
-            "data",
+            "people_count",
         ]
