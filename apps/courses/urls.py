@@ -1,11 +1,11 @@
 from django.urls import path
 
-from .views.course_views import CourseDetailView, CourseListCreateView
 from apps.courses.views.subject_views import (
     SubjectDetailAPIView,
     SubjectListCreateAPIView,
 )
 
+from .views.course_views import CourseDetailView, CourseListCreateView
 
 urlpatterns = [
     path("courses/", CourseListCreateView.as_view(), name="v1_admin_course_list"),
