@@ -16,7 +16,8 @@ from apps.community.views.user.comment_views import (
     CommentListAPIView,
     CommentUpdateAPIView,
 )
-from apps.community.views.admin.post_views import AdminPostListView, AdminPostDetailView
+
+from apps.community.views.admin.post_views import AdminPostListView, AdminPostDetailView, AdminPostUpdateView
 
 urlpatterns = [
     # admin
@@ -43,7 +44,8 @@ urlpatterns = [
     path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
     path("admin/posts/", AdminPostListView.as_view(), name="admin-posts-list"),
     path("admin/posts/<int:post_id>/",AdminPostDetailView.as_view(), name="admin-post-detail"),
-    path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view()),
+    path("admin/posts/<int:post_id>/update/",AdminPostUpdateView.as_view(), name="admin-post-update"),
+    path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view(), name="admin-comment-delete"),
     # user
     path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),

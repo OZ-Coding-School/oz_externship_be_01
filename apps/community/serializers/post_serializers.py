@@ -7,6 +7,7 @@ from apps.community.serializers.attachment_serializers import PostImageResponseS
     PostAttachmentResponseSerializer
 from apps.community.serializers.comment_serializer import CommentResponseSerializer
 from apps.community.serializers.post_author_serializers import AuthorSerializer
+from apps.community.serializers.attachment_serializers import PostAttachmentRequestSerializer
 
 # 게시글 목록
 class PostListSerializer(serializers.ModelSerializer[Post]):
@@ -50,9 +51,9 @@ class PostListSerializer(serializers.ModelSerializer[Post]):
 class PostDetailSerializer(serializers.ModelSerializer[Post]):
     category = serializers.SerializerMethodField()
     author = AuthorSerializer()
-    attachments = PostAttachmentResponseSerializer(many=True)
-    images = PostImageResponseSerializer(many=True)
-    comments = CommentResponseSerializer(many=True)
+    attachments = PostAttachmentResponseSerializer(many=True, required=False, default=[])
+    images = PostImageResponseSerializer(many=True, required=False, default=[])
+    comments = CommentResponseSerializer(many=True, required=False, default=[])
 
     @extend_schema_field(
         {
@@ -90,3 +91,15 @@ class PostDetailSerializer(serializers.ModelSerializer[Post]):
             "updated_at",
         )
         read_only_fields = fields
+
+# 게시글 수정
+class PostUpdateSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(required=False)
+    content = serializers.CharField(required=False)
+    category = serializers.IntegerField(required=False)
+    is_visible = serializers.BooleanField(required=False)
+    attachments = PostAttachmentRequestSerializer(many=True, required=False)
+
+    class Meta:
+        model = Post
+        fields = ("title", "content", "category", "is_visible", "attachments")
