@@ -1,12 +1,15 @@
 from datetime import date
+from typing import Any, Dict
 
 from rest_framework import serializers
+from rest_framework.permissions import AllowAny
 
-from apps.courses.models import Course, Generation
+from apps.courses.models import Generation
 
 
 # 기수 등록
-class GenerationCreateSerializer(serializers.ModelSerializer):
+class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
 
     class Meta:
         model = Generation
@@ -22,15 +25,16 @@ class GenerationCreateSerializer(serializers.ModelSerializer):
 
         read_only_fields = ("id",)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         start = attrs.get("start_date")
         end = attrs.get("end_date")
-        if start > end:
+        if start and end and start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
-
+        return attrs
 
 # 기수 목록
-class GenerationListSerializer(serializers.ModelSerializer):
+class GenerationListSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
 
     course_name = serializers.CharField(source="course.name", read_only=True)
     registered_students = serializers.IntegerField(read_only=True)
@@ -62,7 +66,8 @@ class GenerationListSerializer(serializers.ModelSerializer):
 
 
 # 기수 상세 조회
-class GenerationDetailSerializer(serializers.ModelSerializer):
+class GenerationDetailSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
     course_name = serializers.CharField(source="course.name", read_only=True)
     course_tag = serializers.CharField(source="course.tag", read_only=True)
     course_description = serializers.CharField(source="course.description", read_only=True)
@@ -90,7 +95,8 @@ class GenerationDetailSerializer(serializers.ModelSerializer):
 
 
 # 기수 수정
-class GenerationUpdateSerializer(serializers.ModelSerializer):
+class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
 
     class Meta:
         model = Generation
@@ -99,19 +105,20 @@ class GenerationUpdateSerializer(serializers.ModelSerializer):
             "end_date",
         ]
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         start = attrs.get("start_date", getattr(self.instance, "start_date", None))
         end = attrs.get("end_date", getattr(self.instance, "end_date", None))
-        if start > end:
+        if start and end and start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
-
+        return attrs
 
 # 과정 - 기수 대시보드
-class GenerationTrendSerializer(serializers.ModelSerializer):
+class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
     course_name = serializers.IntegerField(source="course.name", read_only=True)
     course_id = serializers.CharField(source="course.id", read_only=True)
     labels = serializers.ListField(child=serializers.IntegerField())
-    data = serializers.ListField(child=serializers.IntegerField())
+    people_count = serializers.ListField(child=serializers.IntegerField())
 
     class Meta:
         model = Generation
@@ -124,11 +131,12 @@ class GenerationTrendSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class MonthlyGenerationSerializer(serializers.ModelSerializer):
+class MonthlyGenerationSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
     course_id = serializers.IntegerField(source="course.id", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
     labels = serializers.ListField(child=serializers.IntegerField())
-    data = serializers.ListField(child=serializers.IntegerField())
+    people_count = serializers.ListField(child=serializers.IntegerField())
 
     class Meta:
         model = Generation
@@ -141,9 +149,10 @@ class MonthlyGenerationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class OngoingSerializer(serializers.ModelSerializer):
+class OngoingSerializer(serializers.ModelSerializer[Generation]):
+    permission_classes = (AllowAny,)
     labels = serializers.ListField(child=serializers.IntegerField())
-    data = serializers.ListField(child=serializers.IntegerField())
+    people_count = serializers.ListField(child=serializers.IntegerField())
 
     class Meta:
         model = Generation
