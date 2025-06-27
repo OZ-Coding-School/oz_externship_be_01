@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +18,7 @@ from apps.users.serializers.profile_serializers import (
 
 # 프로필 확인
 class UserProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @extend_schema(
         description="(Mock) 내 정보 조회 API",
@@ -26,19 +26,26 @@ class UserProfileView(APIView):
         responses={200: UserProfileSerializer},
     )
     def get(self, request: Request) -> Response:
-        user = request.user
-        assert not isinstance(user, AnonymousUser), "Authenticated user required"
+        dummy_user = User(
+            email="mock@example.com",
+            nickname="mockuser",
+            name="김철수",
+            phone_number="01012345678",
+            birthday="2000-01-01",
+            profile_image_url="https://dummyimage.com/100x100",
+            role=User.Role.STUDENT,
+        )
 
         user_data = {
-            "profile_image_url": user.profile_image_url or "https://dummyimage.com/100x100",
-            "email": user.email,
-            "nickname": user.nickname,
-            "name": user.name,
-            "phone_number": user.phone_number,
-            "birthday": user.birthday,
+            "profile_image_url": dummy_user.profile_image_url,
+            "email": dummy_user.email,
+            "nickname": dummy_user.nickname,
+            "name": dummy_user.name,
+            "phone_number": dummy_user.phone_number,
+            "birthday": dummy_user.birthday,
         }
 
-        if user.role == User.Role.STUDENT:
+        if dummy_user.role == User.Role.STUDENT:
             user_data.update(
                 {
                     "course_name": "백앤드 개발",
@@ -51,7 +58,7 @@ class UserProfileView(APIView):
 
 # 프로필 수정
 class UserProfileUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser]
 
     @extend_schema(
@@ -61,18 +68,22 @@ class UserProfileUpdateView(APIView):
         responses={200: OpenApiTypes.OBJECT},
     )
     def put(self, request: Request) -> Response:
-        user = request.user
-
-        assert not isinstance(user, AnonymousUser), "인증된 사용자만 접근 가능합니다."
 
         serializer = UserProfileUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         validated = serializer.validated_data
 
-        dummy_user = user
-        dummy_user.nickname = validated.get("nickname", user.nickname)
-        dummy_user.phone_number = validated.get("phone_number", user.phone_number)
+        dummy_user = User(
+            email="mock@example.com",
+            nickname="mockuser",
+            name="홍길동",
+            phone_number="01012345678",
+            birthday="1990-01-01",
+            profile_image_url="https://dummyimage.com/100x100",
+        )
+        dummy_user.nickname = validated.get("nickname", dummy_user.nickname)
+        dummy_user.phone_number = validated.get("phone_number", dummy_user.phone_number)
 
         if "profile_image_file" in validated:
             dummy_user.profile_image_url = f"media/users/profile_images/{validated['profile_image_file']}"
