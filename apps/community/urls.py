@@ -2,10 +2,18 @@ from django.urls import path
 
 from apps.community.views.admin.comment_views import AdminCommentDeleteAPIView
 from apps.community.views.admin.notice_views import NoticeCreateAPIView
-from apps.community.views.user.comment_views import CommentListAPIView
+from apps.community.views.user.comment_views import (
+    CommentCreateAPIView,
+    CommentDeleteAPIView,
+    CommentListAPIView,
+    CommentUpdateAPIView,
+)
 
 urlpatterns = [
     path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
     path("comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view()),
     path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
+    path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
+    path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
+    path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
 ]
