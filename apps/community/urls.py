@@ -18,7 +18,7 @@ from apps.community.views.user.comment_views import (
 )
 
 from apps.community.views.admin.post_views import AdminPostListView, AdminPostDetailView, AdminPostUpdateView, \
-    AdminPostDeleteView
+    AdminPostDeleteView, AdminPostVisibilityToggleView
 
 urlpatterns = [
     # admin
@@ -48,6 +48,7 @@ urlpatterns = [
     path("admin/posts/<int:post_id>/update/",AdminPostUpdateView.as_view(), name="admin-post-update"),
     path("admin/posts/<int:post_id>/delete/",AdminPostDeleteView.as_view(), name="admin-post-delete"),
     path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view(), name="admin-comment-delete"),
+    path('admin/posts/<int:post_id>/visibility/', AdminPostVisibilityToggleView.as_view(), name='admin-post-toggle-visibility'),
     # user
     path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
