@@ -10,15 +10,19 @@ from apps.community.views.admin.category_views import (
 )
 from apps.community.views.admin.comment_views import AdminCommentDeleteAPIView
 from apps.community.views.admin.notice_views import NoticeCreateAPIView
+from apps.community.views.admin.post_views import (
+    AdminPostDeleteView,
+    AdminPostDetailView,
+    AdminPostListView,
+    AdminPostUpdateView,
+    AdminPostVisibilityToggleView,
+)
 from apps.community.views.user.comment_views import (
     CommentCreateAPIView,
     CommentDeleteAPIView,
     CommentListAPIView,
     CommentUpdateAPIView,
 )
-
-from apps.community.views.admin.post_views import AdminPostListView, AdminPostDetailView, AdminPostUpdateView, \
-    AdminPostDeleteView, AdminPostVisibilityToggleView
 
 urlpatterns = [
     # admin
@@ -44,11 +48,15 @@ urlpatterns = [
     ),
     path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
     path("admin/posts/", AdminPostListView.as_view(), name="admin-posts-list"),
-    path("admin/posts/<int:post_id>/",AdminPostDetailView.as_view(), name="admin-post-detail"),
-    path("admin/posts/<int:post_id>/update/",AdminPostUpdateView.as_view(), name="admin-post-update"),
-    path("admin/posts/<int:post_id>/delete/",AdminPostDeleteView.as_view(), name="admin-post-delete"),
+    path("admin/posts/<int:post_id>/", AdminPostDetailView.as_view(), name="admin-post-detail"),
+    path("admin/posts/<int:post_id>/update/", AdminPostUpdateView.as_view(), name="admin-post-update"),
+    path("admin/posts/<int:post_id>/delete/", AdminPostDeleteView.as_view(), name="admin-post-delete"),
+    path(
+        "admin/posts/<int:post_id>/visibility/",
+        AdminPostVisibilityToggleView.as_view(),
+        name="admin-post-toggle-visibility",
+    ),
     path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view(), name="admin-comment-delete"),
-    path('admin/posts/<int:post_id>/visibility/', AdminPostVisibilityToggleView.as_view(), name='admin-post-toggle-visibility'),
     # user
     path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
