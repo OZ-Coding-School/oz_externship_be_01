@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 from typing import List
 
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from django.http import Http404
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema, OpenApiResponse
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -13,37 +15,38 @@ from urllib.parse import urlencode
 
 # Mock data
 mock_post_cache = []
-def mock_posts(total=30) -> List[SimpleNamespace]:
-    posts = []
+def init_mock_posts(total=30) -> List[SimpleNamespace]:
+    mock_post_cache.clear()
     for i in range(1, total + 1):
         is_notice = (i == 1)
         is_visible = (i != 2)
-
         category_id = i % 5 + 1
 
         auth_id = i + 1
-        author = SimpleNamespace(id=auth_id, pk=auth_id,
-                                 nickname=f'user_{auth_id}',
-                                 profile_image_url=f'https://cdn.example.com/user_{auth_id}.jpg')
-        comments = [
-            {
-                "id": i,
-                "author": {
-                    "id": i+1,
-                    "nickname": "jjang_admin",
+        author = SimpleNamespace(
+            id=auth_id,
+            pk=auth_id,
+            nickname=f'user_{auth_id}',
+            profile_image_url=f'https://cdn.example.com/user_{auth_id}.jpg'
+        )
+
+        comments = [{
+            "id": i,
+            "author": {
+                "id": i + 1,
+                "nickname": "jjang_admin",
+                "profile_image_url": "https://example.com/profile.jpg"
+            },
+            "content": f"@zizon_admin 댓글입니다.{i}",
+            "created_at": "2025-06-20T13:00:00Z",
+            "tagged_users": [
+                {
+                    "id": 1,
+                    "nickname": "zizon_admin",
                     "profile_image_url": "https://example.com/profile.jpg"
-                },
-                "content": f"@zizon_admin 댓글입니다.{i}",
-                "created_at": "2025-06-20T13:00:00Z",
-                "tagged_users": [
-                    {
-                        "id": 1,
-                        "nickname": "zizon_admin",
-                        "profile_image_url": "https://example.com/profile.jpg"
-                    }
-                ]
-            }
-        ]
+                }
+            ]
+        }]
 
         post_dict = {
             'id': i,
@@ -75,16 +78,25 @@ def mock_posts(total=30) -> List[SimpleNamespace]:
             'created_at': f"2025-06-{(i % 28) + 1:02d}T00:00:00Z",
             'updated_at': f"2025-06-{(i % 28) + 1:02d}T00:00:00Z",
         }
-        posts.append(SimpleNamespace(**post_dict))
-    return posts
+
+        mock_post_cache.append(SimpleNamespace(**post_dict))
+
+
+#  캐시가 없으면 초기화
+def mock_posts(total=30) -> List[SimpleNamespace]:
+    if not mock_post_cache:
+        init_mock_posts(total)
+    return mock_post_cache
 
 # ID 기반으로 전체 포스트 정보 반환
 def get_post_by_id(post_id: int) -> SimpleNamespace:
-    posts = mock_posts()
-    for post in posts:
+    if not mock_post_cache:
+        init_mock_posts()
+
+    for post in mock_post_cache:
         if post.id == post_id:
             return post
-    raise ValueError(f"Post with id {post_id} not found")
+    raise Http404(f"{post_id}번 게시글이 존재하지 않습니다.")
 
 # 어드민 게시글 목록 조회
 class AdminPostListView(APIView):
@@ -158,7 +170,10 @@ class AdminPostDetailView(APIView):
     @extend_schema(
         summary='admin 게시글 상세 조회',
         description='관리자 페이지에서 게시글 상세 정보를 mock 데이터로 반환합니다.',
-        responses={200: PostDetailSerializer},
+        responses={
+            200: PostDetailSerializer,
+            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
+        },
         tags=['Community - 게시글'],
     )
     def get(self, request: Request, post_id: int) -> Response:
@@ -171,10 +186,13 @@ class AdminPostUpdateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        summary="게시글 수정 (Mock)",
+        summary="admin 게시글 수정",
         description="관리자 페이지에서 게시글 정보를 수정하는 mock API입니다. 실제 저장은 되지 않습니다.",
         request=PostUpdateSerializer,
-        responses={200: PostDetailSerializer},
+        responses={
+            200: PostDetailSerializer,
+            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
+        },
         tags=["Community - 게시글"],
     )
     def patch(self, request: Request, post_id: int) -> Response:
@@ -206,4 +224,30 @@ class AdminPostUpdateView(APIView):
             "created_at": original_post.created_at,
             "updated_at": "2025-06-27T15:00:00Z",
         }
+
+        for idx, post in enumerate(mock_post_cache):
+            if post.id == post_id:
+                mock_post_cache[idx] = SimpleNamespace(**mock_response)
+                break
+
         return Response(PostDetailSerializer(instance=SimpleNamespace(**mock_response)).data)
+
+# 게시글 삭제
+class AdminPostDeleteView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="admin 게시글 삭제",
+        description="관리자 페이지에서 게시글을 삭제하는 mock API입니다.",
+        responses={
+            200: OpenApiResponse(description="게시글이 삭제되었습니다."),
+            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
+        },
+        tags=["Community - 게시글"],
+    )
+    def delete(self, request: Request, post_id: int) -> Response:
+        global mock_post_cache
+        _ = get_post_by_id(post_id)  # 없으면 Http404 발생
+
+        mock_post_cache = [p for p in mock_post_cache if p.id != post_id]
+        return Response({"detail": "게시글이 삭제되었습니다."}, status=200)
