@@ -35,11 +35,10 @@ class CategoryStatusUpdateRequestSerializer(ModelSerializer[PostCategory]):
 
 
 # 카테고리 on/off 상태변경 응답 시리얼라이저
-class CategoryStatusUpdateResponseSerializer(serializers.Serializer[Dict[str, Any]]):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
-    is_active = serializers.BooleanField()
-    updated_at = serializers.DateTimeField()
+class CategoryStatusUpdateResponseSerializer(ModelSerializer[PostCategory]):
+    class Meta:
+        model = PostCategory
+        fields = ["categoies_id", "name", "status"]
 
 
 # 카테고리 목록 조회 응답 시리얼라이저

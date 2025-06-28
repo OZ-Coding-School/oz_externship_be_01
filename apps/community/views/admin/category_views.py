@@ -96,25 +96,25 @@ class AdminCommunityCategoryStatusUpdateAPIView(APIView):
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 변경",
-        description="카테고리의 상태를 on/off 합니다.",
-        request=CategoryStatusUpdateRequestSerializer,  # 요청 시리얼라이저
-        responses={200: CategoryStatusUpdateResponseSerializer},  # 응답 시리얼라이저
+        request=inline_serializer(
+            name="CategoryStatusUpdateRequest",
+            fields={
+                "category_id": serializers.IntegerField(),
+                "name": serializers.CharField(),
+                "status": serializers.BooleanField(),
+            },
+        ),
+        responses={200},
     )
     def patch(self, request: Request, category_id: int) -> Response:
-        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
+        data = request.data
+        category_id = int(data.get("category_id", 0))
 
-        if not serializer.is_valid():
-            return Response({"detail": "유효하지 않은 요청입니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        updated_data = {
-            "id": category_id,
-            "name": serializer.validated_data.get("name"),
-            "is_active": serializer.validated_data.get("is_active"),
-            "updated_at": datetime.now(),
-        }
-
-        rsp_serializer = CategoryStatusUpdateResponseSerializer(updated_data)
-        return Response(rsp_serializer.data, status=status.HTTP_200_OK)
+        if not category_id:
+            return Response({"detail": "category_id는 필수입니다."}, status=400)
+        return Response(
+            {"id": category_id, "name": data.get("name"), "status": data.get("status"), "updated_at": datetime.now()}
+        )
 
 
 # 카테고리 목록 조회
