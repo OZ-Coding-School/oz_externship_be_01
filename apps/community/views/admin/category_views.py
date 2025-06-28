@@ -12,6 +12,9 @@ from apps.community.serializers.category_serializers import (
     CategoryCreateRequestSerializer,
     CategoryCreateResponseSerializer,
     CategoryDetailResponseSerializer,
+    CategoryStatusUpdateRequestSerializer,
+    CategoryStatusUpdateResponseSerializer,
+    CategoryUpdateResponseSerializer,
 )
 
 # 카테고리 게시판 상세 조회
@@ -93,25 +96,25 @@ class AdminCommunityCategoryStatusUpdateAPIView(APIView):
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 변경",
-        request=inline_serializer(
-            name="CategoryStatusUpdateRequest",
-            fields={
-                "category_id": serializers.IntegerField(),
-                "name": serializers.CharField(),
-                "status": serializers.BooleanField(),
-            },
-        ),
-        responses={200},
+        description="카테고리의 상태를 on/off 합니다.",
+        request=CategoryStatusUpdateRequestSerializer,  # 요청 시리얼라이저
+        responses={200: CategoryStatusUpdateResponseSerializer},  # 응답 시리얼라이저
     )
     def patch(self, request: Request, category_id: int) -> Response:
-        data = request.data
-        category_id = int(data.get("category_id", 0))
+        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
 
-        if not category_id:
-            return Response({"detail": "category_id는 필수입니다."}, status=400)
-        return Response(
-            {"id": category_id, "name": data.get("name"), "status": data.get("status"), "updated_at": datetime.now()}
-        )
+        if not serializer.is_valid():
+            return Response({"detail": "유효하지 않은 요청입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_data = {
+            "id": category_id,
+            "name": serializer.validated_data.get("name"),
+            "is_active": serializer.validated_data.get("is_active"),
+            "updated_at": datetime.now(),
+        }
+
+        rsp_serializer = CategoryStatusUpdateResponseSerializer(updated_data)
+        return Response(rsp_serializer.data, status=status.HTTP_200_OK)
 
 
 # 카테고리 목록 조회
@@ -143,23 +146,22 @@ class AdminCommunityCategoryUpdateAPIView(APIView):
     @extend_schema(
         tags=["[Admin-category]"],
         summary="커뮤니티 게시판 카테고리 수정",
-        description="커뮤니티 게시판 카테고리를 수정합니다.",
-        request=inline_serializer(
-            name="CategoryUpdateRequest",
-            fields={
-                "category_id": serializers.IntegerField(),
-                "name": serializers.CharField(),
-                "status": serializers.BooleanField(),
-            },
-        ),
-        responses={200},
+        description="카테고리의 이름과 상태를 수정합니다.",
+        request=CategoryCreateRequestSerializer,
+        responses={200: CategoryUpdateResponseSerializer},
     )
     def patch(self, request: Request, category_id: int) -> Response:
-        data = request.data
-        category_id = int(data.get("category_id", 0))
+        serializer = CategoryCreateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"detail": "입력값이 유효하지 않습니다."}, status=400)
 
-        if not category_id:
-            return Response({"detail": "category_id는 필수입니다."}, status=400)
-        return Response(
-            {"id": category_id, "name": data.get("name"), "status": data.get("status"), "updated_at": datetime.now()}
+        # mock용 예시 객체 생성
+        updated_category = PostCategory(
+            id=category_id,
+            name=serializer.validated_data.get("name"),
+            status=serializer.validated_data.get("status"),
+            updated_at=datetime.now(),
         )
+
+        rsp_serializer = CategoryUpdateResponseSerializer(updated_category)
+        return Response(rsp_serializer.data, status=200)
