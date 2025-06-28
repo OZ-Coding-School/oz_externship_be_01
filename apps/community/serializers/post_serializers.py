@@ -2,12 +2,16 @@ from typing import Any
 
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+
 from apps.community.models import Post
-from apps.community.serializers.attachment_serializers import PostImageResponseSerializer, \
-    PostAttachmentResponseSerializer
+from apps.community.serializers.attachment_serializers import (
+    PostAttachmentRequestSerializer,
+    PostAttachmentResponseSerializer,
+    PostImageResponseSerializer,
+)
 from apps.community.serializers.comment_serializer import CommentResponseSerializer
 from apps.community.serializers.post_author_serializers import AuthorSerializer
-from apps.community.serializers.attachment_serializers import PostAttachmentRequestSerializer
+
 
 # 게시글 목록
 class PostListSerializer(serializers.ModelSerializer[Post]):
@@ -29,23 +33,23 @@ class PostListSerializer(serializers.ModelSerializer[Post]):
             return {"id": category_id, "name": "공지사항" if category_id == 1 else f"카테고리 {category_id}"}
         return {"id": None, "name": "없음"}
 
-
     class Meta:
         model = Post
         fields = (
-            'id',
-            'category',
-            'author',
-            'title',
-            'view_count',
-            'likes_count',
-            'comment_count',
-            'is_notice',
-            'is_visible',
-            'created_at'
+            "id",
+            "category",
+            "author",
+            "title",
+            "view_count",
+            "likes_count",
+            "comment_count",
+            "is_notice",
+            "is_visible",
+            "created_at",
         )
 
         read_only_fields = fields
+
 
 # 게시글 디테일
 class PostDetailSerializer(serializers.ModelSerializer[Post]):
@@ -92,8 +96,9 @@ class PostDetailSerializer(serializers.ModelSerializer[Post]):
         )
         read_only_fields = fields
 
+
 # 게시글 수정
-class PostUpdateSerializer(serializers.ModelSerializer):
+class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     title = serializers.CharField(required=False)
     content = serializers.CharField(required=False)
     category = serializers.IntegerField(required=False)
