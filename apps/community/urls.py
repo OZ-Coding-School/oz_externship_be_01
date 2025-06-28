@@ -17,6 +17,11 @@ from apps.community.views.user.comment_views import (
 )
 
 urlpatterns = [
+    path(
+        "admin/categories/<int:category_id>/",
+        AdminCommunityCategoryDetailAPIView.as_view(),
+        name="admin_category_detail",
+    ),
     path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),
     path("comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view()),
     path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
@@ -34,8 +39,5 @@ urlpatterns = [
         "admin/categories/<int:category_id>/update/",
         AdminCommunityCategoryUpdateAPIView.as_view(),
         name="admin_category_update",
-    ),
-    path(
-        "/admin/categories/<category_id>/", AdminCommunityCategoryDetailAPIView.as_view(), name="admin_category_detail"
     ),
 ]
