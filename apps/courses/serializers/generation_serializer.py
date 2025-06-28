@@ -35,8 +35,6 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
 
 # 기수 목록
 class GenerationListSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
-
     course_name = serializers.CharField(source="course.name", read_only=True)
     registered_students = serializers.IntegerField(read_only=True)
 
@@ -68,7 +66,6 @@ class GenerationListSerializer(serializers.ModelSerializer[Generation]):
 
 # 기수 상세 조회
 class GenerationDetailSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
     course_name = serializers.CharField(source="course.name", read_only=True)
     course_tag = serializers.CharField(source="course.tag", read_only=True)
     course_description = serializers.CharField(source="course.description", read_only=True)
@@ -97,7 +94,6 @@ class GenerationDetailSerializer(serializers.ModelSerializer[Generation]):
 
 # 기수 수정
 class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
 
     class Meta:
         model = Generation
@@ -116,7 +112,6 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
 
 # 과정 - 기수 대시보드
 class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
     course_name = serializers.IntegerField(source="course.name", read_only=True)
     course_id = serializers.CharField(source="course.id", read_only=True)
     labels = serializers.ListField(child=serializers.IntegerField())
@@ -134,7 +129,6 @@ class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
 
 
 class MonthlyGenerationSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
     course_id = serializers.IntegerField(source="course.id", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
     labels = serializers.ListField(child=serializers.IntegerField())
@@ -152,7 +146,6 @@ class MonthlyGenerationSerializer(serializers.ModelSerializer[Generation]):
 
 
 class OngoingSerializer(serializers.ModelSerializer[Generation]):
-    permission_classes = (AllowAny,)
     labels = serializers.ListField(child=serializers.IntegerField())
     people_count = serializers.ListField(child=serializers.IntegerField())
 
