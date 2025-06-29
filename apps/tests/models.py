@@ -67,7 +67,8 @@ class TestDeployment(models.Model):
 
 
 class TestSubmission(models.Model):
-
+    # ERD 기준: student_id
+    student = models.ForeignKey("users.PermissionsStudent", on_delete=models.CASCADE, related_name="test_submissions")
     # ERD 기준: student_id
     student = models.ForeignKey("users.PermissionsStudent", on_delete=models.CASCADE, related_name="test_submissions")
     # ERD 기준: deployment_id

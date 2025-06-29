@@ -70,7 +70,7 @@ class Comment(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="post_comments"
     )  # 댓글 작성자
-    content = models.CharField(max_length=255)
+    content = models.CharField(max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

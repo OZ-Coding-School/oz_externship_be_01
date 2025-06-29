@@ -101,6 +101,15 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+      
+      - name: Check for test functions
+        id: check-tests
+        run: |
+          if find apps -type f \( -name "tests.py" -o -name "test_*.py" \) -exec grep -q "def test_" {} +; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Cache Poetry
         id: cache-poetry
@@ -140,6 +149,7 @@ jobs:
 
       # run test
       - name: Test python project
+        if: steps.check-tests.outputs.has_tests == 'true'
         run: |
           poetry run coverage run manage.py test
           poetry run coverage report -m

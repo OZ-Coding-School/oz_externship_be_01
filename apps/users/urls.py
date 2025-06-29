@@ -1,0 +1,34 @@
+from django.urls import path
+
+from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
+from apps.users.views.admin_user_views import (
+    AdminUserDeleteView,
+    AdminUserDetailView,
+    AdminUserListView,
+    AdminUserRoleUpdateView,
+    AdminUserUpdateView,
+)
+from apps.users.views.profile_views import (
+    NicknameCheckView,
+    UserProfileUpdateView,
+    UserProfileView,
+)
+from apps.users.views.withdrawal_views import UserDeleteView, UserRestoreView
+
+urlpatterns = [
+    path("users/delete/", UserDeleteView.as_view(), name="user-delete"),
+    path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
+    path("profile/", UserProfileView.as_view(), name="user-profile"),
+    path("profile/update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
+    path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
+    path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
+    path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
+    path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
+    path("admin/users/<int:user_id>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),
+    path("admin/users/<int:user_id>/role/", AdminUserRoleUpdateView.as_view(), name="admin-user-role-update"),
+    path(
+        "admin/users/student-enrollments/approve/",
+        AdminApproveEnrollmentsView.as_view(),
+        name="admin-student-enrollments-approve",
+    ),
+]
