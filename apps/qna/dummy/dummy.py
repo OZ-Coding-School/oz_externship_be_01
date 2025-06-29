@@ -69,6 +69,7 @@ for q in DUMMY_QUESTIONS:
 for i, question in enumerate(DUMMY_QUESTIONS, start=1):
     # 답변 생성
     answer = Answer(
+        id=i,
         question=question,
         author=DUMMY_USER,
         content=f"샘플 답변 내용 {i}",
