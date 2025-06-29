@@ -1,20 +1,20 @@
 from django.urls import path
 
-
-from apps.qna.views.answers_views import (
-    AdoptAnswerView,
-    AnswerCommentCreateView,
-    AnswerCreateView,
-    AnswerUpdateView
-)
-
 from apps.qna.views.admin_views import (
     AdminAnswerDeleteView,
     AdminCategoryCreateView,
     AdminCategoryDeleteView,
+    AdminCategoryListView,
+    AdminQnaDetailView,
     AdminQuestionDeleteView,
+    AdminQuestionListView,
 )
-
+from apps.qna.views.answers_views import (
+    AdoptAnswerView,
+    AnswerCommentCreateView,
+    AnswerCreateView,
+    AnswerUpdateView,
+)
 from apps.qna.views.questions_views import (
     QuestionCreateView,
     QuestionDetailView,
@@ -23,7 +23,6 @@ from apps.qna.views.questions_views import (
 )
 
 urlpatterns = [
-
     # questions
     path("questions/", QuestionListView.as_view(), name="question-list"),
     path("questions/create/", QuestionCreateView.as_view(), name="question-create"),
@@ -36,7 +35,10 @@ urlpatterns = [
     path("questions/answers/<int:answer_id>/comments/", AnswerCommentCreateView.as_view()),
     # admin
     path("admin/categories/create/", AdminCategoryCreateView.as_view(), name="admin-category-create"),
+    path("admin/categories/list/", AdminCategoryListView.as_view(), name="admin-category-list"),
     path("admin/categories/delete/", AdminCategoryDeleteView.as_view(), name="admin-category-delete"),
     path("admin/questions/delete/", AdminQuestionDeleteView.as_view(), name="admin-question-delete"),
+    path("admin/questions/list/", AdminQuestionListView.as_view(), name="admin-question-list"),
     path("admin/answers/delete/", AdminAnswerDeleteView.as_view(), name="admin-answer-delete"),
+    path("admin/qna/detail/", AdminQnaDetailView.as_view(), name="admin-qna-detail"),
 ]
