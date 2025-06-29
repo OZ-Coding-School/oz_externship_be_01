@@ -1,9 +1,10 @@
 from datetime import datetime
 from uuid import uuid4
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema
@@ -15,23 +16,73 @@ from apps.tests.serializers.test_deployment_serializers import (
     DeploymentStatusUpdateSerializer,
 )
 
-# MOCK 데이터 (DB 대신 메모리 저장된 테스트 배포 데이터)
-MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
-    101: {
-        "id": 101,
-        "test": {"id": 1, "title": "Python 기초"},
-        "generation": {"id": 1, "name": "1기", "course": {"id": 1, "title": "풀스택"}},
-        "duration_time": 60,
-        "access_code": "aB3dE9",
-        "status": "Activated",
-        "open_at": str(datetime.now()),
-        "close_at": str(datetime.now()),
-        "questions_snapshot_json": {},
-        "created_at": str(datetime.now()),
-        "updated_at": str(datetime.now()),
+## 🔹 시험 데이터 (test.id 기준)
+MOCK_TESTS = {
+    1: {"id": 1, "title": "HTML 기초", "subject": {"title": "웹프로그래밍"}},
+    2: {"id": 2, "title": "CSS 심화", "subject": {"title": "웹디자인"}},
+}
+# 🔹 배포 데이터 (deployment.id 기준)
+MOCK_GENERATIONS = {
+    1: {
+        "id": 1,
+        "name": "5기",
+        "course": {
+            "id": 1,
+            "title": "웹프로그래밍"
+        }
+    },
+    2: {
+        "id": 2,
+        "name": "4기",
+        "course": {
+            "id": 2,
+            "title": "웹디자인"
+        }
     }
 }
 
+
+# 🔹 배포 데이터 (deployment.id 기준)
+MOCK_DEPLOYMENTS = {
+    101: {
+        "id": 101,
+        "test": MOCK_TESTS[1],
+        "generation": MOCK_GENERATIONS[1],
+        "duration_time": 60,
+        "access_code": "aB3dE9",
+        "status": "Activated",
+        "open_at": datetime.now().isoformat(),
+        "close_at": datetime.now().isoformat(),
+        "questions_snapshot_json": {
+            "1": {
+                "question": "3 + 5 = ?",
+                "choices": ["6", "7", "8"],
+                "answer": "8",
+            }
+        },
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    },
+    102: {
+        "id": 102,
+        "test": MOCK_TESTS[2],
+        "generation": MOCK_GENERATIONS[2],
+        "duration_time": 90,
+        "access_code": "fG7hJ2",
+        "status": "Deactivated",
+        "open_at": datetime.now().isoformat(),
+        "close_at": datetime.now().isoformat(),
+        "questions_snapshot_json": {
+            "1": {
+                "question": "CSS Flexbox의 주 용도는?",
+                "choices": ["레이아웃", "애니메이션", "폼 제어"],
+                "answer": "레이아웃",
+            }
+        },
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    },
+}
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=AdminCodeValidationSerializer,
@@ -97,14 +148,20 @@ class TestDeploymentStatusView(APIView):
     responses={200: DeploymentListSerializer(many=True)},
 )
 class DeploymentListView(APIView):
-    """
-    배포 목록 조회 API
-    - 저장된 모든 배포 정보를 리스트 형태로 반환
-    """
     permission_classes = [AllowAny]
     serializer_class = DeploymentListSerializer
-    def get(self, request) -> Response:
-        return Response(DeploymentListSerializer(list(MOCK_DEPLOYMENTS.values()), many=True).data)
+
+    def get(self, request: Request) -> Response:
+        # dict.values()를 리스트로 변환
+        deployments_list = list(MOCK_DEPLOYMENTS.values())
+        serializer = DeploymentListSerializer(deployments_list, many=True)
+        data: List[Dict[str, Any]] = serializer.data
+        return Response({
+            "count": len(data),
+            "next": None,
+            "previous": None,
+            "results": data
+        })
 
 
 @extend_schema(
@@ -112,69 +169,82 @@ class DeploymentListView(APIView):
     responses={200: DeploymentListSerializer},
 )
 class DeploymentDetailView(APIView):
-
-    # 배포 상세 조회 API
-    # 배포 ID에 해당하는 상세 정보를 반환
-
+    # 배포 상세 조회 API: 배포 ID로 상세 정보 반환
     permission_classes = [AllowAny]
     serializer_class = DeploymentListSerializer
-    def get(self, request, deployment_id: int) -> Response:
+
+    def get(self, request: Any, deployment_id: int) -> Response:
         deployment = MOCK_DEPLOYMENTS.get(deployment_id)
         if not deployment:
-            return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(DeploymentListSerializer(deployment).data)
-
+            return Response(
+                {"detail": "존재하지 않는 배포입니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = self.serializer_class(deployment)
+        return Response(serializer.data)
 
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentCreateSerializer,
-    responses={201: DeploymentListSerializer},
+    responses={201: dict},
 )
+# TestDeployment 배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
 
-    # 새로운 배포 생성 API
-    # 클라이언트로부터 시험, 기수, 시간 등의 정보를 입력받아 배포 생성
-    # 생성된 배포 정보를 반환
+    permission_classes = [AllowAny]  # 권한 설정: 누구나 접근 가능
+    serializer_class = DeploymentCreateSerializer  # 입력 검증용 시리얼라이저
 
-    permission_classes = [AllowAny]
-    serializer_class = DeploymentCreateSerializer
+        # POST 요청 처리: 배포 생성
     def post(self, request) -> Response:
-        serializer = DeploymentCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        serializer = self.serializer_class(data=request.data)  # 요청 데이터 시리얼라이즈
+        serializer.is_valid(raise_exception=True)  # 유효성 검사, 실패 시 예외 발생
+        validated: Dict[str, Any] = serializer.validated_data  # 검증된 데이터
 
-        now = str(datetime.now())
-        new_id = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
+        test_id: int = validated["test"]  # 시험 ID
+        generation_id: int = validated["generation"]  # 기수 ID
 
-        # 새 배포 데이터 생성
-        new_data = {
-            "id": new_id,
-            "test": {
-                "id": validated["test"].id,
-                "title": getattr(validated["test"], "title", "제목 없음"),
-            },
-            "generation": {
-                "id": validated["generation"].id,
-                "name": getattr(validated["generation"], "name", "기수 없음"),
-                "course": {
-                    "id": getattr(validated["generation"].course, "id", 0),
-                    "title": getattr(validated["generation"].course, "title", "과정 없음"),
-                },
-            },
-            "duration_time": validated.get("duration_time", 60),
+        # MOCK 데이터에서 시험, 기수 정보 조회
+        test_info: Dict[str, Any] = MOCK_TESTS.get(test_id)  # 시험 정보 조회
+        generation_info: Dict[str, Any] = MOCK_GENERATIONS.get(generation_id)  # 기수 정보 조회
+
+        if not test_info:
+            return Response({"detail": "존재하지 않는 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        if not generation_info:
+            return Response({"detail": "존재하지 않는 기수입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        now: str = datetime.now().isoformat()  # 현재 시간 ISO 포맷 문자열
+        new_id: int = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1  # 새로운 배포 ID 생성
+
+        new_data: Dict[str, Any] = {
+            "id": new_id,  # 배포 ID
+            "test": test_info,  # 시험 정보
+            "generation": generation_info,  # 기수 정보
+            "duration_time": validated.get("duration_time", 60),  # 시험 시간 (기본 60분)
             "access_code": str(uuid4())[:6],  # 6자리 무작위 참가코드 생성
-            "status": "Activated",
-            "open_at": validated.get("open_at", now),
-            "close_at": validated.get("close_at", now),
-            "questions_snapshot_json": {},
-            "created_at": now,
-            "updated_at": now,
+            "status": "Activated",  # 상태
+            "open_at": validated.get("open_at", now),  # 개시 시간
+            "close_at": validated.get("close_at", now),  # 종료 시간
+            "questions_snapshot_json": {  # 문제 스냅샷 예시
+                "1": {
+                    "question": "3 + 5 = ?",
+                    "choices": ["6", "7", "8"],
+                    "answer": "8",
+                }
+            },
+            "created_at": now,  # 생성 시간
+            "updated_at": now,  # 수정 시간
         }
 
-        MOCK_DEPLOYMENTS[new_id] = new_data
+        MOCK_DEPLOYMENTS[new_id] = new_data  # 메모리 저장
 
-        return Response(DeploymentListSerializer(new_data).data, status=status.HTTP_201_CREATED)
+        response_data: Dict[str, Any] = {
+            "deployment_id": new_data["id"],  # 응답용 배포 ID
+            "access_code": new_data["access_code"],  # 응답용 참가 코드
+            "status": new_data["status"],  # 응답용 상태
+            "snapshot": new_data["questions_snapshot_json"],  # 응답용 문제 스냅샷
+        }
 
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화"],
