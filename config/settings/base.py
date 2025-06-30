@@ -215,3 +215,11 @@ sentry_sdk.init(
     traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", 1)),
     profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", 1)),
 )
+
+# < 이메일 설정 >
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")  # .local.env 에 적어놓겠슴다!
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
