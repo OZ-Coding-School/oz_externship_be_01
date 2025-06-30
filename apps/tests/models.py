@@ -2,10 +2,12 @@ from django.db import models
 
 # 문제 유형 enum
 QUESTION_TYPE_CHOICES = [
-    ("multiple_choice", "객관식"),
+    ("multiple_choice_single", "객관식 단일 선택"),
+    ("multiple_choice_multi", "객관식 다중 선택"),
     ("ox", "O,X 퀴즈"),
     ("ordering", "순서 정렬"),
     ("fill_in_blank", "빈칸 채우기"),
+    ("short_answer", "주관식 단답형"),
 ]
 
 # 배포 상태 enum
@@ -33,14 +35,16 @@ class Test(models.Model):
 class TestQuestion(models.Model):
     # ERD 기준: test_id
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
-    question = models.CharField(max_length=255)
-    prompt = models.TextField(null=True, blank=True)
-    blank_count = models.PositiveSmallIntegerField(null=True, blank=True)
-    options_json = models.TextField(null=True, blank=True)
-    type = models.CharField(max_length=50, choices=QUESTION_TYPE_CHOICES)
-    answer = models.JSONField()
-    point = models.PositiveSmallIntegerField()
-    explanation = models.TextField()
+    question = models.CharField(max_length=255)  # 문제 제목/내용
+    prompt = models.TextField(null=True, blank=True)  # 문제 지문
+    blank_count = models.PositiveSmallIntegerField(null=True, blank=True)  # 빈칸 문제일 경우 빈칸 수
+    options_json = models.TextField(null=True, blank=True)  # 객관식/순서정렬 문제 보기를 JSON으로 저장
+    type = models.CharField(
+        max_length=50, choices=QUESTION_TYPE_CHOICES
+    )  # 정답 (단일/다중/순서/빈칸/주관식 모두 대응 가능)
+    answer = models.JSONField()  # 배점
+    point = models.PositiveSmallIntegerField()  # 해설
+    explanation = models.TextField()  # 해설
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
