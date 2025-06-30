@@ -15,6 +15,8 @@ from apps.qna.serializers.admin_serializers import (
     AdminQuestionListSerializer,
 )
 
+dummy.load_dummy_data()
+
 
 # 카테고리 등록
 class AdminCategoryCreateView(APIView):
