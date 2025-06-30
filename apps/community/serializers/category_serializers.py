@@ -38,7 +38,7 @@ class CategoryStatusUpdateRequestSerializer(ModelSerializer[PostCategory]):
 class CategoryStatusUpdateResponseSerializer(ModelSerializer[PostCategory]):
     class Meta:
         model = PostCategory
-        fields = ["categoies_id", "name", "status"]
+        fields = [ "name", "status"]
 
 
 # 카테고리 목록 조회 응답 시리얼라이저
