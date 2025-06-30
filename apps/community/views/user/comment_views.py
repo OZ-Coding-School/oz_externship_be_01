@@ -118,13 +118,22 @@ class CommentCreateAPIView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        mock_response = {
-            "id": 45,
-            "post_id": post_id,
-            "user": {"id": 7, "nickname": "태연123"},
-            "content": serializer.validated_data["content"],
-        }
-        return Response(mock_response, status=status.HTTP_201_CREATED)
+        # mock_response = {
+        #     "id": 45,
+        #     "post_id": post_id,
+        #     "user": {"id": 7, "nickname": "태연123"},
+        #     "content": serializer.validated_data["content"],
+        # }
+
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return Response({"detail": "존재하지 않는 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        comment = serializer.save(post=post)
+
+        response_serializer = CommentResponseSerializer(comment)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CommentUpdateAPIView(APIView):
