@@ -1,13 +1,5 @@
 from django.urls import path
 
-from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
-from apps.users.views.auth.email_login import EmailLoginAPIView
-from apps.users.views.auth.signup import SignUpAPIView
-from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
-
-
-from django.urls import path
-
 from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
@@ -16,6 +8,10 @@ from apps.users.views.admin_user_views import (
     AdminUserRoleUpdateView,
     AdminUserUpdateView,
 )
+from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
+from apps.users.views.auth.email_login import EmailLoginAPIView
+from apps.users.views.auth.signup import SignUpAPIView
+from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
 from apps.users.views.profile_views import (
     NicknameCheckView,
     UserProfileUpdateView,
@@ -31,8 +27,6 @@ urlpatterns = [
     path("signup", SignUpAPIView.as_view(), name="sign_up"),
     path("login/kakao", KakaoLoginAPIView.as_view(), name="kakao_login"),
     path("login/naver", NaverLoginAPIView.as_view(), name="naver_login"),
-
-
     path("users/delete/", UserDeleteView.as_view(), name="user-delete"),
     path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
     path("profile/", UserProfileView.as_view(), name="user-profile"),
