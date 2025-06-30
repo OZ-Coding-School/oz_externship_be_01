@@ -48,7 +48,7 @@ class CommentCreateSerializer(serializers.ModelSerializer[Any]):
 
     class Meta:
         model = Comment
-        fields = ["content"]
+        fields = ["content", "author"]
 
 
 class CommentUpdateSerializer(CommentCreateSerializer):
