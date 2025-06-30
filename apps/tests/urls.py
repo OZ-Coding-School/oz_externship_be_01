@@ -26,9 +26,6 @@ from .views.user_testsubmission_views import (
 
 app_name = "tests"
 
-from apps.tests.views import test_admin_view
-from apps.tests.views import test_user_view
-
 urlpatterns = [
     # 쪽지 시험 응시
     path(
