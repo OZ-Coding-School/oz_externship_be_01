@@ -153,25 +153,28 @@ class CommentUpdateAPIView(APIView):
         },
     )
     def patch(self, request: Request, comment_id: int) -> Response:
-        serializer = CommentUpdateSerializer(data=request.data)
 
+        try:
+            comment = Comment.objects.get(id=comment_id)
+        except Comment.DoesNotExist:
+            return Response({"detail": "댓글이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CommentUpdateSerializer(comment, data=request.data, partial=True)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if comment_id == 99:
-            return Response({"detail": "해당 댓글을 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save()
 
-        content = serializer.validated_data["content"]
+        response_serializer = CommentResponseSerializer(comment)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
-        mock_response = {
-            "id": comment_id,
-            "post_id": 45,
-            "user": {"id": 7, "nickname": "정아"},
-            "content": content,
-            "updated_at": "2025-06-20T14:05:00Z",
-        }
-
-        return Response(mock_response, status=status.HTTP_200_OK)
+        # mock_response = {
+        #     "id": comment_id,
+        #     "post_id": 45,
+        #     "user": {"id": 7, "nickname": "정아"},
+        #     "content": content,
+        #     "updated_at": "2025-06-20T14:05:00Z",
+        # }
 
 
 class CommentDeleteAPIView(APIView):
