@@ -23,7 +23,8 @@ DUMMY_ANSWER_COMMENTS = []
 
 # 1. 대분류 (parent 없음)
 def load_dummy_data() -> None:
-    parent_category = QuestionCategory.objects.create(
+    parent_category = QuestionCategory(
+        id=1,
         name="Python",
         parent=None,
         created_at=timezone.now(),
@@ -31,7 +32,8 @@ def load_dummy_data() -> None:
     DUMMY_CATEGORY.append(parent_category)
 
     # 2. 중분류 (대분류의 하위)
-    middle_category = QuestionCategory.objects.create(
+    middle_category = QuestionCategory(
+        id=2,
         name="Django",
         parent=parent_category,  # 대분류를 parent로 지정
         created_at=timezone.now(),
@@ -39,7 +41,8 @@ def load_dummy_data() -> None:
     DUMMY_CATEGORY.append(middle_category)
 
     # 3. 소분류 (중분류의 하위)
-    sub_category = QuestionCategory.objects.create(
+    sub_category = QuestionCategory(
+        id=3,
         name="typeerror",
         parent=middle_category,  # 중분류를 parent로 지정
         created_at=timezone.now(),
