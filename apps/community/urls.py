@@ -5,6 +5,7 @@ from apps.community.views.admin.category_views import (
     AdminCommunityCategoryCreateAPIView,
     AdminCommunityCategoryDetailAPIView,
     AdminCommunityCategoryStatusUpdateAPIView,
+    AdminCategoryListAPIView,
     AdminCommunityCategoryUpdateAPIView,
 )
 from apps.community.views.admin.comment_views import AdminCommentDeleteAPIView

@@ -80,6 +80,7 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         if not serializer.is_valid():
             return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
         category_data = PostCategory(
+            categories_id=serializer.validated_data.get("categories_id"),
             name=serializer.validated_data.get("name"),
             status=serializer.validated_data.get("status", True),
             created_at=datetime.now(),
@@ -99,22 +100,21 @@ class AdminCommunityCategoryStatusUpdateAPIView(APIView):
         request=inline_serializer(
             name="CategoryStatusUpdateRequest",
             fields={
-                "category_id": serializers.IntegerField(),
                 "name": serializers.CharField(),
                 "status": serializers.BooleanField(),
             },
         ),
         responses={200},
     )
+    
     def patch(self, request: Request, category_id: int) -> Response:
-        data = request.data
-        category_id = int(data.get("category_id", 0))
-
-        if not category_id:
-            return Response({"detail": "category_id는 필수입니다."}, status=400)
-        return Response(
-            {"id": category_id, "name": data.get("name"), "status": data.get("status"), "updated_at": datetime.now()}
-        )
+        data = {
+            "name": request.data.get("name"),
+            "status": request.data.get("status")
+        }
+        serializer = CategoryStatusUpdateResponseSerializer(data=data)
+        serializer.is_valid()
+        return Response(serializer.data, status=200)
 
 
 # 카테고리 목록 조회
