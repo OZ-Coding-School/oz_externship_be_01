@@ -12,6 +12,12 @@ from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeV
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
 from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
+from apps.users.views.find_account_views import (
+    EmailFindView,
+    PasswordChangeView,
+    PasswordResetEmailSendView,
+    PasswordResetVerifyCodeView,
+)
 from apps.users.views.profile_views import (
     NicknameCheckView,
     UserProfileUpdateView,
@@ -37,6 +43,10 @@ urlpatterns = [
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
     path("admin/users/<int:user_id>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),
     path("admin/users/<int:user_id>/role/", AdminUserRoleUpdateView.as_view(), name="admin-user-role-update"),
+    path("account/find-email/", EmailFindView.as_view(), name="find-email"),
+    path("account/send-reset-code/", PasswordResetEmailSendView.as_view(), name="send-reset-code"),
+    path("account/verify-code/", PasswordResetVerifyCodeView.as_view(), name="verify-code"),
+    path("account/change-password/", PasswordChangeView.as_view(), name="change-password"),
     path(
         "admin/users/student-enrollments/approve/",
         AdminApproveEnrollmentsView.as_view(),
