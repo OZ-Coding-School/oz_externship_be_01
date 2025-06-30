@@ -26,7 +26,7 @@ class AdminCategoryCreateView(APIView):
         summary="카테고리 등록",
         request=AdminCategoryListSerializer,
     )
-    def post(self, request: Request, category_id: int) -> Response:
+    def post(self, request: Request) -> Response:
         serializer = AdminCategoryListSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -69,12 +69,8 @@ class AdminCategoryDeleteView(APIView):
 class AdminQnaDetailView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        tags=["(Admin) QnA"],
-        description="조회할 질의응답 ID",
-        summary="질의응답 상세 조회"
-    )
-    def get(self, request: Request, question_id: int, *args, **kwargs) -> Response:
+    @extend_schema(tags=["(Admin) QnA"], description="조회할 질의응답 ID", summary="질의응답 상세 조회")
+    def get(self, request: Request, question_id: int, *args: Any, **kwargs: Any) -> Response:
         # 1. 질문 찾기
         question = next((q for q in dummy.DUMMY_QUESTIONS if q.id == question_id), None)
         if not question:
@@ -133,15 +129,17 @@ class AdminQnaDetailView(APIView):
                 if comment.answer.id == answer.id
             ]
 
-            answers.append({
-                "id": answer.id,
-                "content": answer.content,
-                "author": answer.author.id if answer.author else None,
-                "is_adopted": answer.is_adopted,
-                "created_at": answer.created_at,
-                "images": answer_images,
-                "comments": answer_comments,
-            })
+            answers.append(
+                {
+                    "id": answer.id,
+                    "content": answer.content,
+                    "author": answer.author.id if answer.author else None,
+                    "is_adopted": answer.is_adopted,
+                    "created_at": answer.created_at,
+                    "images": answer_images,
+                    "comments": answer_comments,
+                }
+            )
 
         # 5. 최종 응답
         data = {
@@ -164,11 +162,7 @@ class AdminQnaDetailView(APIView):
 class AdminQuestionListView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        tags=["(Admin) QnA"],
-        description="조회할 질문 ID",
-        summary="질문 목록 조회"
-    )
+    @extend_schema(tags=["(Admin) QnA"], description="조회할 질문 ID", summary="질문 목록 조회")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = AdminQuestionListSerializer(dummy.DUMMY_QUESTIONS, many=True)
         resp_data = serializer.data
