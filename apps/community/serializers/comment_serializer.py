@@ -3,7 +3,7 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from apps.community.models import Comment, CommentTags, Post
+from apps.community.models import Comment, CommentTags
 
 User = get_user_model()
 
@@ -24,11 +24,18 @@ class CommentTagSerializer(serializers.ModelSerializer[Any]):
 
 class CommentResponseSerializer(serializers.ModelSerializer[Any]):
     author = UserCommentSerializer(read_only=True)
-    tagged_users = CommentTagSerializer(source="tags", many=True, read_only=True)
+    tags = CommentTagSerializer(source="tags.all", many=True, read_only=True)
 
     class Meta:
         model = Comment
-        fields = ("id", "author", "content", "created_at", "updated_at", "tagged_users")
+        fields = (
+            "id",
+            "author",
+            "content",
+            "created_at",
+            "updated_at",
+            "tags",
+        )
         read_only_fields = ("created_at", "updated_at")
 
 
@@ -42,7 +49,7 @@ class CommentCreateSerializer(serializers.ModelSerializer[Any]):
 
     class Meta:
         model = Comment
-        fields = ["content"]
+        fields = ["content", "author"]
 
 
 class CommentUpdateSerializer(CommentCreateSerializer):
