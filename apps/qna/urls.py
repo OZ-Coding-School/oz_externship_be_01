@@ -34,7 +34,7 @@ urlpatterns = [
     path("questions/<int:question_id>/answers/<int:answer_id>/adopt/", AdoptAnswerView.as_view()),
     path("questions/answers/<int:answer_id>/comments/", AnswerCommentCreateView.as_view()),
     # admin
-    path("admin/categories/<int:category_id>/create/", AdminCategoryCreateView.as_view(), name="admin-category-create"),
+    path("admin/categories/create/", AdminCategoryCreateView.as_view(), name="admin-category-create"),
     path("admin/categories/list/", AdminCategoryListView.as_view(), name="admin-category-list"),
     path("admin/categories/<int:category_id>/delete/", AdminCategoryDeleteView.as_view(), name="admin-category-delete"),
     path("admin/questions/<int:question_id>/delete/", AdminQuestionDeleteView.as_view(), name="admin-question-delete"),
