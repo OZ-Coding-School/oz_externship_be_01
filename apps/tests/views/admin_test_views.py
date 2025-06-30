@@ -60,36 +60,41 @@ class AdminTestDeleteAPIView(APIView):
     auth=[],
 )
 class AdminTestUpdateAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # 추후 IsAuthenticated + 권한 검사로 변경 예정
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
     serializer_class = AdminTestUpdateSerializer
 
     def patch(self, request: Request, test_id: int) -> Response:
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         # mock: 존재하지 않는 시험 예외 처리
         if test_id == 9999:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        serializer = self.serializer_class(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         validated_data = serializer.validated_data
 
-        # mock subject
+        # mock subject 객체
         subject = Subject(id=validated_data.get("subject_id", 1), title="컴퓨터공학")
 
-        # mock test
+        # mock test 객체 (실제 서비스라면 DB 조회로 교체 필요)
         test = Test(
             id=test_id,
-            title=validated_data.get("title", "기존 제목"),
+            title="기존 제목",
             subject=subject,
             created_at=timezone.now(),
             updated_at=timezone.now(),
         )
 
-        # 수동 필드 주입
         test.subject_id = subject.id
-        serializer = self.serializer_class(instance=test)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # 수정 반영
+        updated_test = serializer.update(test, validated_data)
+
+        # 응답
+        response_serializer = self.serializer_class(instance=updated_test)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 # (admin)쪽지시험 상세조회
@@ -125,13 +130,29 @@ class AdminTestDetailAPIView(APIView):
             ),
         ]
 
+        # mock 문제에 상세 필드 추가
+        questions_data = TestQuestionSimpleSerializer(questions, many=True).data
+
+        # detail 필드를 응답 dict에 수동으로 추가
+        questions_data[0]["prompt"] = None
+        questions_data[0]["options"] = ["Last In", "First Out"]
+        questions_data[0]["answer"] = "Last In First Out"
+
+        questions_data[1]["prompt"] = "자료구조에서 큐는 ____ 구조입니다."
+        questions_data[1]["options"] = []
+        questions_data[1]["answer"] = "FIFO"
+
         test = Test(
-            id=test_id, title="자료구조 쪽지시험", subject=subject, created_at=timezone.now(), updated_at=timezone.now()
+            id=test_id,
+            title="자료구조 쪽지시험",
+            subject=subject,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
         )
 
         # 응답에 필요한 데이터 수동 조합
         data = self.serializer_class(test).data
-        data["questions"] = TestQuestionSimpleSerializer(questions, many=True).data
+        data["questions"] = questions_data
         data["question_count"] = len(questions)
 
         return Response(data, status=status.HTTP_200_OK)
@@ -160,9 +181,19 @@ class AdminTestListView(APIView):
         test.submission_count = 20  # type: ignore[attr-defined]
 
         serializer = self.serializer_class(instance=[test], many=True)
+        response_data = serializer.data
+
+        # detail_url 필드 수동 추가
+        for item in response_data:
+            item["detail_url"] = f"/api/v1/admin/tests/{item['id']}/"
 
         return Response(
-            {"count": len(serializer.data), "next": None, "previous": None, "results": serializer.data},
+            {
+                "count": len(response_data),
+                "next": None,
+                "previous": None,
+                "results": response_data,
+            },
             status=status.HTTP_200_OK,
         )
 

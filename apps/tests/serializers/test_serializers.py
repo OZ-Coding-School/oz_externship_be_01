@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.courses.models import Subject
@@ -7,18 +8,40 @@ from apps.tests.models import Test, TestQuestion
 
 
 # 쪽지시험 수정
-class AdminTestUpdateSerializer(serializers.ModelSerializer[Test]):
-    subject_id = serializers.IntegerField()
+class AdminTestUpdateSerializer(serializers.ModelSerializer):
+    subject_id = serializers.IntegerField(required=False)
+    thumbnail_file = serializers.ImageField(write_only=True, required=False)  # 이미지 수정용 필드
+    thumbnail_img_url = serializers.URLField(read_only=True)  # 수정 후 응답에 이미지 경로 제공
 
     class Meta:
         model = Test
-        fields = ("id", "title", "subject_id", "updated_at")
+        fields = ("id", "title", "subject_id", "thumbnail_file", "thumbnail_img_url", "updated_at")
         read_only_fields = ("id", "updated_at")
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         if not data:
             raise serializers.ValidationError("수정할 데이터가 없습니다.")
         return data
+
+    def update(self, instance: Test, validated_data: dict[str, Any]) -> Test:
+        # 제목 수정
+        if "title" in validated_data:
+            instance.title = validated_data["title"]
+
+        # 과목 수정
+        if "subject_id" in validated_data:
+            instance.subject_id = validated_data["subject_id"]
+
+        # 로고 이미지 수정
+        if "thumbnail_file" in validated_data:
+            thumbnail_file = validated_data.pop("thumbnail_file")
+            # 실제 서비스에서는 이미지 업로드 후 URL 생성 필요
+
+            instance.thumbnail_img_url = f"https://my-cdn.com/{thumbnail_file.name}"
+
+        instance.updated_at = timezone.now()
+        # instance.save() 추후  DB 반영
+        return instance
 
 
 # 쪽지시험 상세조회 (Test 모델의 ForeignKey 필드로 연결된 Subject를 직렬화)
