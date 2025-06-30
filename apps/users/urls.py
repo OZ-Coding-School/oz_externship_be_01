@@ -8,16 +8,16 @@ from apps.users.views.admin_user_views import (
     AdminUserRoleUpdateView,
     AdminUserUpdateView,
 )
+from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
+from apps.users.views.auth.email_login import EmailLoginAPIView
+from apps.users.views.auth.signup import SignUpAPIView
+from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
 from apps.users.views.find_account_views import (
     EmailFindView,
     PasswordChangeView,
     PasswordResetEmailSendView,
     PasswordResetVerifyCodeView,
 )
-from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
-from apps.users.views.auth.email_login import EmailLoginAPIView
-from apps.users.views.auth.signup import SignUpAPIView
-from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
 from apps.users.views.profile_views import (
     NicknameCheckView,
     UserProfileUpdateView,
