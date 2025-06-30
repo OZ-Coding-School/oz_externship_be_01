@@ -1,18 +1,19 @@
 from datetime import datetime
+from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
-from typing import Dict, Any, List
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.request import Request
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from drf_spectacular.utils import extend_schema
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.tests.serializers.test_deployment_serializers import (
     AdminCodeValidationSerializer,
-    DeploymentListSerializer,
     DeploymentCreateSerializer,
+    DeploymentDetailSerializer,
+    DeploymentListSerializer,
     DeploymentStatusUpdateSerializer,
 )
 
@@ -23,22 +24,8 @@ MOCK_TESTS = {
 }
 # 🔹 배포 데이터 (deployment.id 기준)
 MOCK_GENERATIONS = {
-    1: {
-        "id": 1,
-        "name": "5기",
-        "course": {
-            "id": 1,
-            "title": "웹프로그래밍"
-        }
-    },
-    2: {
-        "id": 2,
-        "name": "4기",
-        "course": {
-            "id": 2,
-            "title": "웹디자인"
-        }
-    }
+    1: {"id": 1, "name": "5기", "course": {"id": 1, "title": "웹프로그래밍"}},
+    2: {"id": 2, "name": "4기", "course": {"id": 2, "title": "웹디자인"}},
 }
 
 
@@ -48,8 +35,10 @@ MOCK_DEPLOYMENTS = {
         "id": 101,
         "test": MOCK_TESTS[1],
         "generation": MOCK_GENERATIONS[1],
+        "total_participants": 15,
+        "average_score": 85.6,
         "duration_time": 60,
-        "access_code": "aB3dE9",
+        "access_code": "",
         "status": "Activated",
         "open_at": datetime.now().isoformat(),
         "close_at": datetime.now().isoformat(),
@@ -67,6 +56,8 @@ MOCK_DEPLOYMENTS = {
         "id": 102,
         "test": MOCK_TESTS[2],
         "generation": MOCK_GENERATIONS[2],
+        "total_participants": 10,
+        "average_score": 78.2,
         "duration_time": 90,
         "access_code": "fG7hJ2",
         "status": "Deactivated",
@@ -83,6 +74,8 @@ MOCK_DEPLOYMENTS = {
         "updated_at": datetime.now().isoformat(),
     },
 }
+
+
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=AdminCodeValidationSerializer,
@@ -93,23 +86,26 @@ class TestValidateCodeAdminView(APIView):
 
     permission_classes = [AllowAny]
     serializer_class = AdminCodeValidationSerializer
-    def post(self, request) -> Response:
+
+    def post(self, request: Request) -> Response:
         serializer = AdminCodeValidationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         deployment_id = serializer.validated_data["deployment_id"]
         access_code = serializer.validated_data["access_code"]
 
-        deployment = MOCK_DEPLOYMENTS.get(deployment_id)
+        deployment: Optional[Dict[str, Any]] = MOCK_DEPLOYMENTS.get(deployment_id)
         if not deployment:
             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
 
         if deployment["access_code"] == access_code and deployment["status"] == "Activated":
-            return Response({
-                "message": "참가코드가 유효합니다.",
-                "test_title": deployment["test"]["title"],
-                "deployment_id": deployment_id,
-                "duration_time": deployment["duration_time"],
-            })
+            return Response(
+                {
+                    "message": "참가코드가 유효합니다.",
+                    "test_title": deployment["test"]["title"],
+                    "deployment_id": deployment_id,
+                    "duration_time": deployment["duration_time"],
+                }
+            )
         return Response({"detail": "유효하지 않은 참가코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -125,7 +121,8 @@ class TestDeploymentStatusView(APIView):
 
     permission_classes = [AllowAny]
     serializer_class = DeploymentStatusUpdateSerializer
-    def patch(self, request, deployment_id: int) -> Response:
+
+    def patch(self, request: Request, deployment_id: int) -> Response:
         deployment = MOCK_DEPLOYMENTS.get(deployment_id)
         if not deployment:
             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
@@ -136,11 +133,13 @@ class TestDeploymentStatusView(APIView):
         deployment["status"] = serializer.validated_data["status"]
         deployment["updated_at"] = str(datetime.now())
 
-        return Response({
-            "deployment_id": deployment_id,
-            "status": deployment["status"],
-            "message": "배포 상태가 성공적으로 변경되었습니다.",
-        })
+        return Response(
+            {
+                "deployment_id": deployment_id,
+                "status": deployment["status"],
+                "message": "배포 상태가 성공적으로 변경되었습니다.",
+            }
+        )
 
 
 @extend_schema(
@@ -155,13 +154,8 @@ class DeploymentListView(APIView):
         # dict.values()를 리스트로 변환
         deployments_list = list(MOCK_DEPLOYMENTS.values())
         serializer = DeploymentListSerializer(deployments_list, many=True)
-        data: List[Dict[str, Any]] = serializer.data
-        return Response({
-            "count": len(data),
-            "next": None,
-            "previous": None,
-            "results": data
-        })
+        data = cast(List[Dict[str, Any]], serializer.data)
+        return Response({"count": len(data), "next": None, "previous": None, "results": data})
 
 
 @extend_schema(
@@ -169,19 +163,19 @@ class DeploymentListView(APIView):
     responses={200: DeploymentListSerializer},
 )
 class DeploymentDetailView(APIView):
-    # 배포 상세 조회 API: 배포 ID로 상세 정보 반환
     permission_classes = [AllowAny]
-    serializer_class = DeploymentListSerializer
+    serializer_class = DeploymentDetailSerializer
 
-    def get(self, request: Any, deployment_id: int) -> Response:
+    def get(self, request: Request, deployment_id: int) -> Response:
         deployment = MOCK_DEPLOYMENTS.get(deployment_id)
         if not deployment:
-            return Response(
-                {"detail": "존재하지 않는 배포입니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        # 예: 미제출 인원 수는 하드코딩 혹은 계산 필요
+        deployment["unsubmitted_participants"] = 3  # 예시
         serializer = self.serializer_class(deployment)
         return Response(serializer.data)
+
 
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
@@ -194,8 +188,8 @@ class TestDeploymentCreateView(APIView):
     permission_classes = [AllowAny]  # 권한 설정: 누구나 접근 가능
     serializer_class = DeploymentCreateSerializer  # 입력 검증용 시리얼라이저
 
-        # POST 요청 처리: 배포 생성
-    def post(self, request) -> Response:
+    # POST 요청 처리: 배포 생성
+    def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)  # 요청 데이터 시리얼라이즈
         serializer.is_valid(raise_exception=True)  # 유효성 검사, 실패 시 예외 발생
         validated: Dict[str, Any] = serializer.validated_data  # 검증된 데이터
@@ -204,8 +198,8 @@ class TestDeploymentCreateView(APIView):
         generation_id: int = validated["generation"]  # 기수 ID
 
         # MOCK 데이터에서 시험, 기수 정보 조회
-        test_info: Dict[str, Any] = MOCK_TESTS.get(test_id)  # 시험 정보 조회
-        generation_info: Dict[str, Any] = MOCK_GENERATIONS.get(generation_id)  # 기수 정보 조회
+        test_info: Optional[Dict[str, Any]] = MOCK_TESTS.get(test_id)
+        generation_info: Optional[Dict[str, Any]] = MOCK_GENERATIONS.get(generation_id)
 
         if not test_info:
             return Response({"detail": "존재하지 않는 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -246,6 +240,7 @@ class TestDeploymentCreateView(APIView):
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화"],
 )
@@ -256,7 +251,8 @@ class TestDeploymentDeleteView(APIView):
 
     permission_classes = [AllowAny]
     serializer_class = DeploymentCreateSerializer
-    def delete(self, request, deployment_id: int) -> Response:
+
+    def delete(self, request: Request, deployment_id: int) -> Response:
         if deployment_id not in MOCK_DEPLOYMENTS:
             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
 
