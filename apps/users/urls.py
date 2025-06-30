@@ -81,6 +81,7 @@ urlpatterns = [
         AdminApproveEnrollmentsView.as_view(),
         name="admin-student-enrollments-approve",
     ),
+    path("admin/withdrawal/<int:withdrawal_id>", AdminDetailWithdrawalView.as_view(), name="admin-withdrawal-detail"),
     path(
         "admin/users/student-enrollments/reject/",
         RejectEnrollmentRequestView.as_view(),
