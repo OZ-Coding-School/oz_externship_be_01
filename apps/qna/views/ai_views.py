@@ -42,16 +42,14 @@ class ChatbotConnectAPIView(APIView):
             return DRFResponse({"detail": "질문이 존재하지 않습니다."}, status=400)
 
         if token_user is None or not getattr(token_user, "is_staff", False):
-            # mypy 타입 체크 무시
-            existing = ChatbotSession.objects.filter(user=token_user, question=question).order_by("-created_at").first()  # type: ignore[misc]
+            existing = ChatbotSession.objects.filter(user=token_user, question=question).order_by("-created_at").first()
             if existing and existing.chat_count >= 2:
                 existing.status = "rejected"
                 existing.rejection_reason = "최대 2회까지의 대화만 허용됩니다."
                 existing.save()
                 return DRFResponse({"detail": existing.rejection_reason}, status=403)
 
-        # mypy 타입 체크 무시
-        session = ChatbotSession.objects.create(  # type: ignore[misc]
+        session = ChatbotSession.objects.create(
             user=token_user, question=question, socket_id=socket_id or "", status="connected", chat_count=0
         )
 
@@ -163,8 +161,7 @@ class AIPromptChatAPIView(APIView):
         if not question:
             return DRFResponse({"detail": "질문이 존재하지 않습니다."}, status=400)
 
-        # mypy 타입 체크 무시
-        session, _ = ChatbotSession.objects.get_or_create(  # type: ignore[misc]
+        session, _ = ChatbotSession.objects.get_or_create(
             user=user,
             question=question,
             defaults={"socket_id": "ai-prompt", "status": "connected", "chat_count": 0, "is_waiting_reply": False},
