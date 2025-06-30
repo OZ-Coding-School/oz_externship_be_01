@@ -46,7 +46,7 @@ class TestSubmissionStartView(APIView):
             questions_snapshot_json=[
                 {
                     "question_id": 1,
-                    "type": "multiple_choice",  # 객관식
+                    "type": "multiple_choice",  # 객관식 단일 선택
                     "question": "HTML의 기본 구조를 이루는 태그는?",
                     "prompt": None,
                     "blank_count": None,
@@ -73,7 +73,7 @@ class TestSubmissionStartView(APIView):
                 },
                 {
                     "question_id": 4,
-                    "type": "fill_in_blank",  # 빈칸 채우기
+                    "type": "short_answer",  # 주관식 단답형
                     "question": "다음 문장의 빈칸을 채우세요.",
                     "prompt": "HTML에서 문서의 제목을 설정할 때 사용하는 태그는 <____>이다.",
                     "blank_count": 1,
@@ -87,6 +87,15 @@ class TestSubmissionStartView(APIView):
                     "prompt": "HTML의 <____> 태그는 문서의 제목을 정의하고, <____> 태그 안에 위치한다.",
                     "blank_count": 2,
                     "options_json": [],
+                    "point": 5,
+                },
+                {
+                    "question_id": 6,
+                    "type": "multiple_choice_multiple",  # 객관식 다중 선택
+                    "question": "다음 중 CSS에서 글자 색상과 관련된 속성을 모두 고르세요.",
+                    "prompt": None,
+                    "blank_count": None,
+                    "options_json": ["A. color", "B. background-color", "C. font-size", "D. text-align"],
                     "point": 5,
                 },
             ],
@@ -118,16 +127,18 @@ class TestSubmissionStartView(APIView):
                 "started_at": "2025-06-20T10:30:00",
                 "cheating_count": 2,
                 "answers_json": [
-                    # 객관식
+                    # 객관식 단일 선택
                     {"question_id": 1, "answer": ["A"]},
                     # ox 문제
                     {"question_id": 2, "answer": ["x"]},
                     # 순서 정렬 답안
                     {"question_id": 3, "answer": ["<html>", "<head>", "<body>", "<title>"]},
-                    # 빈칸 채우기
+                    # 주관식 단답형
                     {"question_id": 4, "answer": ["title"]},
-                    # 미작성
+                    # 빈칸 채우기, 답안 미작성
                     {"question_id": 5, "answer": [""]},
+                    # 객관식 다중 선택
+                    {"question_id": 6, "answer": ["A", "B"]},
                 ],
             },
         )
@@ -178,7 +189,7 @@ class TestSubmissionResultView(APIView):
                 questions_snapshot_json=[
                     {
                         "question_id": 1,
-                        "type": "multiple_choice",
+                        "type": "multiple_choice_single",  # 객관식 단일 선택
                         "question": "HTML의 기본 구조를 이루는 태그는?",
                         "prompt": None,
                         "blank_count": None,
@@ -189,7 +200,7 @@ class TestSubmissionResultView(APIView):
                     },
                     {
                         "question_id": 2,
-                        "type": "ox",
+                        "type": "ox",  # ox 문제
                         "question": "CSS는 프로그래밍 언어이다.",
                         "prompt": None,
                         "blank_count": None,
@@ -200,7 +211,7 @@ class TestSubmissionResultView(APIView):
                     },
                     {
                         "question_id": 3,
-                        "type": "ordering",
+                        "type": "ordering",  # 순서 정렬
                         "question": "다음 HTML 요소들을 웹 페이지에 표시되는 순서대로 정렬하세요.",
                         "prompt": None,
                         "blank_count": None,
@@ -211,7 +222,7 @@ class TestSubmissionResultView(APIView):
                     },
                     {
                         "question_id": 4,
-                        "type": "fill_in_blank",
+                        "type": "fill_in_blank",  # 빈칸 채우기
                         "question": "다음 문장의 빈칸을 채우세요.",
                         "prompt": "HTML에서 문서의 제목을 설정할 때 사용하는 태그는 <____>이다.",
                         "blank_count": 1,
@@ -222,7 +233,7 @@ class TestSubmissionResultView(APIView):
                     },
                     {
                         "question_id": 5,
-                        "type": "빈칸 채우기",
+                        "type": "short_answer",  # 주관식 단답형
                         "question": "다음 문장의 빈칸을 채우세요.",
                         "prompt": "HTML의 <____> 태그는 문서의 제목을 정의하고, <____> 태그 안에 위치한다.",
                         "blank_count": 2,
@@ -230,6 +241,17 @@ class TestSubmissionResultView(APIView):
                         "answer": ["<title>", "<head>"],
                         "point": 5,
                         "explanation": "color 속성은 HTML 요소의 텍스트 색상을 지정하는 데 사용됩니다. 예를 들어, color: red;는 텍스트 색상을 빨간색으로 설정합니다.",
+                    },
+                    {
+                        "question_id": 6,
+                        "type": "multiple_choice_multiple",  # 객관식 다중 선택
+                        "question": "다음 중 CSS에서 글자 색상과 관련된 속성을 모두 고르세요.",
+                        "prompt": None,
+                        "blank_count": None,
+                        "options_json": ["A. color", "B. background-color", "C. font-size", "D. text-align"],
+                        "answer": ["A", "B"],
+                        "point": 5,
+                        "explanation": "color는 글자 색상을 지정하고, background-color는 배경 색상을 지정합니다. font-size와 text-align은 각각 글자 크기와 정렬에 관한 속성입니다.",
                     },
                 ],
             ),
