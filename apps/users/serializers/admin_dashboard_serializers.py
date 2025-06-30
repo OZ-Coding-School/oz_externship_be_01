@@ -13,9 +13,7 @@ from rest_framework.serializers import (
 
 class ChartTypeEnum(str, Enum):
     BAR = "bar"
-    LINE = "line"
     PIE = "pie"
-    SCATTER = "scatter"
 
 
 # 수강생 전환 추세 요청
@@ -67,7 +65,7 @@ class JoinTrendResponseSerializer(Serializer[Any]):
             choices=[e.value for e in ChartTypeEnum],
             help_text="차트 유형 (bar | line | pie | scatter)",
         )
-        self.fields["range_type"] = CharField(help_text="조회 범위 단위 (예: monthly)")
+        self.fields["range"] = CharField(help_text="조회 범위 단위 (예: monthly | yearly)")
         self.fields["labels"] = ListField(child=CharField(), help_text="X축 라벨 (날짜, 월, 연도 등)")
         self.fields["data"] = ListField(child=IntegerField(), help_text="Y축 값 (해당 날짜의 회원가입 수)")
 

@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Any, Callable, Dict, List, TypedDict, Union
+from typing import Callable, Dict, List, TypedDict, Union
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -85,8 +85,8 @@ class AdminJoinTrendView(APIView):
             {
                 "title": f"회원가입 추세 {labels[0]} ~ {labels[-1]}",
                 "graph_type": "join",
-                "chart_type": ChartTypeEnum.LINE.value,
-                "range_type": range_type,
+                "chart_type": ChartTypeEnum.BAR.value,
+                "range": range_type,
                 "data": dict(zip(labels, data)),
             },
             status=status.HTTP_200_OK,
@@ -121,8 +121,7 @@ class AdminWithdrawTrendView(APIView):
             {
                 "title": f"회원 탈퇴 추세 {labels[0]} ~ {labels[-1]}",
                 "graph_type": "withdraw",
-                "chart_type": ChartTypeEnum.LINE.value,
-                "range_type": unit,
+                "chart_type": ChartTypeEnum.BAR.value,
                 "range": range_,
                 "data": dict(zip(labels, data)),
             },
