@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.qna.models import Question, QuestionCategory, QuestionImage, Answer
+from apps.qna.models import Answer, Question, QuestionCategory, QuestionImage
 
 
 # 질문 이미지
@@ -10,10 +10,12 @@ class AdminQuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
         fields = ["id", "img_url", "created_at", "updated_at"]
         read_only_fields = fields
 
-class AdminAnswerSerializer(serializers.ModelSerializer):
+
+class AdminAnswerSerializer(serializers.ModelSerializer[Answer]):
     class Meta:
         model = Answer
         fields = ["id", "content", "author", "is_adopted", "created_at"]
+
 
 # 카테고리 목록 조회
 class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory]):
@@ -41,7 +43,19 @@ class AdminQuestionDetailSerializer(serializers.ModelSerializer[Question]):
 
     class Meta:
         model = Question
-        fields = ["id", "title", "content", "author", "category", "view_count", "created_at", "updated_at", "images", "answers", "category"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "author",
+            "category",
+            "view_count",
+            "created_at",
+            "updated_at",
+            "images",
+            "answers",
+            "category",
+        ]
 
 
 # 질의응답 카테고리 질문 등록
@@ -55,6 +69,3 @@ class AdminCategoryCreateSerializer(serializers.ModelSerializer[QuestionCategory
 
     # 추후 카테고리 검증 코드 추가 예정
     # 검증 된 데이터로 생성 코드 구현 예정
-
-
-
