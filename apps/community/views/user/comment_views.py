@@ -1,5 +1,4 @@
-
-from drf_spectacular.utils import OpenApiResponse, extend_schema, OpenApiExample
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
@@ -11,7 +10,8 @@ from apps.community.models import Comment, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
-    CommentUpdateSerializer, CommentTagSerializer,
+    CommentTagSerializer,
+    CommentUpdateSerializer,
 )
 
 mock_existing_ids = range(1, 4)
@@ -98,6 +98,7 @@ class CommentListAPIView(APIView):
         #     {"count": 23, "next": f"/api/v1/comments/?post_id={post_id}&page=2", "previous": None, "results": results},
         #     status=status.HTTP_200_OK,
         # )
+
 
 class CommentCreateAPIView(APIView):
     permission_classes = [AllowAny]
