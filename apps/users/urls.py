@@ -1,5 +1,12 @@
 from django.urls import path
 
+from apps.users.views.admin_dashboard_views import (
+    AdminEnrollmentTrendView,
+    AdminJoinTrendView,
+    AdminWithdrawalReasonPieView,
+    AdminWithdrawalReasonTrendView,
+    AdminWithdrawTrendView,
+)
 from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
@@ -43,6 +50,24 @@ urlpatterns = [
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
     path("admin/users/<int:user_id>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),
     path("admin/users/<int:user_id>/role/", AdminUserRoleUpdateView.as_view(), name="admin-user-role-update"),
+    # 수강생 전환 추세
+    path("admin/users/dashboard/enrollment/", AdminEnrollmentTrendView.as_view(), name="admin-enrollment-trend"),
+    # 회원가입 추세
+    path("admin/users/dashboard/join/", AdminJoinTrendView.as_view(), name="admin-join-trend"),
+    # 회원 탈퇴 추세
+    path("admin/users/dashboard/withdraw/", AdminWithdrawTrendView.as_view(), name="admin-withdraw-trend"),
+    # 탈퇴 사유 통계 (원형)
+    path(
+        "admin/users/dashboard/withdrawal-reasons/pie/",
+        AdminWithdrawalReasonPieView.as_view(),
+        name="admin-withdrawal-reason-pie",
+    ),
+    # 탈퇴 사유 추이 (막대/꺾은선)
+    path(
+        "admin/users/dashboard/withdrawal-reasons/trend/",
+        AdminWithdrawalReasonTrendView.as_view(),
+        name="admin-withdrawal-reason-trend",
+    ),
     path("account/find-email/", EmailFindView.as_view(), name="find-email"),
     path("account/send-reset-code/", PasswordResetEmailSendView.as_view(), name="send-reset-code"),
     path("account/verify-code/", PasswordResetVerifyCodeView.as_view(), name="verify-code"),
