@@ -8,7 +8,7 @@ from .views.admin_test_views import (
     AdminTestUpdateAPIView,
 )
 
-from apps.tests.views.test_admin_view import (
+from apps.tests.views.admin_testquestion_views import (
     TestQuestionCreateView,
     TestQuestionListView,
     TestQuestionUpdateDeleteView,

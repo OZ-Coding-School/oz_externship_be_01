@@ -5,19 +5,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.tests.serializers.test_question_crud_serializers import (
+from apps.tests.serializers.test_question_serializers import (
     ErrorResponseSerializer,
     TestListItemSerializer,
     TestQuestionCreateSerializer,
     TestQuestionUpdateSerializer,
 )
 
+
 # 문제 생성
 class TestQuestionCreateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["Tests/Admin"],
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 어드민이 특정 쪽지시험에 문제를 출제합니다.",
         request=TestQuestionCreateSerializer,
         responses={
@@ -44,7 +45,7 @@ class TestQuestionListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["Tests/Admin"],
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 수강생이 속한 기수에 배포된 쪽지시험 목록을 조회합니다.",
         responses={
             200: OpenApiResponse(response=TestListItemSerializer(many=True), description="시험 목록 조회 성공"),
@@ -85,7 +86,7 @@ class TestQuestionUpdateDeleteView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["Tests/Admin"],
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 어드민이 기존 쪽지시험 문제를 수정합니다.",
         request=TestQuestionUpdateSerializer,
         responses={
@@ -104,7 +105,7 @@ class TestQuestionUpdateDeleteView(APIView):
 
     # 문제 삭제
     @extend_schema(
-        tags=["Tests/Admin"],
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 어드민이 등록한 쪽지시험 문제를 삭제합니다.",
         responses={
             204: OpenApiResponse(description="삭제 성공"),
