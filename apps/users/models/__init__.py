@@ -6,6 +6,7 @@ from .permissions import (
 from .social_user import SocialUser
 from .student_enrollment import StudentEnrollmentRequest
 from .user import User
+from .withdrawals import Withdrawal
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "PermissionsStaff",
     "StudentEnrollmentRequest",
     "SocialUser",
+    "Withdrawal",
 ]
