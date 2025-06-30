@@ -12,9 +12,10 @@ from apps.community.serializers.category_serializers import (
     CategoryCreateRequestSerializer,
     CategoryCreateResponseSerializer,
     CategoryDetailResponseSerializer,
+    CategoryRenameRequestSerializer,
+    CategoryRenameResponseSerializer,
     CategoryStatusUpdateRequestSerializer,
     CategoryStatusUpdateResponseSerializer,
-    CategoryUpdateResponseSerializer,
 )
 
 # 카테고리 게시판 상세 조회
@@ -90,27 +91,58 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         return Response(rsp_serializer.data, status=status.HTTP_201_CREATED)
 
 
-# 게시판 on/off 상태변경
-class AdminCommunityCategoryStatusUpdateAPIView(APIView):
+# 카테고리 상태 ON API
+class CategoryStatusOnAPIView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
         tags=["[Admin-category]"],
-        summary="카테고리 상태 변경",
-        request=inline_serializer(
-            name="CategoryStatusUpdateRequest",
-            fields={
-                "name": serializers.CharField(),
-                "status": serializers.BooleanField(),
-            },
-        ),
-        responses={200},
+        summary="카테고리 상태 ON",
+        request=CategoryStatusUpdateRequestSerializer,
+        responses={200: CategoryStatusUpdateResponseSerializer},
     )
-    def patch(self, request: Request, category_id: int) -> Response:
-        data = {"name": request.data.get("name"), "status": request.data.get("status")}
-        serializer = CategoryStatusUpdateResponseSerializer(data=data)
-        serializer.is_valid()
-        return Response(serializer.data, status=200)
+    def post(self, request, category_id):
+        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"detail": "요청이 유효하지 않습니다."}, status=400)
+
+        validated = serializer.validated_data
+        mock_instance = {
+            "id": validated["id"],
+            "name": validated["name"],
+            "status": True,
+            "updated_at": datetime.now(),
+        }
+
+        response = CategoryStatusUpdateResponseSerializer(mock_instance)
+        return Response(response.data, status=200)
+
+
+# 카테고리 상태 OFF API
+class CategoryStatusOffAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["[Admin-category]"],
+        summary="카테고리 상태 OFF",
+        request=CategoryStatusUpdateRequestSerializer,
+        responses={200: CategoryStatusUpdateResponseSerializer},
+    )
+    def post(self, request, category_id):
+        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"detail": "요청이 유효하지 않습니다."}, status=400)
+
+        validated = serializer.validated_data
+        mock_instance = {
+            "id": validated["id"],
+            "name": validated["name"],
+            "status": False,
+            "updated_at": datetime.now(),
+        }
+
+        response = CategoryStatusUpdateResponseSerializer(mock_instance)
+        return Response(response.data, status=200)
 
 
 # 카테고리 목록 조회
@@ -136,28 +168,27 @@ class AdminCategoryListAPIView(APIView):
 
 
 # 커뮤니티 게시판 카테고리 수정
-class AdminCommunityCategoryUpdateAPIView(APIView):
+class AdminCategoryRenameAPIView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin-category]"],
-        summary="커뮤니티 게시판 카테고리 수정",
-        description="카테고리의 이름과 상태를 수정합니다.",
-        request=CategoryCreateRequestSerializer,
-        responses={200: CategoryUpdateResponseSerializer},
+        tags=["[Admin-Category]"],
+        summary="카테고리명 수정",
+        request=CategoryRenameRequestSerializer,
+        responses={200: CategoryRenameResponseSerializer},
     )
     def patch(self, request: Request, category_id: int) -> Response:
-        serializer = CategoryCreateRequestSerializer(data=request.data)
+        serializer = CategoryRenameRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"detail": "입력값이 유효하지 않습니다."}, status=400)
 
-        # mock용 예시 객체 생성
-        updated_category = PostCategory(
-            id=category_id,
-            name=serializer.validated_data.get("name"),
-            status=serializer.validated_data.get("status"),
-            updated_at=datetime.now(),
-        )
+        validated = serializer.validated_data
+        mock_instance = {
+            "id": category_id,
+            "name": validated["name"],
+            "status": True,
+            "updated_at": datetime.now(),
+        }
 
-        rsp_serializer = CategoryUpdateResponseSerializer(updated_category)
-        return Response(rsp_serializer.data, status=200)
+        response = CategoryRenameResponseSerializer(mock_instance)
+        return Response(response.data, status=200)
