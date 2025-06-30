@@ -124,3 +124,21 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
         subject_id: int = validated_data.pop("subject_id")
         validated_data["subject_id"] = subject_id
         return Test.objects.create(**validated_data)
+
+
+# 공통 AdminTestSerializer
+class AdminTestSerializer(serializers.ModelSerializer[Test]):
+    subject = SubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("id", "subject", "title", "created_at", "updated_at")
+
+
+# 공통 UserTestSerializer
+class UserTestSerializer(serializers.ModelSerializer[Test]):
+    subject = SubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("id", "subject", "title", "thumbnail_img_url")
