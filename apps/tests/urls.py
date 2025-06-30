@@ -1,17 +1,17 @@
 from django.urls import path
 
+from apps.tests.views.admin_testquestion_views import (
+    TestQuestionCreateView,
+    TestQuestionListView,
+    TestQuestionUpdateDeleteView,
+)
+
 from .views.admin_test_views import (
     AdminTestCreateAPIView,
     AdminTestDeleteAPIView,
     AdminTestDetailAPIView,
     AdminTestListView,
     AdminTestUpdateAPIView,
-)
-
-from apps.tests.views.admin_testquestion_views import (
-    TestQuestionCreateView,
-    TestQuestionListView,
-    TestQuestionUpdateDeleteView,
 )
 
 app_name = "tests"
