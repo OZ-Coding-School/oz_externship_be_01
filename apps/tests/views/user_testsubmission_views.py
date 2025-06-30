@@ -15,7 +15,7 @@ from apps.tests.serializers.test_submission_serializers import (
 
 
 # 쪽지 시험 응시
-@extend_schema(tags=["[User] Test - submission(쪽지시험 응시/제출/결과조회)"])
+@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
 class TestSubmissionStartView(APIView):
     permission_classes = [AllowAny]
     serializer_class = UserTestStartSerializer
@@ -107,7 +107,7 @@ class TestSubmissionStartView(APIView):
 
 # 쪽지 시험 제출
 @extend_schema(
-    tags=["[User] Test - submission(쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestSubmitSerializer,
     examples=[
         OpenApiExample(
@@ -152,7 +152,7 @@ class TestSubmissionSubmitView(APIView):
 
 
 # 쪽지 시험 결과 조회
-@extend_schema(tags=["[User] Test - submission(쪽지시험 응시/제출/결과조회)"])
+@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
 class TestSubmissionResultView(APIView):
     permission_classes = [AllowAny]
     serializer_class = UserTestResultSerializer

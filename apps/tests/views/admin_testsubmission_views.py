@@ -15,7 +15,7 @@ from apps.users.models.permissions import PermissionsStudent
 
 
 # 쪽지 시험 응시 내역 전체 목록 조회
-@extend_schema(tags=["[Admin] Test - submission(쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionsView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminTestListSerializer
@@ -43,7 +43,7 @@ class AdminTestSubmissionsView(APIView):
 
 
 # 쪽지 시험 응시 내역 상세 조회
-@extend_schema(tags=["[Admin] Test - submission(쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminTestDetailSerializer
@@ -91,7 +91,7 @@ class AdminTestSubmissionDetailView(APIView):
 
 
 # 쪽지 시험 응시 내역 삭제
-@extend_schema(tags=["[Admin] Test - submission(쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDeleteView(APIView):
     permission_classes = [AllowAny]
 
