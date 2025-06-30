@@ -1,16 +1,11 @@
 from rest_framework import serializers
+
 from apps.users.models import User
+from apps.users.models.withdrawals import Withdrawal
 
-class UserSerializer(serializers.ModelSerializer):
+
+# 회원 탈퇴 응답 시리얼라이저
+class WithdrawalResponseSerializer(serializers.ModelSerializer[Withdrawal]):
     class Meta:
-        model = User
-        fields = "__all__"
-
-class AdminDetailWithDrawalSerializer(serializers.Serializer):
-    user = UserSerializer(read_only=True)
-    id = serializers.IntegerField(read_only=True)
-    user_id = serializers.IntegerField(read_only=True)
-    reason = serializers.CharField(read_only=True)
-    reason_detail = serializers.CharField(read_only=True)
-    due_date = serializers.DateTimeField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+        model = Withdrawal
+        fields = ["id", "user", "reason", "reason_detail", "due_date", "created_at"]

@@ -16,7 +16,7 @@ class Withdrawal(models.Model):
         NOT_SATISFIED = "NOT_SATISFIED", "불만족"
         ETC = "ETC", "기타"
 
-    user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name="withdrawal", null=True)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name="withdrawal")
     reason = models.CharField(max_length=20, choices=Reason.choices)
     reason_detail = models.TextField()
     due_date = models.DateField(default=two_weeks_later)
@@ -27,4 +27,4 @@ class Withdrawal(models.Model):
         db_table = "withdrawals"
 
     def __str__(self) -> str:
-        return f"{self.user.email} - {self.get_reason_display()}"  # type: ignore
+        return f"{self.user.email} - {self.get_reason_display()}"
