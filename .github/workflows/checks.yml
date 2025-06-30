@@ -147,7 +147,7 @@ jobs:
         run: |
           poetry run python manage.py migrate
 
-      # run test
+      # run tests
       - name: Test python project
         if: steps.check-tests.outputs.has_tests == 'true'
         run: |
