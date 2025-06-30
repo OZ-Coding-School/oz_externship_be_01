@@ -2,10 +2,11 @@ from django.urls import path
 
 from apps.community.views.admin.category_views import (
     AdminCategoryListAPIView,
+    AdminCategoryRenameAPIView,
     AdminCommunityCategoryCreateAPIView,
     AdminCommunityCategoryDetailAPIView,
-    AdminCommunityCategoryStatusUpdateAPIView,
-    AdminCommunityCategoryUpdateAPIView,
+    CategoryStatusOffAPIView,
+    CategoryStatusOnAPIView,
 )
 from apps.community.views.admin.comment_views import AdminCommentDeleteAPIView
 from apps.community.views.admin.notice_views import NoticeCreateAPIView
@@ -29,15 +30,18 @@ urlpatterns = [
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
     path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
     path(
-        "admin/categories/<int:category_id>/status/",
-        AdminCommunityCategoryStatusUpdateAPIView.as_view(),
-        name="admin_category_status_update",
+        "admin/community/category/<int:category_id>/on/", CategoryStatusOnAPIView.as_view(), name="category-status-on"
+    ),
+    path(
+        "admin/community/category/<int:category_id>/off/",
+        CategoryStatusOffAPIView.as_view(),
+        name="category-status-off",
     ),
     path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),
     path("admin/categories/", AdminCategoryListAPIView.as_view(), name="admin_category_list"),
     path(
-        "admin/categories/<int:category_id>/update/",
-        AdminCommunityCategoryUpdateAPIView.as_view(),
-        name="admin_category_update",
+        "admin/categories/<int:category_id>/rename/",
+        AdminCategoryRenameAPIView.as_view(),
+        name="admin_category_rename",
     ),
 ]
