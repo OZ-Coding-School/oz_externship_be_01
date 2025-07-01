@@ -144,33 +144,19 @@ class AdminPostDeleteView(APIView):
 
 # 게시글 노출 on/off
 class AdminPostVisibilityToggleView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
 
-    @extend_schema(
-        summary="admin 게시글 노출 상태 토글",
-        description="관리자 페이지에서 게시글의 노출 상태를 on/off로 변경하는 mock API입니다.",
-        responses={
-            200: OpenApiResponse(description="게시글 노출 상태가 변경되었습니다."),
-            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
-        },
-        tags=["Community - 게시글"],
-    )
-    def patch(self, request: Request, post_id: int) -> Response:
-        post = get_post_by_id(post_id)  # 없으면 Http404 발생
+    def patch(self, request, post_id: int) -> Response:
+        post = get_object_or_404(Post, id=post_id)
 
-        new_is_visible = not post.is_visible
-        post.is_visible = new_is_visible
-
-        for idx, p in enumerate(mock_post_cache):
-            if p.id == post_id:
-                mock_post_cache[idx] = post
-                break
+        # 현재 값 반전
+        post.is_visible = not post.is_visible
+        post.save()
 
         return Response(
             {
-                "id": post.id,
-                "is_visible": post.is_visible,
-                "message": f"게시글 노출 상태가 {'ON' if post.is_visible else 'OFF'}으로 변경되었습니다.",
+                "message": f"게시글 노출 상태가 {'활성화' if post.is_visible else '비활성화'}되었습니다.",
+                "data": PostDetailSerializer(post).data
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_200_OK
         )
