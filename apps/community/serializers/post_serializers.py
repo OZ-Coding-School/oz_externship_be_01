@@ -11,28 +11,14 @@ from apps.community.serializers.attachment_serializers import (
     PostImageResponseSerializer,
 )
 from apps.community.serializers.comment_serializers import CommentResponseSerializer
+from apps.community.serializers.category_serializers import CategoryDetailResponseSerializer
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 
 
 # 게시글 목록
 class PostListSerializer(serializers.ModelSerializer[Post]):
-    category = serializers.SerializerMethodField()
-
-    @extend_schema_field(
-        {
-            "type": "object",
-            "properties": {
-                "id": {"type": "integer", "example": 1},
-                "name": {"type": "string", "example": "공지사항"},
-            },
-        }
-    )
-    def get_category(self, obj: Any) -> dict[str, Any]:
-        category = getattr(obj, "category", None)
-        if category:
-            category_id = category.get("id") if isinstance(category, dict) else getattr(category, "id", None)
-            return {"id": category_id, "name": "공지사항" if category_id == 1 else f"카테고리 {category_id}"}
-        return {"id": None, "name": "없음"}
+    category = CategoryDetailResponseSerializer(read_only=True)
+    author = AuthorSerializer(read_only=True)
 
     class Meta:
         model = Post
@@ -48,9 +34,7 @@ class PostListSerializer(serializers.ModelSerializer[Post]):
             "is_visible",
             "created_at",
         )
-
         read_only_fields = fields
-
 
 # 게시글 디테일
 class PostDetailSerializer(serializers.ModelSerializer[Post]):
