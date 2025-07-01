@@ -131,23 +131,15 @@ class AdminPostUpdateView(APIView):
 
 # 게시글 삭제
 class AdminPostDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
 
-    @extend_schema(
-        summary="admin 게시글 삭제",
-        description="관리자 페이지에서 게시글을 삭제하는 mock API입니다.",
-        responses={
-            200: OpenApiResponse(description="게시글이 삭제되었습니다."),
-            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
-        },
-        tags=["Community - 게시글"],
-    )
-    def delete(self, request: Request, post_id: int) -> Response:
-        global mock_post_cache
-        _ = get_post_by_id(post_id)  # 없으면 Http404 발생
-
-        mock_post_cache = [p for p in mock_post_cache if p.id != post_id]
-        return Response({"detail": "게시글이 삭제되었습니다."}, status=200)
+    def delete(self, request, post_id: int) -> Response:
+        post = get_object_or_404(Post, id=post_id)
+        post.delete()
+        return Response(
+            {"id": post_id, "message": "게시글이 삭제되었습니다."},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 # 게시글 노출 on/off
