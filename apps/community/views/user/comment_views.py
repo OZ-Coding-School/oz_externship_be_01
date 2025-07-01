@@ -79,26 +79,6 @@ class CommentListAPIView(APIView):
 
         return paginator.get_paginated_response(results)
 
-        # if not post_id:
-        #     return Response({"detail": "post_id는 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
-        # user1 = User(id=5, nickname="유저1")
-        # user2 = User(id=6, nickname="유저2")
-        #
-        # post = Post(id=post_id)
-        # mock_comment1 = Comment(
-        #     id=1, post=post, author=user1, content="@tae 좋은 글 감사합니다!", created_at=datetime(2025, 6, 20, 13, 15)
-        # )
-        #
-        # mock_comment2 = Comment(
-        #     id=2, post=post, author=user2, content="동의합니다.", created_at=datetime(2025, 6, 20, 13, 16)
-        # )
-        # results = CommentResponseSerializer([mock_comment1, mock_comment2], many=True).data
-        #
-        # return Response(
-        #     {"count": 23, "next": f"/api/v1/comments/?post_id={post_id}&page=2", "previous": None, "results": results},
-        #     status=status.HTTP_200_OK,
-        # )
-
 
 class CommentCreateAPIView(APIView):
     permission_classes = [AllowAny]
@@ -118,13 +98,6 @@ class CommentCreateAPIView(APIView):
         serializer = CommentCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # mock_response = {
-        #     "id": 45,
-        #     "post_id": post_id,
-        #     "user": {"id": 7, "nickname": "태연123"},
-        #     "content": serializer.validated_data["content"],
-        # }
 
         try:
             post = Post.objects.get(id=post_id)
@@ -153,7 +126,6 @@ class CommentUpdateAPIView(APIView):
         },
     )
     def patch(self, request: Request, comment_id: int) -> Response:
-
         try:
             comment = Comment.objects.get(id=comment_id)
         except Comment.DoesNotExist:
@@ -167,14 +139,6 @@ class CommentUpdateAPIView(APIView):
 
         response_serializer = CommentResponseSerializer(comment)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-        # mock_response = {
-        #     "id": comment_id,
-        #     "post_id": 45,
-        #     "user": {"id": 7, "nickname": "정아"},
-        #     "content": content,
-        #     "updated_at": "2025-06-20T14:05:00Z",
-        # }
 
 
 class CommentDeleteAPIView(APIView):
