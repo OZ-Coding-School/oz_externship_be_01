@@ -1,20 +1,25 @@
-from django.db.models.aggregates import Count
-from django.db.models.functions import Coalesce
+from typing import List
+
+from django.db.models import Q
+from django.db.models.aggregates import Count, Sum
+from django.db.models.functions import Coalesce, TruncMonth
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import Course, Generation
+from apps.courses.models import Course, Generation,EnrollmentRequest
 from apps.courses.serializers.generation_serializer import (
     GenerationCreateSerializer,
     GenerationDetailSerializer,
     GenerationListSerializer,
-    GenerationTrendSerializer,
-    MonthlyGenerationSerializer,
-    OngoingSerializer,
+    CourseTrendSerializer,
+    MonthlyCourseSerializer,
+    OngoingCourseSerializer, EnrollmentGraphSerializer
 )
 
 
@@ -88,49 +93,165 @@ class GenerationDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GenerationTrendView(APIView):
+class CourseTrendView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = GenerationTrendSerializer
+    serializer_class = CourseTrendSerializer
 
-    def get(
-        self,
-        request: Request,
-    ) -> Response:
-        payload = {"course_id": 101, "course_name": "백엔드", "labels": [1, 2, 3, 4], "people_count": [25, 30, 28, 32]}
-        serializer = self.serializer_class(data=payload)
-        if serializer.is_valid(raise_exception=True):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='course_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='조회할 과정의 ID',
+                required=True
+            )
+        ]
+    )
+
+
+
+    def get(self, request: Request,) -> Response:
+        course_id = request.query_params.get('course_id')
+        if not course_id:
+            return Response({"detail": "과정 ID(course_id)는 필수 쿼리 파라미터입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            course = get_object_or_404(Course, id=course_id)
+
+            # accepted_at이 NULL이 아닌 등록 요청만 카운트
+            generations_data = Generation.objects.filter(course=course).annotate(
+                registered_students=Coalesce(
+                    Count('enrollments', filter=Q(enrollments__accepted_at__isnull=False)),
+                    0
+                )
+            ).order_by('number')
+
+            labels: List[str] = []
+            registered_students_count: List[int] = []
+            max_capacity_trend: List[int] = []
+
+            for gen in generations_data:
+                labels.append(f"{gen.number}기")
+                registered_students_count.append(gen.registered_students)
+                max_capacity_trend.append(gen.max_student)
+
+            output_payload = {
+                "course_id": course.id,
+                "course_name": course.name,
+                "labels": labels,
+                "registered_students_count": registered_students_count,
+                "max_capacity_trend": max_capacity_trend,
+            }
+
+            serializer = self.serializer_class(output_payload)
+            serializer.is_valid(raise_exception=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
 
+        except Course.DoesNotExist:
+            return Response({"detail": "해당 과정을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class MonthlygenerationView(APIView):
+class MonthlyCourseView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = MonthlyGenerationSerializer
+    serializer_class = MonthlyCourseSerializer
 
-    def get(self, request: Request) -> Response:
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='course_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='조회할 과정 ID',
+                required=True
+            )
+        ]
+    )
+    def get(self, request: Request, pk: int) -> Response:
+        course_id = request.query_params.get("course_id")
+
+        if not course_id:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        try:
+            course = get_object_or_404(Course, id=course_id)
+
+            monthly_enrollments = EnrollmentRequest.objects.filter(
+                generation_course=course, #해당 과정에 속한 기수의 요청
+                accepted_at__isnull=False, #승인된 요청
+            ).annotate(month_start=TruncMonth('accepted_at') #accepted_at을 월 단위로
+            ).values("month_start").annotate(count=Count('id') #해당 월 등록 요청 카운트
+            ).order_by("month_start") #월별로 정렬
+
+            labels : List[str] = [] #데이터 가공
+            monthly_enrollments_count : List[int] = []
+            for entry in monthly_enrollments:
+                labels.append(entry["month_start"].strftime('%Y-%m'))
+                monthly_enrollments_count.append(entry["count"])
+
+            payload = {
+                'course_id' : course.id,
+                'course_name' : course.name,
+                'labels': labels,
+                'monthly_enrollments_count' : monthly_enrollments_count,
+            }
+
+            serializer = self.serializer_class(payload)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Course.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class OngoingCourseView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = EnrollmentGraphSerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='course_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='조회할 과정 ID',
+                required=False
+            )
+        ]
+    )
+
+    def get(self, request: Request, pk: int) -> Response:
+        course_id = request.query_params.get("course_id")
+        queryset = Course.objects.all()
+        if course_id:
+            try:
+                queryset = queryset.filter(id=int(course_id))
+            except ValueError:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
+            if not queryset.exists():
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+        courses_with_enrollments = queryset.annotate(
+            total_students= Coalesce(Sum('generation__enrollment',
+                                         filter=Q(generations__enrollments__accepted_at__isnull=False)), 0)
+        ).order_by('name')
+
+        labels : List[str] = []
+        total_enrollments_count : List[int] = []
+
+        for course in courses_with_enrollments:
+            labels.append(course.name)
+            total_enrollments_count.append(course.total_students)
+
         payload = {
-            "course_id": 101,
-            "course_name": "백엔드",
-            "labels": ["2025-1", "2025-2", "2025-3"],
-            "people_count": [25, 30, 30],
+            'labels': labels,
+            'total_enrollments_count' : total_enrollments_count,
         }
 
-        serializer = self.serializer_class(data=payload)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
-
-
-class OngoingGenerationView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = OngoingSerializer
-
-    def get(self, request: Request) -> Response:
-        payload = {"labels": ["백엔드", "프론트", "풀스택"], "people_count": [25, 30, 30]}
-        serializer = self.serializer_class(data=payload)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(payload)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -4,7 +4,7 @@ from typing import Any, Dict
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 
-from apps.courses.models import Generation
+from apps.courses.models import Generation, Course
 
 
 # 기수 등록
@@ -111,47 +111,29 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
 
 
 # 과정 - 기수 대시보드
-class GenerationTrendSerializer(serializers.ModelSerializer[Generation]):
-    course_name = serializers.IntegerField(source="course.name", read_only=True)
-    course_id = serializers.CharField(source="course.id", read_only=True)
-    labels = serializers.ListField(child=serializers.IntegerField())
-    people_count = serializers.ListField(child=serializers.IntegerField())
-
-    class Meta:
-        model = Generation
-        fields = [
-            "course_name",
-            "course_id",
-            "labels",
-            "people_count",
-        ]
-        read_only_fields = fields
-
-
-class MonthlyGenerationSerializer(serializers.ModelSerializer[Generation]):
+class CourseTrendSerializer(serializers.Serializer):
     course_id = serializers.IntegerField(source="course.id", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
-    labels = serializers.ListField(child=serializers.IntegerField())
-    people_count = serializers.ListField(child=serializers.IntegerField())
+
+    labels=serializers.ListField(child=serializers.CharField())
+    registered_students_count = serializers.ListField(child=serializers.IntegerField())
+#월별
+class MonthlyCourseSerializer(serializers.Serializer):
+    course_id = serializers.IntegerField(source="course.id", read_only=True)
+    course_name = serializers.CharField(source="course.name", read_only=True)
+
+    labels=serializers.ListField(child=serializers.CharField())
+    monthly_count = serializers.ListField(child=serializers.IntegerField())
+#모든 과정
+class EnrollmentGraphSerializer(serializers.ModelSerializer[Course]):
+    total_students = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Generation
-        fields = [
-            "course_id",
-            "course_name",
-            "labels",
-            "people_count",
-        ]
-        read_only_fields = fields
+        model = Course
+        fields = ['id','name','total_students']
 
+class OngoingCourseSerializer(serializers.Serializer):
 
-class OngoingSerializer(serializers.ModelSerializer[Generation]):
-    labels = serializers.ListField(child=serializers.IntegerField())
-    people_count = serializers.ListField(child=serializers.IntegerField())
+    labels=serializers.ListField(child=serializers.CharField())
 
-    class Meta:
-        model = Generation
-        fields = [
-            "labels",
-            "people_count",
-        ]
+    total_enrollment_count = serializers.ListField(child=serializers.IntegerField())

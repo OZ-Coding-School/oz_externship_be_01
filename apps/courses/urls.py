@@ -6,10 +6,10 @@ from apps.courses.views.generation_views import (
     GenerationDeleteView,
     GenerationDetailView,
     GenerationListView,
-    GenerationTrendView,
+    CourseTrendView,
     GenerationUpdateView,
-    MonthlygenerationView,
-    OngoingGenerationView,
+    MonthlyCourseView,
+    OngoingCourseView,
 )
 from apps.courses.views.subject_views import (
     SubjectDetailAPIView,
@@ -28,7 +28,7 @@ urlpatterns = [
     path("generations/<int:pk>/delete/", GenerationDeleteView.as_view(), name="generation_delete"),
     path("generations/<int:pk>/detail/", GenerationDetailView.as_view(), name="generation_update_detail"),
     path("generations/list/", GenerationListView.as_view(), name="generation_list"),
-    path("generations/dashboard/trend", GenerationTrendView.as_view(), name="generation_trend"),
-    path("generations/dashboard/Monthly", MonthlygenerationView.as_view(), name="generation_monthly"),
-    path("generations/dashboard/ongoing", OngoingGenerationView.as_view(), name="generation_ongoing"),
+    path("generations/dashboard/trend", CourseTrendView.as_view(), name="generation_trend"),
+    path("generations/dashboard/Monthly", MonthlyCourseView.as_view(), name="generation_monthly"),
+    path("generations/dashboard/ongoing", OngoingCourseView.as_view(), name="generation_ongoing"),
 ]
