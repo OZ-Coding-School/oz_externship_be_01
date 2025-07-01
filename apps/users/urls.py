@@ -7,6 +7,9 @@ from apps.users.views.admin_dashboard_views import (
     AdminWithdrawalReasonTrendView,
     AdminWithdrawTrendView,
 )
+from apps.users.views.admin_enrollments_rejection_views import (
+    RejectEnrollmentRequestView,
+)
 from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
@@ -45,6 +48,7 @@ urlpatterns = [
     path("profile/", UserProfileView.as_view(), name="user-profile"),
     path("profile/update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
     path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
+    # admin 유저 관리
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
@@ -76,5 +80,10 @@ urlpatterns = [
         "admin/users/student-enrollments/approve/",
         AdminApproveEnrollmentsView.as_view(),
         name="admin-student-enrollments-approve",
+    ),
+    path(
+        "admin/users/student-enrollments/reject/",
+        RejectEnrollmentRequestView.as_view(),
+        name="admin-student-enrollments-reject",
     ),
 ]
