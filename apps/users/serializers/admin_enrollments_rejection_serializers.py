@@ -2,12 +2,14 @@ from typing import Any
 
 from rest_framework import serializers
 
+from apps.users.models import StudentEnrollmentRequest
+
 
 # 요청
 class MockEnrollmentSerializer(serializers.Serializer[Any]):
     id = serializers.IntegerField(min_value=1, help_text="수강 신청 ID")
     status = serializers.ChoiceField(
-        choices=["PENDING", "APPROVED", "REJECTED"], help_text="현재 상태 (PENDING, APPROVED, REJECTED)"
+        choices=StudentEnrollmentRequest.EnrollmentStatus.choices, help_text="현재 상태 (PENDING, APPROVED, REJECTED)"
     )
 
 

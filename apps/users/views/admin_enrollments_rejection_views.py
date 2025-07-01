@@ -7,6 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.users.models import StudentEnrollmentRequest
 from apps.users.serializers.admin_enrollments_rejection_serializers import (
     RejectEnrollmentRequestSerializer,
     RejectionResponseSerializer,
@@ -36,15 +37,17 @@ class RejectEnrollmentRequestView(APIView):
         downgraded_user_ids = []
         deleted_permission_ids = []
 
+        status_enum = StudentEnrollmentRequest.EnrollmentStatus
+
         for enrollment in enrollments:
             enrollment_id = enrollment["id"]
             status_value = enrollment["status"]
 
-            if status_value == "REJECTED":
+            if status_value == status_enum.REJECTED:
                 skipped_ids.append(enrollment_id)
-            elif status_value == "PENDING":
+            elif status_value == status_enum.PENDING:
                 rejected_ids.append(enrollment_id)
-            elif status_value == "APPROVED":
+            elif status_value == status_enum.APPROVED:
                 rejected_ids.append(enrollment_id)
                 downgraded_user_ids.append(enrollment_id)
                 deleted_permission_ids.append(enrollment_id)
