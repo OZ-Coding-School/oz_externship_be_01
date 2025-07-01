@@ -108,8 +108,6 @@ class CategoryStatusOnAPIView(APIView):
 
         validated = serializer.validated_data
         mock_instance = {
-            "id": validated["id"],
-            "name": validated["name"],
             "status": True,
             "updated_at": datetime.now(),
         }
@@ -135,8 +133,6 @@ class CategoryStatusOffAPIView(APIView):
 
         validated = serializer.validated_data
         mock_instance = {
-            "id": validated["id"],
-            "name": validated["name"],
             "status": False,
             "updated_at": datetime.now(),
         }
