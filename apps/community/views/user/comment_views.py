@@ -1,3 +1,6 @@
+import re
+
+from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
@@ -6,13 +9,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Comment, Post
+from apps.community.models import Comment, CommentTags, Post
 from apps.community.serializers.comment_serializer import (
     CommentCreateSerializer,
     CommentResponseSerializer,
-    CommentTagSerializer,
     CommentUpdateSerializer,
 )
+
+User = get_user_model()
 
 
 # 댓글 조희
@@ -70,8 +74,6 @@ class CommentListAPIView(APIView):
         results = []
         for comment in paginated_comments:
             comment_data = CommentResponseSerializer(comment).data
-            tag_data = CommentTagSerializer(comment.tags.all(), many=True).data
-            comment_data["tagged_users"] = tag_data
             results.append(comment_data)
 
         return paginator.get_paginated_response(results)
@@ -101,7 +103,17 @@ class CommentCreateAPIView(APIView):
         except Post.DoesNotExist:
             return Response({"detail": "존재하지 않는 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        comment = serializer.save(post=post)
+        comment = serializer.save(post=post, author=request.user)
+
+        content = serializer.validated_data.get("content", "")
+        tag_usernames = re.findall(r"@(\w+)", content)
+
+        for username in tag_usernames:
+            try:
+                tagged_user = User.objects.get(username=username)
+                CommentTags.objects.create(comment=comment, tagged_user=tagged_user)
+            except User.DoesNotExist:
+                continue
 
         response_serializer = CommentResponseSerializer(comment)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
