@@ -34,7 +34,7 @@ class AdminListCourseSerializer(serializers.ModelSerializer[Course]):
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminListGenerationSerializer(serializers.ModelSerializer[Generation]):
-    course = CourseSerializer(read_only=True)
+    course = AdminListCourseSerializer(read_only=True)
 
     class Meta:
         model = Generation
@@ -62,13 +62,13 @@ class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment])
 # 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
     test = AdminListSerializer(read_only=True)
-    generation_number = AdminListGenerationSerializer(read_only=True)
+    generation = AdminListGenerationSerializer(read_only=True)
 
     class Meta:
         model = TestDeployment
         fields = (
             "test",
-            "generation_number",
+            "generation",
         )
 
 

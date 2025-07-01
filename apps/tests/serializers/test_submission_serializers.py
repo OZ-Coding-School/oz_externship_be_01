@@ -45,10 +45,14 @@ class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]
 class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestListDeploymentSerializer(read_only=True)
     student = AdminListStudentSerializer(read_only=True)
+    total_score = serializers.SerializerMethodField()
 
     class Meta:
         model = TestSubmission
-        fields = ("id", "deployment", "student", "cheating_count", "started_at", "created_at")
+        fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
+
+    def get_total_score(self, obj):
+        return 30  # 그냥 고정 점수 예시
 
 
 # 관리자 쪽지 시험 응시 상세 조회
