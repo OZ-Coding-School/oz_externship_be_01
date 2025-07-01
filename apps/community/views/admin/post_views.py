@@ -3,6 +3,7 @@ from typing import List, cast
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404
 from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -116,53 +117,17 @@ class AdminPostDetailView(APIView):
 
 # 어드민 게시글 수정
 class AdminPostUpdateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     parser_classes = [MultiPartParser, FormParser]
 
-    @extend_schema(
-        summary="admin 게시글 수정",
-        description="관리자 페이지에서 게시글 정보를 수정하는 mock API입니다. 실제 저장은 되지 않습니다.",
-        request=PostUpdateSerializer,
-        responses={
-            200: PostDetailSerializer,
-            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
-        },
-        tags=["Community - 게시글"],
-    )
     def patch(self, request: Request, post_id: int) -> Response:
-        serializer = PostUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        post = get_object_or_404(Post, id=post_id)
+        serializer = PostUpdateSerializer(post, data=request.data, partial=True)
 
-        original_post = get_post_by_id(post_id)
-        original_category_id = original_post.category["id"]
-        category_id = validated.get("category", original_category_id)
-
-        mock_response = {
-            "id": post_id,
-            "category": {"id": category_id, "name": "공지사항" if category_id == 1 else f"카테고리 {category_id}"},
-            "author": original_post.author,
-            "title": validated.get("title", original_post.title),
-            "content": validated.get("content", original_post.content),
-            "view_count": original_post.view_count,
-            "likes_count": original_post.likes_count,
-            "comment_count": original_post.comment_count,
-            "is_visible": validated.get("is_visible", original_post.is_visible),
-            "is_notice": original_post.is_notice,
-            "attachments": validated.get("attachments", original_post.attachments),
-            "images": original_post.images,
-            "comments": original_post.comments,
-            "created_at": original_post.created_at,
-            "updated_at": "2025-06-27T15:00:00Z",
-        }
-
-        for idx, post in enumerate(mock_post_cache):
-            if post.id == post_id:
-                mock_post_cache[idx] = SimpleNamespace(**mock_response)
-                break
-
-        return Response(PostDetailSerializer(instance=cast(Post, SimpleNamespace(**mock_response))).data)
-
+        if serializer.is_valid():
+            serializer.save()
+            return Response(PostDetailSerializer(post).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 게시글 삭제
 class AdminPostDeleteView(APIView):

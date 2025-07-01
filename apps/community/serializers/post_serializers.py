@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.community.models import Post
+from apps.community.models import Post, PostCategory
 from apps.community.serializers.attachment_serializers import (
     PostAttachmentRequestSerializer,
     PostAttachmentResponseSerializer,
@@ -67,7 +67,7 @@ class PostDetailSerializer(serializers.ModelSerializer[Post]):
 class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     title = serializers.CharField(required=False)
     content = serializers.CharField(required=False)
-    category = serializers.IntegerField(required=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=PostCategory.objects.all(), required=False)
     is_visible = serializers.BooleanField(required=False)
     attachments = PostAttachmentRequestSerializer(many=True, required=False)
     images = PostImageRequestSerializer(many=True, required=False)
