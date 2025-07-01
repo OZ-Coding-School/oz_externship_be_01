@@ -6,6 +6,7 @@ from apps.tests.views.admin_testquestion_views import (
     TestQuestionUpdateDeleteView,
 )
 
+from .views.admin_dashboard_views import TestDashboardView
 from .views.admin_test_views import (
     AdminTestCreateAPIView,
     AdminTestDeleteAPIView,
