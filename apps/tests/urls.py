@@ -13,8 +13,13 @@ from .views.admin_test_views import (
     AdminTestListView,
     AdminTestUpdateAPIView,
 )
-from .views.admin_testdeployments_views import TestValidateCodeAdminView, TestDeploymentCreateView, \
-    TestDeploymentDeleteView, TestDeploymentStatusView, DeploymentListView, DeploymentDetailView
+from .views.admin_testdeployments_views import (
+    DeploymentDetailView,
+    DeploymentListView,
+    TestDeploymentCreateView,
+    TestDeploymentDeleteView,
+    TestDeploymentStatusView,
+)
 from .views.user_testdeployments_views import UserCodeValidationView
 
 app_name = "tests"
@@ -28,11 +33,36 @@ urlpatterns = [
     path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
     path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
     path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
-    path("tests/validate-code/",TestValidateCodeAdminView.as_view(), name="admin-code-validate"),
-    path("tests/validate-code/",UserCodeValidationView.as_view(), name="user-code-validate"),
-    path("admin/test-deployments/(deployment_id}/", TestDeploymentDeleteView.as_view(), name="test-deployment-DeleteView"),
-    path("admin/test-deployments/{deployment_id}/status/", TestDeploymentStatusView.as_view(), name="test-deployment-status"),
-    path("admin/test-deployments/",DeploymentListView.as_view(), name="test-deployment-list"),
-    path("admin/test-deployments/{deployment_id}/",DeploymentDetailView.as_view(), name="test-deployment-detail"),
-    path("admin/test-deployments/", TestDeploymentCreateView.as_view(), name="test-deployment-create"),
-    ]
+    # 참가 코드 검증 (Admin용)
+    path("tests/validate-code/", UserCodeValidationView.as_view(), name="user-code-validate"),
+    # 배포 상태 변경 (Activated ↔ Deactivated)
+    path(
+        "admin/test-deployments/<int:deployment_id>/status/",
+        TestDeploymentStatusView.as_view(),
+        name="test-deployment-status",
+    ),
+    # 배포 목록 조회
+    path(
+        "admin/test-deployments/",
+        DeploymentListView.as_view(),
+        name="test-deployment-list",
+    ),
+    # 배포 상세 조회
+    path(
+        "admin/test-deployments/<int:deployment_id>/",
+        DeploymentDetailView.as_view(),
+        name="test-deployment-detail",
+    ),
+    # 배포 생성
+    path(
+        "admin/test-deployments/create/",
+        TestDeploymentCreateView.as_view(),
+        name="test-deployment-create",
+    ),
+    # 배포 삭제
+    path(
+        "admin/test-deployments/<int:deployment_id>/delete/",
+        TestDeploymentDeleteView.as_view(),
+        name="test-deployment-delete",
+    ),
+]

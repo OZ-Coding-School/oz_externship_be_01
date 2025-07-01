@@ -19,9 +19,11 @@ MOCK_USERS: dict[str, dict[str, Any]] = {
 
 
 @extend_schema(
-    tags=["[User] Test - Deployment (쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[User] Test - Deployment (쪽지시험 참가코드 검증)"],
     request=UserCodeValidationSerializer,
     responses={200: dict, 400: dict, 404: dict},
+    summary="쪽지시험 참가코드 구현 API",
+    description="id(1,2)과 access_code (aB3dE9,xY9zQ1)를 이용하여 사용자의 참가코드 유효성을 검사.",
 )
 class UserCodeValidationView(APIView):
 

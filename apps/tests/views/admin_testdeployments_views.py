@@ -10,7 +10,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.serializers.test_deployment_serializers import (
-    AdminCodeValidationSerializer,
     DeploymentCreateSerializer,
     DeploymentDetailSerializer,
     DeploymentListSerializer,
@@ -18,27 +17,27 @@ from apps.tests.serializers.test_deployment_serializers import (
 )
 
 ## 🔹 시험 데이터 (test.id 기준)
-MOCK_TESTS = {
+MOCK_TESTS: Dict[int, Dict[str, Any]] = {
     1: {"id": 1, "title": "HTML 기초", "subject": {"title": "웹프로그래밍"}},
     2: {"id": 2, "title": "CSS 심화", "subject": {"title": "웹디자인"}},
 }
 # 🔹 배포 데이터 (deployment.id 기준)
-MOCK_GENERATIONS = {
+MOCK_GENERATIONS: Dict[int, Dict[str, Any]] = {
     1: {"id": 1, "name": "5기", "course": {"id": 1, "title": "웹프로그래밍"}},
     2: {"id": 2, "name": "4기", "course": {"id": 2, "title": "웹디자인"}},
 }
 
 
 # 🔹 배포 데이터 (deployment.id 기준)
-MOCK_DEPLOYMENTS = {
+MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
     101: {
         "id": 101,
-        "test": MOCK_TESTS[1],
         "generation": MOCK_GENERATIONS[1],
+        "course_name": "웹프로그래밍",
         "total_participants": 15,
         "average_score": 85.6,
         "duration_time": 60,
-        "access_code": "",
+        "access_code": "aB3dE9",
         "status": "Activated",
         "open_at": datetime.now().isoformat(),
         "close_at": datetime.now().isoformat(),
@@ -54,8 +53,8 @@ MOCK_DEPLOYMENTS = {
     },
     102: {
         "id": 102,
-        "test": MOCK_TESTS[2],
         "generation": MOCK_GENERATIONS[2],
+        "course_name": "디자인",
         "total_participants": 10,
         "average_score": 78.2,
         "duration_time": 90,
@@ -76,43 +75,45 @@ MOCK_DEPLOYMENTS = {
 }
 
 
-@extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
-    request=AdminCodeValidationSerializer,
-    responses={200: dict, 400: dict, 404: dict},
-)
-# 참가코드 검증( 어드민 )
-class TestValidateCodeAdminView(APIView):
-
-    permission_classes = [AllowAny]
-    serializer_class = AdminCodeValidationSerializer
-
-    def post(self, request: Request) -> Response:
-        serializer = AdminCodeValidationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        deployment_id = serializer.validated_data["deployment_id"]
-        access_code = serializer.validated_data["access_code"]
-
-        deployment: Optional[Dict[str, Any]] = MOCK_DEPLOYMENTS.get(deployment_id)
-        if not deployment:
-            return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
-
-        if deployment["access_code"] == access_code and deployment["status"] == "Activated":
-            return Response(
-                {
-                    "message": "참가코드가 유효합니다.",
-                    "test_title": deployment["test"]["title"],
-                    "deployment_id": deployment_id,
-                    "duration_time": deployment["duration_time"],
-                }
-            )
-        return Response({"detail": "유효하지 않은 참가코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
+# @extend_schema(
+#     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+#     request=AdminCodeValidationSerializer,
+#     responses={200: dict, 400: dict, 404: dict},
+# )
+# # 참가코드 검증( 어드민 )
+# class TestValidateCodeAdminView(APIView):
+#
+#     permission_classes = [AllowAny]
+#     serializer_class = AdminCodeValidationSerializer
+#
+#     def post(self, request: Request) -> Response:
+#         serializer = AdminCodeValidationSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         deployment_id = serializer.validated_data["deployment_id"]
+#         access_code = serializer.validated_data["access_code"]
+#
+#         deployment: Optional[Dict[str, Any]] = MOCK_DEPLOYMENTS.get(deployment_id)
+#         if not deployment:
+#             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
+#
+#         if deployment["access_code"] == access_code and deployment["status"] == "Activated":
+#             return Response(
+#                 {
+#                     "message": "참가코드가 유효합니다.",
+#                     "test_title": deployment["test"]["title"],
+#                     "deployment_id": deployment_id,
+#                     "duration_time": deployment["duration_time"],
+#                 }
+#             )
+#         return Response({"detail": "유효하지 않은 참가코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentStatusUpdateSerializer,
     responses={200: dict, 404: dict},
+    summary="배포 상태 변경",
+    description="배포 아이디 101.102 기반으로 해당 상태를 PATCH 요청을 통해 활성화(Activated) 또는 비활성화(Deactivated)로 변경합니다. ",
 )
 class TestDeploymentStatusView(APIView):
 
@@ -145,6 +146,8 @@ class TestDeploymentStatusView(APIView):
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer(many=True)},
+    summary="시험 배포 목록 조회",
+    description="등록된 모든 시험 배포 정보(ID 101,102)를 조회합니다. 페이징 없이 전체 데이터를 반환합니다.",
 )
 class DeploymentListView(APIView):
     permission_classes = [AllowAny]
@@ -161,6 +164,8 @@ class DeploymentListView(APIView):
 @extend_schema(
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer},
+    summary="시험 배포 상세 조회",
+    description="지정한 배포 ID(101,102)에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
 )
 class DeploymentDetailView(APIView):
     permission_classes = [AllowAny]
@@ -181,68 +186,77 @@ class DeploymentDetailView(APIView):
     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentCreateSerializer,
     responses={201: dict},
+    summary="시험 배포 생성",
+    description="course_name(웹프로그래밍)와 기수 ID(1) 시간 (60)을 넣어 새로운 시험 배포를 생성합니다.참가코드는 무작위로 자동 생성되며, 문제 스냅샷도 포함됩니다.",
 )
 # TestDeployment 배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = DeploymentCreateSerializer
 
-    permission_classes = [AllowAny]  # 권한 설정: 누구나 접근 가능
-    serializer_class = DeploymentCreateSerializer  # 입력 검증용 시리얼라이저
-
-    # POST 요청 처리: 배포 생성
     def post(self, request: Request) -> Response:
-        serializer = self.serializer_class(data=request.data)  # 요청 데이터 시리얼라이즈
-        serializer.is_valid(raise_exception=True)  # 유효성 검사, 실패 시 예외 발생
-        validated: Dict[str, Any] = serializer.validated_data  # 검증된 데이터
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated: Dict[str, Any] = serializer.validated_data
 
-        test_id: int = validated["test"]  # 시험 ID
-        generation_id: int = validated["generation"]  # 기수 ID
+        course_name: str = validated["course_name"]  # 사용자 입력: "웹프로그래밍"
+        generation_id: int = validated["generation"]  # 사용자 입력: 1 등
 
-        # MOCK 데이터에서 시험, 기수 정보 조회
-        test_info: Optional[Dict[str, Any]] = MOCK_TESTS.get(test_id)
+        #  course_name으로 시험 찾기 (subject.title 기준)
+        test_info = None
+        for test in MOCK_TESTS.values():
+            if test["subject"]["title"] == course_name:
+                test_info = test
+                break
+
         generation_info: Optional[Dict[str, Any]] = MOCK_GENERATIONS.get(generation_id)
 
         if not test_info:
-            return Response({"detail": "존재하지 않는 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "해당 과목에 해당하는 시험이 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
         if not generation_info:
             return Response({"detail": "존재하지 않는 기수입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        now: str = datetime.now().isoformat()  # 현재 시간 ISO 포맷 문자열
-        new_id: int = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1  # 새로운 배포 ID 생성
+        now: str = datetime.now().isoformat()
+        new_id: int = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
 
         new_data: Dict[str, Any] = {
-            "id": new_id,  # 배포 ID
-            "test": test_info,  # 시험 정보
-            "generation": generation_info,  # 기수 정보
-            "duration_time": validated.get("duration_time", 60),  # 시험 시간 (기본 60분)
-            "access_code": str(uuid4())[:6],  # 6자리 무작위 참가코드 생성
-            "status": "Activated",  # 상태
-            "open_at": validated.get("open_at", now),  # 개시 시간
-            "close_at": validated.get("close_at", now),  # 종료 시간
-            "questions_snapshot_json": {  # 문제 스냅샷 예시
+            "id": new_id,
+            "test": test_info,
+            "generation": generation_info,
+            "duration_time": validated.get("duration_time", 60),
+            "access_code": str(uuid4())[:6],
+            "status": "Activated",
+            "open_at": validated.get("open_at", now),
+            "close_at": validated.get("close_at", now),
+            "questions_snapshot_json": {
                 "1": {
                     "question": "3 + 5 = ?",
                     "choices": ["6", "7", "8"],
                     "answer": "8",
                 }
             },
-            "created_at": now,  # 생성 시간
-            "updated_at": now,  # 수정 시간
+            "created_at": now,
+            "updated_at": now,
         }
 
-        MOCK_DEPLOYMENTS[new_id] = new_data  # 메모리 저장
+        MOCK_DEPLOYMENTS[new_id] = new_data
 
         response_data: Dict[str, Any] = {
-            "deployment_id": new_data["id"],  # 응답용 배포 ID
-            "access_code": new_data["access_code"],  # 응답용 참가 코드
-            "status": new_data["status"],  # 응답용 상태
-            "snapshot": new_data["questions_snapshot_json"],  # 응답용 문제 스냅샷
+            "deployment_id": new_data["id"],
+            "access_code": new_data["access_code"],
+            "status": new_data["status"],
+            "snapshot": new_data["questions_snapshot_json"],
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    summary="시험 배포 삭제",
+    description="지정한 배포 I(101,102)D에 해당하는 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )
 class TestDeploymentDeleteView(APIView):
 
