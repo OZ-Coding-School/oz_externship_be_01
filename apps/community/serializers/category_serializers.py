@@ -29,15 +29,11 @@ class CategoryCreateResponseSerializer(ModelSerializer[PostCategory]):
 
 # 요청용 시리얼라이저
 class CategoryStatusUpdateRequestSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
     status = serializers.BooleanField()
 
 
 # 응답용 시리얼라이저
 class CategoryStatusUpdateResponseSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
     status = serializers.BooleanField()
     updated_at = serializers.DateTimeField()
 
