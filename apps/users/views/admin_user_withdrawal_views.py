@@ -27,14 +27,5 @@ class AdminDetailWithdrawalView(APIView):
         except Withdrawal.DoesNotExist:
             return Response({"detail": "탈퇴 내역을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        response_data = {
-            "withdrawal_info": {
-                "id": withdrawal.id,
-                "user_id": withdrawal.user.id,
-                "reason": withdrawal.reason,
-                "reason_detail": withdrawal.reason_detail,
-                "due_date": withdrawal.due_date,
-                "created_at": withdrawal.created_at,
-            }
-        }
-        return Response(response_data, status=status.HTTP_200_OK)
+        serializer = WithdrawalResponseSerializer(withdrawal)
+        return Response(serializer.data, status=status.HTTP_200_OK)
