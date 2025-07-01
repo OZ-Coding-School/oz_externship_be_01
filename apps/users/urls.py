@@ -18,6 +18,7 @@ from apps.users.views.admin_user_views import (
     AdminUserRoleUpdateView,
     AdminUserUpdateView,
 )
+from apps.users.views.admin_user_withdrawal_views import AdminDetailWithdrawalView
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
@@ -81,6 +82,7 @@ urlpatterns = [
         AdminApproveEnrollmentsView.as_view(),
         name="admin-student-enrollments-approve",
     ),
+    path("admin/withdrawal/<int:withdrawal_id>", AdminDetailWithdrawalView.as_view(), name="admin-withdrawal-detail"),
     path(
         "admin/users/student-enrollments/reject/",
         RejectEnrollmentRequestView.as_view(),
