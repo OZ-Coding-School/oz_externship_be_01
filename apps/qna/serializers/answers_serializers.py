@@ -21,11 +21,13 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
         ]
 
     def get_author(self, obj: Answer) -> dict[str, Any]:
+        author = getattr(obj, "author", None)
+
         return {
-            "id": obj.author.id,
-            "nickname": obj.author.nickname,
-            "profile_image": getattr(obj.author, "profile_image_url", ""),
-            "role": getattr(obj.author, "role", ""),
+            "id": getattr(author, "id", None),
+            "nickname": getattr(author, "nickname", ""),
+            "profile_image": getattr(author, "profile_image_url", ""),
+            "role": getattr(author, "role", ""),
         }
 
 
@@ -37,6 +39,12 @@ class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
         model = Answer
         fields = ["content", "image_files", "image_urls"]
 
+    def validate_content(self, value: str) -> str:
+        # 마크다운 형식 지원, 빈 내용 방지
+        if not value or not value.strip():
+            raise serializers.ValidationError("답변 내용을 입력해주세요.")
+        return value.strip()
+
 
 class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
@@ -45,6 +53,12 @@ class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     class Meta:
         model = Answer
         fields = ["content", "image_files", "image_urls"]
+
+    def validate_content(self, value: str) -> str:
+        # 마크다운 형식 지원, 빈 내용 방지
+        if not value or not value.strip():
+            raise serializers.ValidationError("답변 내용을 입력해주세요.")
+        return value.strip()
 
 
 class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):
