@@ -31,7 +31,8 @@ from .views.user_testsubmission_views import (
     TestSubmissionStartView,
     TestSubmissionSubmitView,
 )
-
+from .views.user_deploymentstatus_views import TestDeploymentStatusView
+from .views.admin_dashboard_views import TestDashboardView
 app_name = "tests"
 
 urlpatterns = [
@@ -112,4 +113,6 @@ urlpatterns = [
         TestDeploymentDeleteView.as_view(),
         name="test-deployment-delete",
     ),
+    path("validate-status/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
+    path("mock-dashboard/", TestDashboardView.as_view(), name="mock-test-dashboard"),
 ]
