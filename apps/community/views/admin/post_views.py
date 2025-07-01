@@ -1,19 +1,11 @@
-from types import SimpleNamespace
-from typing import List, cast
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.http import Http404
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiResponse,
-    extend_schema,
-)
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,8 +16,10 @@ from apps.community.serializers.post_pagination_serializers import (
 )
 from apps.community.serializers.post_serializers import (
     PostDetailSerializer,
-    PostUpdateSerializer, PostListSerializer,
+    PostListSerializer,
+    PostUpdateSerializer,
 )
+
 
 # 어드민 게시글 목록 조회
 class AdminPostListView(APIView):
@@ -39,8 +33,8 @@ class AdminPostListView(APIView):
         category_id = request.query_params.get("category_id")
         if is_visible is not None:
             queryset = queryset.filter(is_visible=is_visible.lower() == "true")
-        if category_id:
-            queryset = queryset.filter(category_id=category_id)
+        if category_id and int(category_id) != 1:  # 1이면 전체보기
+            queryset = queryset.filter(category_id=int(category_id))
 
         # 검색 필터링
         search_type = request.query_params.get("search_type")
@@ -67,7 +61,9 @@ class AdminPostListView(APIView):
         # 정렬
         ordering = ordering_map.get(ordering_param)
         if ordering:
-            queryset = queryset.order_by(ordering)
+            queryset = queryset.order_by("-is_notice", ordering)
+        else:
+            queryset = queryset.order_by("-is_notice", "-created_at")
 
         # 페이지네이션
         page_number = int(request.query_params.get("page", 1))
@@ -89,7 +85,7 @@ class AdminPostListView(APIView):
             "count": paginator.count,
             "next": next_url,
             "previous": prev_url,
-            "results": PostListSerializer(page.object_list, many=True).data,
+            "results": PostListSerializer(list(page.object_list), many=True).data,
         }
 
         return Response(AdminPostPaginationSerializer(data).data)
@@ -101,9 +97,9 @@ class AdminPostDetailView(APIView):
 
     def get(self, request: Request, post_id: int) -> Response:
         from django.shortcuts import get_object_or_404
+
         post = get_object_or_404(
-            Post.objects.select_related("category", "author")
-            .prefetch_related(
+            Post.objects.select_related("category", "author").prefetch_related(
                 "attachments",
                 "images",
                 "comments__author",
@@ -129,6 +125,7 @@ class AdminPostUpdateView(APIView):
             return Response(PostDetailSerializer(post).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # 게시글 삭제
 class AdminPostDeleteView(APIView):
     permission_classes = [IsAdminUser]
@@ -136,10 +133,7 @@ class AdminPostDeleteView(APIView):
     def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
         post.delete()
-        return Response(
-            {"id": post_id, "message": "게시글이 삭제되었습니다."},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response({"id": post_id, "message": "게시글이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
 
 
 # 게시글 노출 on/off
@@ -156,7 +150,7 @@ class AdminPostVisibilityToggleView(APIView):
         return Response(
             {
                 "message": f"게시글 노출 상태가 {'활성화' if post.is_visible else '비활성화'}되었습니다.",
-                "data": PostDetailSerializer(post).data
+                "data": PostDetailSerializer(post).data,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )

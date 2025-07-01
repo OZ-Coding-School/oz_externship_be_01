@@ -1,13 +1,15 @@
 from rest_framework import serializers
 
-from apps.community.models import Post, PostCategory, PostAttachment, PostImage
+from apps.community.models import Post, PostAttachment, PostCategory, PostImage
 from apps.community.serializers.attachment_serializers import (
     PostAttachmentRequestSerializer,
     PostAttachmentResponseSerializer,
     PostImageRequestSerializer,
     PostImageResponseSerializer,
 )
-from apps.community.serializers.category_serializers import CategoryDetailResponseSerializer
+from apps.community.serializers.category_serializers import (
+    CategoryDetailResponseSerializer,
+)
 from apps.community.serializers.comment_serializer import CommentResponseSerializer
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 
@@ -35,23 +37,20 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
         attachments_data = validated_data.pop("attachments", [])
         images_data = validated_data.pop("images", [])
 
-        try:
-            category = PostCategory.objects.get(name="공지사항")
-        except PostCategory.DoesNotExist:
-            raise serializers.ValidationError("공지사항 카테고리가 존재하지 않습니다.")
-
-        validated_data["category"] = category
+        validated_data["category"], _ = PostCategory.objects.get_or_create(name="공지사항")
         validated_data["author"] = self.context["request"].user
 
         post = Post.objects.create(**validated_data)
 
-        for attachment in attachments_data:
-            PostAttachment.objects.create(post=post, **attachment)
-
-        for image in images_data:
-            PostImage.objects.create(post=post, **image)
+        PostAttachment.objects.bulk_create([
+            PostAttachment(post=post, **attachment) for attachment in attachments_data
+        ])
+        PostImage.objects.bulk_create([
+            PostImage(post=post, **image) for image in images_data
+        ])
 
         return post
+
 
 # 공지 사항 응답
 class NoticeResponseSerializer(serializers.ModelSerializer[Post]):
