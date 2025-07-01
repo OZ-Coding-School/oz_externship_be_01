@@ -3,6 +3,7 @@ from rest_framework import serializers
 from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
+    AdminTestListDeploymentSerializer,
     UserTestDeploymentSerializer,
 )
 from apps.users.models import PermissionsStudent, User
@@ -12,7 +13,7 @@ from apps.users.models import PermissionsStudent, User
 class UserSerializer(serializers.ModelSerializer[User]):
     class Meta:
         model = User
-        fields = ["id", "name", "nickname"]
+        fields = ("id", "name", "nickname")
 
 
 # 공통 Admin
@@ -25,19 +26,29 @@ class StudentSerializer(serializers.ModelSerializer[PermissionsStudent]):
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
+class AdminListUserSerializer(serializers.ModelSerializer[User]):
+    class Meta:
+        model = User
+        fields = ("name", "nickname")
+
+
+# 관리자 쪽지 시험 응시 전체 목록 조회
+class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]):
+    user = AdminListUserSerializer(read_only=True)
+
+    class Meta:
+        model = PermissionsStudent
+        fields = ("user",)
+
+
+# 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
-    deployment = AdminTestDeploymentSerializer(read_only=True)
-    student = StudentSerializer(read_only=True)
+    deployment = AdminTestListDeploymentSerializer(read_only=True)
+    student = AdminListStudentSerializer(read_only=True)
 
     class Meta:
         model = TestSubmission
-        fields = (
-            "id",
-            "deployment",
-            "student",
-            "cheating_count",
-            "started_at",
-        )
+        fields = ("id", "deployment", "student", "cheating_count", "started_at", "created_at")
 
 
 # 관리자 쪽지 시험 응시 상세 조회

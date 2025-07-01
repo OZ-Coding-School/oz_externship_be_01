@@ -23,17 +23,16 @@ class AdminTestSubmissionsView(APIView):
     def get(self, request: Request) -> Response:
         mock_data = TestSubmission(
             id=1,
-            student=PermissionsStudent(id=1, user=User(id=1, name="William", nickname="Will")),
             deployment=TestDeployment(
-                id=1,
-                generation=Generation(id=1, number=3, course=Course(id=1, name="프론트 초격차")),
-                test=Test(id=1, title="프론트엔드 기초 쪽지시험", subject=Subject(id=1, title="프론트엔드 기초")),
+                test=Test(title="프론트엔드 기초 쪽지시험", subject=Subject(title="프론트엔드 기초")),
+                generation=Generation(number=3, course=Course(name="프론트 초격차")),
             ),
+            student=PermissionsStudent(user=User(name="William", nickname="Will")),
             cheating_count=2,
             # 모델 필드에는 없음. 응답 JSON에만 포함
             # score=85,
-            created_at="2025-06-26T09:00:00",
-            updated_at="2025-06-26T10:00:00",
+            started_at="2025-06-26T09:00:00",  # 시험 응시 시간
+            created_at="2025-06-26T10:00:00",  # 시험 제출 시간
         )
 
         serializer = self.serializer_class(instance=mock_data)

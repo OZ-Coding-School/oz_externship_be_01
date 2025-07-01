@@ -7,7 +7,10 @@ from rest_framework.views import APIView
 
 from apps.courses.models import Generation, Subject
 from apps.tests.models import Test, TestDeployment, TestSubmission
-from apps.tests.serializers.test_deployment_serializers import UserTestStartSerializer
+from apps.tests.serializers.test_deployment_serializers import (
+    UserTestDeploymentSerializer,
+    UserTestStartSerializer,
+)
 from apps.tests.serializers.test_submission_serializers import (
     UserTestResultSerializer,
     UserTestSubmitSerializer,
@@ -15,10 +18,15 @@ from apps.tests.serializers.test_submission_serializers import (
 
 
 # 쪽지 시험 응시
-@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
+@extend_schema(
+    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    request=UserTestStartSerializer,
+    responses=UserTestDeploymentSerializer,
+)
 class TestSubmissionStartView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = UserTestStartSerializer
+    request_serializer_class = UserTestStartSerializer
+    response_serializer_class = UserTestDeploymentSerializer
 
     def post(self, request: Request, test_id: int) -> Response:
         """
@@ -35,7 +43,6 @@ class TestSubmissionStartView(APIView):
         # mock data
         mock_data = TestDeployment(
             id=1,
-            generation=Generation(id=1),
             test=Test(
                 id=test_id,
                 title="프론트엔드 기초 쪽지시험",
@@ -110,7 +117,7 @@ class TestSubmissionStartView(APIView):
         if access_code != data.get("access_code"):
             return Response({"message": "등록 되지 않은 시험 코드 입니다."}, status=403)
 
-        serializer = self.serializer_class(mock_data)
+        serializer = self.response_serializer_class(instance=mock_data)
         return Response({"message": "쪽지시험 응시 시작 완료", "data": serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -126,20 +133,28 @@ class TestSubmissionStartView(APIView):
                 "deployment": 1,
                 "started_at": "2025-06-20T10:30:00",
                 "cheating_count": 2,
-                "answers_json": [
-                    # 객관식 단일 선택
-                    {"question_id": 1, "answer": ["A"]},
-                    # ox 문제
-                    {"question_id": 2, "answer": ["x"]},
-                    # 순서 정렬 답안
-                    {"question_id": 3, "answer": ["<html>", "<head>", "<body>", "<title>"]},
-                    # 주관식 단답형
-                    {"question_id": 4, "answer": ["title"]},
-                    # 빈칸 채우기, 답안 미작성
-                    {"question_id": 5, "answer": [""]},
-                    # 객관식 다중 선택
-                    {"question_id": 6, "answer": ["A", "B"]},
-                ],
+                # "answers_json": [
+                #     # 객관식 단일 선택
+                #     {"question_id": 1, "answer": ["A"]},
+                #     # ox 문제
+                #     {"question_id": 2, "answer": ["x"]},
+                #     # 순서 정렬 답안
+                #     {"question_id": 3, "answer": ["<html>", "<head>", "<body>", "<title>"]},
+                #     # 주관식 단답형
+                #     {"question_id": 4, "answer": ["title"]},
+                #     # 빈칸 채우기, 답안 미작성
+                #     {"question_id": 5, "answer": [""]},
+                #     # 객관식 다중 선택
+                #     {"question_id": 6, "answer": ["A", "B"]},
+                # ],
+                "answers_json": {
+                    1: ["A"],
+                    2: ["X"],
+                    3: ["<html>", "<head>", "<body>", "<title>"],
+                    4: ["title"],
+                    5: [""],
+                    6: ["A", "B"],
+                },
             },
         )
     ],
