@@ -2,11 +2,11 @@ from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
 from apps.courses.views.generation_views import (
+    CourseTrendView,
     GenerationCreateView,
     GenerationDeleteView,
     GenerationDetailView,
     GenerationListView,
-    CourseTrendView,
     GenerationUpdateView,
     MonthlyCourseView,
     OngoingCourseView,

@@ -4,7 +4,7 @@ from typing import Any, Dict
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 
-from apps.courses.models import Generation, Course
+from apps.courses.models import Course, Generation
 
 
 # 기수 등록
@@ -111,29 +111,34 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
 
 
 # 과정 - 기수 대시보드
-class CourseTrendSerializer(serializers.Serializer):
+class CourseTrendSerializer(serializers.Serializer[Any]):
     course_id = serializers.IntegerField(source="course.id", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
 
-    labels=serializers.ListField(child=serializers.CharField())
+    labels = serializers.ListField(child=serializers.CharField())
     registered_students_count = serializers.ListField(child=serializers.IntegerField())
-#월별
-class MonthlyCourseSerializer(serializers.Serializer):
+
+
+# 월별
+class MonthlyCourseSerializer(serializers.Serializer[Any]):
     course_id = serializers.IntegerField(source="course.id", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
 
-    labels=serializers.ListField(child=serializers.CharField())
+    labels = serializers.ListField(child=serializers.CharField())
     monthly_count = serializers.ListField(child=serializers.IntegerField())
-#모든 과정
+
+
+# 모든 과정
 class EnrollmentGraphSerializer(serializers.ModelSerializer[Course]):
     total_students = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Course
-        fields = ['id','name','total_students']
+        fields = ["id", "name", "total_students"]
 
-class OngoingCourseSerializer(serializers.Serializer):
 
-    labels=serializers.ListField(child=serializers.CharField())
+class OngoingCourseSerializer(serializers.Serializer[Any]):
+
+    labels = serializers.ListField(child=serializers.CharField())
 
     total_enrollment_count = serializers.ListField(child=serializers.IntegerField())
