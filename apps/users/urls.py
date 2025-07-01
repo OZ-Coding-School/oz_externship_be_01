@@ -1,9 +1,5 @@
 from django.urls import path
 
-from apps.users.views.admin_enrollments_views import (
-    AdminApproveEnrollmentsView,
-    AdminEnrollmentListView,
-)
 from apps.users.views.admin_dashboard_views import (
     AdminEnrollmentTrendView,
     AdminJoinTrendView,
@@ -14,7 +10,10 @@ from apps.users.views.admin_dashboard_views import (
 from apps.users.views.admin_enrollments_rejection_views import (
     RejectEnrollmentRequestView,
 )
-from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
+from apps.users.views.admin_enrollments_views import (
+    AdminApproveEnrollmentsView,
+    AdminEnrollmentListView,
+)
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
     AdminUserDetailView,

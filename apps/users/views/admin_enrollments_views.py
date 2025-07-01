@@ -101,7 +101,6 @@ class AdminEnrollmentListView(APIView):
         if status_filter in ("PENDING", "APPROVED", "REJECTED"):
             queryset = queryset.filter(status=status_filter)
 
-
         queryset = queryset.order_by(ordering)
 
         # 페이징 (간단 예시: limit-offset)
