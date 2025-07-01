@@ -29,7 +29,7 @@ class AdminTestSubmissionsView(APIView):
             ),
             student=PermissionsStudent(user=User(name="William", nickname="Will")),
             cheating_count=2,
-            #total_score=30, # 시리얼라이저 참고
+            # total_score=30, # 시리얼라이저 참고
             started_at="2025-06-26T09:00:00",  # 시험 응시 시간
             created_at="2025-06-26T10:00:00",  # 시험 제출 시간
         )
