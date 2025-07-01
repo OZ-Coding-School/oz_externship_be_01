@@ -1,5 +1,9 @@
 from django.urls import path
 
+from apps.users.views.admin_enrollments_views import (
+    AdminApproveEnrollmentsView,
+    AdminEnrollmentListView,
+)
 from apps.users.views.admin_dashboard_views import (
     AdminEnrollmentTrendView,
     AdminJoinTrendView,
@@ -50,6 +54,7 @@ urlpatterns = [
     path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
     # admin 유저 관리
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
+    path("admin/users/student-enrollments/", AdminEnrollmentListView.as_view(), name="admin-student-enrollments-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
     path("admin/users/<int:user_id>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),

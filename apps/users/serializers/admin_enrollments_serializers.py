@@ -31,3 +31,29 @@ class EnrollmentSerializer(serializers.ModelSerializer[Any]):
             "created_at",
             "updated_at",
         ]
+
+
+class AdminEnrollmentSerializer(serializers.ModelSerializer):
+    # 유저 관련 필드 (이름, 이메일, 생년월일)
+    user_name = serializers.CharField(source="user.name", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    user_birthday = serializers.DateField(source="user.birthday", read_only=True)
+
+    # 과정명과 기수명
+    course_name = serializers.CharField(source="generation.course.name", read_only=True)
+    generation_name = serializers.CharField(source="generation.name", read_only=True)
+
+    class Meta:
+        model = StudentEnrollmentRequest
+        fields = [
+            "id",
+            "user_name",
+            "user_email",
+            "user_birthday",
+            "course_name",
+            "generation_name",
+            "status",
+            "accepted_at",
+            "created_at",
+            "updated_at",
+        ]
