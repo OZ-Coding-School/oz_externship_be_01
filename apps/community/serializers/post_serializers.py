@@ -1,6 +1,3 @@
-from typing import Any
-
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.community.models import Post
@@ -17,8 +14,8 @@ from apps.community.serializers.post_author_serializers import AuthorSerializer
 
 # 게시글 목록
 class PostListSerializer(serializers.ModelSerializer[Post]):
-    category = CategoryDetailResponseSerializer(read_only=True)
-    author = AuthorSerializer(read_only=True)
+    category = CategoryDetailResponseSerializer()
+    author = AuthorSerializer()
 
     class Meta:
         model = Post
@@ -38,27 +35,11 @@ class PostListSerializer(serializers.ModelSerializer[Post]):
 
 # 게시글 디테일
 class PostDetailSerializer(serializers.ModelSerializer[Post]):
-    category = serializers.SerializerMethodField()
+    category = CategoryDetailResponseSerializer()
     author = AuthorSerializer()
     attachments = PostAttachmentResponseSerializer(many=True, required=False, default=[])
     images = PostImageResponseSerializer(many=True, required=False, default=[])
     comments = CommentResponseSerializer(many=True, required=False, default=[])
-
-    @extend_schema_field(
-        {
-            "type": "object",
-            "properties": {
-                "id": {"type": "integer", "example": 1},
-                "name": {"type": "string", "example": "공지사항"},
-            },
-        }
-    )
-    def get_category(self, obj: Any) -> dict[str, Any]:
-        category = getattr(obj, "category", None)
-        if category:
-            category_id = category.get("id") if isinstance(category, dict) else getattr(category, "id", None)
-            return {"id": category_id, "name": "공지사항" if category_id == 1 else f"카테고리 {category_id}"}
-        return {"id": None, "name": "없음"}
 
     class Meta:
         model = Post

@@ -41,10 +41,32 @@ class AdminPostListView(APIView):
         if category_id:
             queryset = queryset.filter(category_id=category_id)
 
+        # 검색 필터링
+        search_type = request.query_params.get("search_type")
+        keyword = request.query_params.get("keyword")
+        if keyword:
+            if search_type == "title":
+                queryset = queryset.filter(title__icontains=keyword)
+            elif search_type == "content":
+                queryset = queryset.filter(content__icontains=keyword)
+            elif search_type == "author":
+                queryset = queryset.filter(author__nickname__icontains=keyword)
+            elif search_type == "title_content":
+                queryset = queryset.filter(Q(title__icontains=keyword) | Q(content__icontains=keyword))
+
+        # 정렬 처리
+        ordering_param = request.query_params.get("ordering", "recent")
+        ordering_map = {
+            "recent": "-created_at",
+            "old": "created_at",
+            "view": "-view_count",
+            "like": "-likes_count",
+        }
+
         # 정렬
-        ordering = request.query_params.get("ordering")
-        if ordering in ["created_at", "view_count", "likes_count"]:
-            queryset = queryset.order_by(f"-{ordering}")
+        ordering = ordering_map.get(ordering_param)
+        if ordering:
+            queryset = queryset.order_by(ordering)
 
         # 페이지네이션
         page_number = int(request.query_params.get("page", 1))
@@ -74,20 +96,21 @@ class AdminPostListView(APIView):
 
 # 어드민 게시글 상세 조회
 class AdminPostDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
 
-    @extend_schema(
-        summary="admin 게시글 상세 조회",
-        description="관리자 페이지에서 게시글 상세 정보를 mock 데이터로 반환합니다.",
-        responses={
-            200: PostDetailSerializer,
-            404: OpenApiResponse(description="존재하지 않는 게시글입니다."),
-        },
-        tags=["Community - 게시글"],
-    )
     def get(self, request: Request, post_id: int) -> Response:
-        post = get_post_by_id(post_id)
-        serializer = PostDetailSerializer(instance=cast(Post, post))
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(
+            Post.objects.select_related("category", "author")
+            .prefetch_related(
+                "attachments",
+                "images",
+                "comments__author",
+                "comments__tags__tagged_user",
+            ),
+            id=post_id,
+        )
+        serializer = PostDetailSerializer(post)
         return Response(serializer.data)
 
 
