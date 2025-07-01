@@ -45,7 +45,7 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
 class NoticeResponseSerializer(serializers.ModelSerializer[Post]):
     attachments = PostAttachmentResponseSerializer(many=True, read_only=True)
     images = PostImageResponseSerializer(many=True, read_only=True)
-    category = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Post
@@ -61,11 +61,15 @@ class NoticeResponseSerializer(serializers.ModelSerializer[Post]):
             "created_at",
             "updated_at",
         )
-        read_only_fields = [
+        read_only_fields = (
             "id",
+            "title",
+            "content",
+            "is_notice",
+            "is_visible",
             "created_at",
             "updated_at",
-        ]
+        )
 
     @extend_schema_field(
         {
