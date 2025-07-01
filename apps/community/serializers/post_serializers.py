@@ -7,6 +7,7 @@ from apps.community.models import Post
 from apps.community.serializers.attachment_serializers import (
     PostAttachmentRequestSerializer,
     PostAttachmentResponseSerializer,
+    PostImageRequestSerializer,
     PostImageResponseSerializer,
 )
 from apps.community.serializers.comment_serializer import CommentResponseSerializer
@@ -104,7 +105,8 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     category = serializers.IntegerField(required=False)
     is_visible = serializers.BooleanField(required=False)
     attachments = PostAttachmentRequestSerializer(many=True, required=False)
+    images = PostImageRequestSerializer(many=True, required=False)
 
     class Meta:
         model = Post
-        fields = ("title", "content", "category", "is_visible", "attachments")
+        fields = ("title", "content", "category", "is_visible", "attachments", "images")
