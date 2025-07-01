@@ -14,9 +14,6 @@ from apps.community.serializers.comment_serializer import (
     CommentUpdateSerializer,
 )
 
-mock_existing_ids = range(1, 4)
-unauthorized_ids = [99]
-
 
 # 댓글 조희
 class CommentListAPIView(APIView):
@@ -157,10 +154,13 @@ class CommentDeleteAPIView(APIView):
     )
     def delete(self, request: Request, comment_id: int) -> Response:
 
-        if comment_id not in mock_existing_ids:
-            return Response({"detail": "해당 댓글이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            comment = Comment.objects.get(id=comment_id)
+        except Comment.DoesNotExist:
+            return Response({"detail": "존재하지 않는 댓글입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        if comment_id in unauthorized_ids:
+        if comment.author != request.user:
             return Response({"detail": "해당 댓글을 삭제할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
+        comment.delete()
         return Response({"detail": "댓글이 삭제 되었습니다."}, status=status.HTTP_200_OK)
