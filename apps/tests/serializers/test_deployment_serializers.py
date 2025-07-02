@@ -1,5 +1,7 @@
-from rest_framework import serializers
 from typing import Any, Dict
+
+from rest_framework import serializers
+
 from apps.courses.models import Course, Generation
 from apps.tests.models import Test, TestDeployment
 from apps.tests.serializers.test_serializers import (

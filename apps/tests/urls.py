@@ -25,14 +25,13 @@ from .views.admin_testsubmission_views import (
     AdminTestSubmissionDetailView,
     AdminTestSubmissionsView,
 )
+from .views.user_deploymentstatus_views import TestDeploymentStatusView
 from .views.user_testdeployments_views import UserCodeValidationView
 from .views.user_testsubmission_views import (
     TestSubmissionResultView,
     TestSubmissionStartView,
     TestSubmissionSubmitView,
 )
-from .views.user_deploymentstatus_views import TestDeploymentStatusView
-from .views.admin_dashboard_views import TestDashboardView
 
 app_name = "tests"
 
