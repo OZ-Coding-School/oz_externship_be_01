@@ -1,16 +1,19 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tests.models import TestQuestion
 from apps.tests.serializers.test_question_serializers import (
-    ErrorResponseSerializer,
+    DeleteResponseSerializer,
     TestListItemSerializer,
     TestQuestionCreateSerializer,
     TestQuestionUpdateSerializer,
 )
+from apps.tests.testquestion_permissions import IsAdminOrStaffByGroup
 
 
 # 문제 생성
@@ -83,7 +86,8 @@ class TestQuestionListView(APIView):
 
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaffByGroup]
 
     @extend_schema(
         tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
@@ -106,14 +110,14 @@ class TestQuestionUpdateDeleteView(APIView):
     # 문제 삭제
     @extend_schema(
         tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
-        description="Mock - 어드민이 등록한 쪽지시험 문제를 삭제합니다.",
+        description="어드민이 등록한 쪽지시험 문제를 삭제합니다.",
         responses={
             204: OpenApiResponse(description="삭제 성공"),
-            403: OpenApiResponse(response=ErrorResponseSerializer, description="이 작업을 수행할 권한이 없습니다."),
-            404: OpenApiResponse(response=ErrorResponseSerializer, description="문제를 찾을 수 없음"),
+            403: OpenApiResponse(response=DeleteResponseSerializer, description="이 작업을 수행할 권한이 없습니다."),
+            404: OpenApiResponse(response=DeleteResponseSerializer, description="문제를 찾을 수 없음"),
         },
     )
     def delete(self, request: Request, question_id: int) -> Response:
-        if question_id == 999:
-            return Response({"detail": "테스트 질문을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        question = get_object_or_404(TestQuestion, id=question_id)
+        question.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
