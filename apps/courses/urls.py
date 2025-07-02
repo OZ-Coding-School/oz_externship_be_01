@@ -21,6 +21,12 @@ from apps.courses.views.subject_views import (
     SubjectDetailAPIView,
     SubjectDropdownListAPIView,
     SubjectListCreateAPIView,
+from apps.courses.views.subject_views import SubjectDetailAPIView, SubjectListCreateAPIView
+from .views.course_views import (
+    CourseDetailView,
+    CourseListCreateView,
+    CourseEnrollmentStatsView,
+    CourseEnrollmentListView
 )
 
 from .views.course_views import CourseDetailView, CourseListCreateView

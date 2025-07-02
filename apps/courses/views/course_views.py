@@ -1,17 +1,22 @@
 from typing import Any
-
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+from django.db.models import Count, Q
 
-from apps.courses.models import Course
+from apps.courses.models import Course, Generation
 from apps.courses.serializers.course_serializers import (
     CourseListSerializer,
     CourseSerializer,
+    CourseEnrollmentStatsSerializer,
+    CourseEnrollmentListSerializer,
+    EnrollmentRequestSerializer,
 )
+from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
 
 class CourseListCreateView(APIView):
@@ -19,41 +24,16 @@ class CourseListCreateView(APIView):
 
     @extend_schema(summary="과정 목록 조회", responses=CourseListSerializer(many=True), tags=["course"])
     def get(self, request: Request) -> Response:
-        mock_courses_data: list[dict[str, Any]] = [
-            {
-                "id": 1,
-                "name": "AI 백엔드 심화과정",
-                "tag": "AI1",
-                "description": "AI 백엔드 개발 심화 교육과정입니다.",
-                "thumbnail_img_url": "https://cdn.example.com/images/ai-course.png",
-                "created_at": "2025-06-20T10:00:00Z",
-                "updated_at": "2025-06-22T11:00:00Z",
-            },
-            {
-                "id": 2,
-                "name": "프론트엔드 기본 과정",
-                "tag": "FE1",
-                "description": "HTML, CSS, JS 기본기를 학습하는 과정",
-                "thumbnail_img_url": "https://cdn.example.com/images/fe-course.png",
-                "created_at": "2025-06-21T09:00:00Z",
-                "updated_at": None,
-            },
-        ]
-
-        mock_courses: list[Course] = [Course(**data) for data in mock_courses_data]
-
-        serializer = CourseListSerializer(instance=mock_courses, many=True)
+        courses = Course.objects.all()
+        serializer = CourseListSerializer(instance=courses, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(summary="과정 등록", request=CourseSerializer, responses=CourseSerializer, tags=["course"])
     def post(self, request: Request) -> Response:
         serializer = CourseSerializer(data=request.data)
         if serializer.is_valid():
-            mock_response: dict[str, Any] = serializer.data.copy()
-            mock_response["id"] = 1
-            mock_response["created_at"] = "2025-06-23T14:31:00Z"
-            mock_response["updated_at"] = None
-            return Response(mock_response, status=status.HTTP_201_CREATED)
+            course = serializer.save()
+            return Response(CourseSerializer(course).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -62,37 +42,89 @@ class CourseDetailView(APIView):
 
     @extend_schema(summary="과정 상세 조회", responses=CourseSerializer, tags=["course"])
     def get(self, request: Request, course_id: int) -> Response:
-        mock_course: dict[str, Any] = {
-            "id": course_id,
-            "name": "AI 백엔드 심화과정",
-            "tag": "AI1",
-            "description": "AI 백엔드 개발 심화 교육과정입니다.",
-            "thumbnail_img_url": "https://cdn.example.com/images/ai-course.png",
-            "created_at": "2025-06-20T10:00:00Z",
-            "updated_at": "2025-06-23T14:31:00Z",
-        }
-        serializer = CourseSerializer(data=mock_course)
-        serializer.is_valid()
+        course = get_object_or_404(Course, id=course_id)
+        serializer = CourseSerializer(course)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(summary="과정 수정", request=CourseSerializer, responses=CourseSerializer, tags=["course"])
     def patch(self, request: Request, course_id: int) -> Response:
-        serializer = CourseSerializer(data=request.data, partial=True)
+        course = get_object_or_404(Course, id=course_id)
+        serializer = CourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
-            mock_response: dict[str, Any] = {
-                "id": course_id,
-                "name": serializer.validated_data.get("name", "AI 백엔드 심화과정 v2"),
-                "tag": "AI1",
-                "description": serializer.validated_data.get("description", "최신 트렌드 반영된 AI 백엔드 과정"),
-                "thumbnail_img_url": serializer.validated_data.get(
-                    "thumbnail_img_url", "https://cdn.example.com/images/ai-course-v2.png"
-                ),
-                "created_at": "2025-06-20T10:00:00Z",
-                "updated_at": "2025-06-23T15:12:22Z",
-            }
-            return Response(mock_response, status=status.HTTP_200_OK)
+            updated_course = serializer.save()
+            return Response(CourseSerializer(updated_course).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(summary="과정 삭제", responses={200: CourseSerializer}, tags=["course"])
     def delete(self, request: Request, course_id: int) -> Response:
+        course = get_object_or_404(Course, id=course_id)
+        course.delete()
         return Response({"detail": f"{course_id}번 과정이 삭제되었습니다."}, status=status.HTTP_200_OK)
+
+
+class CourseEnrollmentStatsView(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(summary="과정별 수강 등록 통계 조회", responses=CourseEnrollmentStatsSerializer, tags=["course"])
+    def get(self, request: Request, course_id: int) -> Response:
+        course = get_object_or_404(Course, id=course_id)
+        enrollments = StudentEnrollmentRequest.objects.filter(generation__course_id=course_id).select_related(
+            "generation", "user"
+        )
+
+        total_enrollments = enrollments.count()
+        pending_enrollments = enrollments.filter(status="PENDING").count()
+        approved_enrollments = enrollments.filter(status="APPROVED").count()
+        rejected_enrollments = enrollments.filter(status="REJECTED").count()
+
+        generation_stats = (
+            enrollments.values("generation__id", "generation__number")
+            .annotate(enrollment_count=Count("id"))
+            .order_by("generation__number")
+        )
+
+        generations = []
+        for stat in generation_stats:
+            generation_obj = Generation.objects.filter(id=stat["generation__id"]).first()
+            generations.append(
+                {
+                    "generation_id": stat["generation__id"],
+                    "generation_number": stat["generation__number"],
+                    "enrollment_count": stat["enrollment_count"],
+                    "max_student": generation_obj.max_student if generation_obj else 0,
+                    "status": generation_obj.status if generation_obj else "unknown",
+                }
+            )
+
+        stats_data = {
+            "course_id": course.id,
+            "course_name": course.name,
+            "total_enrollments": total_enrollments,
+            "pending_enrollments": pending_enrollments,
+            "approved_enrollments": approved_enrollments,
+            "rejected_enrollments": rejected_enrollments,
+            "generations": generations,
+        }
+
+        serializer = CourseEnrollmentStatsSerializer(data=stats_data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CourseEnrollmentListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(summary="과정별 수강 등록 목록 조회", responses=CourseEnrollmentListSerializer, tags=["course"])
+    def get(self, request: Request, course_id: int) -> Response:
+        course = get_object_or_404(Course, id=course_id)
+        enrollments = (
+            StudentEnrollmentRequest.objects.filter(generation__course_id=course_id)
+            .select_related("generation", "user")
+            .order_by("-created_at")
+        )
+
+        enrollment_data = {"course_id": course.id, "course_name": course.name, "enrollments": enrollments}
+
+        serializer = CourseEnrollmentListSerializer(data=enrollment_data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
