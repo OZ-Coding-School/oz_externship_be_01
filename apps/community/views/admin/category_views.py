@@ -12,11 +12,11 @@ from apps.community.serializers.category_serializers import (
     CategoryCreateRequestSerializer,
     CategoryCreateResponseSerializer,
     CategoryDetailResponseSerializer,
+    CategoryListResponseSerializer,
     CategoryRenameRequestSerializer,
     CategoryRenameResponseSerializer,
     CategoryStatusUpdateRequestSerializer,
     CategoryStatusUpdateResponseSerializer,
-    CategoryListResponseSerializer,
 )
 
 # 카테고리 게시판 상세 조회
