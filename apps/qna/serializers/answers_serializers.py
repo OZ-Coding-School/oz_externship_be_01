@@ -3,10 +3,18 @@ from typing import Any
 from rest_framework import serializers
 
 from apps.qna.models import Answer, AnswerComment, AnswerImage
+from apps.users.models import User
+
+
+class AuthorSerializer(serializers.ModelSerializer[User]):
+    # 작성자 정보를 위한 별도 시리얼라이저
+    class Meta:
+        model = User
+        fields = ["id", "nickname", "profile_image_url", "role"]
 
 
 class AnswerListSerializer(serializers.ModelSerializer[Answer]):
-    author = serializers.SerializerMethodField()
+    author = AuthorSerializer(read_only=True)
 
     class Meta:
         model = Answer
@@ -20,14 +28,6 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
             "updated_at",
         ]
 
-    def get_author(self, obj: Answer) -> dict[str, Any]:
-        return {
-            "id": obj.author.id,
-            "nickname": obj.author.nickname,
-            "profile_image": getattr(obj.author, "profile_image_url", ""),
-            "role": getattr(obj.author, "role", ""),
-        }
-
 
 class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
@@ -37,6 +37,12 @@ class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
         model = Answer
         fields = ["content", "image_files", "image_urls"]
 
+    def validate_content(self, value: str) -> str:
+        # 마크다운 형식 지원, 빈 내용 방지
+        if not value or not value.strip():
+            raise serializers.ValidationError("답변 내용을 입력해주세요.")
+        return value.strip()
+
 
 class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
@@ -45,6 +51,12 @@ class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     class Meta:
         model = Answer
         fields = ["content", "image_files", "image_urls"]
+
+    def validate_content(self, value: str) -> str:
+        # 마크다운 형식 지원, 빈 내용 방지
+        if not value or not value.strip():
+            raise serializers.ValidationError("답변 내용을 입력해주세요.")
+        return value.strip()
 
 
 class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):
