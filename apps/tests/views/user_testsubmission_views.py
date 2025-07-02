@@ -24,8 +24,7 @@ from apps.tests.serializers.test_submission_serializers import (
     request=UserTestStartSerializer,
 )
 class TestSubmissionStartView(APIView):
-    permission_classes = [AllowAny]
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer
 
