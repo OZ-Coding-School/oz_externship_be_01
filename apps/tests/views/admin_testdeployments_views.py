@@ -228,13 +228,6 @@ class TestDeploymentCreateView(APIView):
             "status": "Activated",
             "open_at": validated.get("open_at", now_iso),
             "close_at": validated.get("close_at", now_iso),
-            "questions_snapshot_json": {
-                "1": {
-                    "question": "3 + 5 = ?",
-                    "choices": ["6", "7", "8"],
-                    "answer": "8",
-                }
-            },
             "created_at": now_iso,
             "updated_at": now_iso,
         }
@@ -245,7 +238,6 @@ class TestDeploymentCreateView(APIView):
             "deployment_id": new_deployment["id"],
             "access_code": new_deployment["access_code"],
             "status": new_deployment["status"],
-            "snapshot": new_deployment["questions_snapshot_json"],
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
