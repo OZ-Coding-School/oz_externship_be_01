@@ -126,19 +126,3 @@ class MonthlyCourseSerializer(serializers.Serializer[Any]):
 
     labels = serializers.ListField(child=serializers.CharField())
     monthly_count = serializers.ListField(child=serializers.IntegerField())
-
-
-# 모든 과정
-class EnrollmentGraphSerializer(serializers.ModelSerializer[Course]):
-    total_students = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Course
-        fields = ["id", "name", "total_students"]
-
-
-class OngoingCourseSerializer(serializers.Serializer[Any]):
-
-    labels = serializers.ListField(child=serializers.CharField())
-
-    total_enrollment_count = serializers.ListField(child=serializers.IntegerField())

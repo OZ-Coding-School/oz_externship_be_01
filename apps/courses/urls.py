@@ -29,6 +29,6 @@ urlpatterns = [
     path("generations/<int:pk>/detail/", GenerationDetailView.as_view(), name="generation_update_detail"),
     path("generations/list/", GenerationListView.as_view(), name="generation_list"),
     path("generations/dashboard/trend", CourseTrendView.as_view(), name="generation_trend"),
-    path("generations/dashboard/Monthly", MonthlyCourseView.as_view(), name="generation_monthly"),
+    path("generations/dashboard/monthly", MonthlyCourseView.as_view(), name="generation_monthly"),
     path("generations/dashboard/ongoing", OngoingCourseView.as_view(), name="generation_ongoing"),
 ]
