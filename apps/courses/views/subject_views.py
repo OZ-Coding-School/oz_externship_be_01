@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Dict, List, Optional, Union, cast  # cast 임포트 확인
+from typing import Any, Dict, List, Optional, Union, cast
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -11,6 +11,7 @@ from drf_spectacular.utils import (
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser  # <--- 이 줄을 추가합니다.
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,8 +25,6 @@ from apps.courses.serializers.subject_serializers import (
     SubjectSerializer,
     SubjectUpdateSerializer,
 )
-
-# Mock 클래스들은 이제 필요 없으므로 제거합니다.
 
 
 # --- SubjectListCreateAPIView ---
@@ -41,6 +40,7 @@ class SubjectListCreateAPIView(APIView):
 
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 목록 조회",
@@ -192,10 +192,7 @@ class SubjectListCreateAPIView(APIView):
         # --- 페이지네이션 로직 ---
         paginator: PageNumberPagination = self.pagination_class()
 
-        # paginator.page_size_query_param을 str로 cast하여 Mypy 오류 해결
-        limit_param: Optional[str] = request.query_params.get(
-            cast(str, paginator.page_size_query_param)
-        )  # <--- 이 줄 수정
+        limit_param: Optional[str] = request.query_params.get(cast(str, paginator.page_size_query_param))
         if limit_param is not None:
             try:
                 limit_value = int(limit_param)
@@ -330,7 +327,6 @@ class SubjectListCreateAPIView(APIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
-# --- 과목 상세 조회, 수정, 삭제 API View ---
 @extend_schema(
     tags=["Admin - 과목 관리"],
     summary="(Admin) 등록된 수강 과목 상세 조회, 수정, 삭제 API.",
@@ -342,6 +338,7 @@ class SubjectDetailAPIView(APIView):
     """
 
     permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self, subject_id: int) -> Subject:
         try:
