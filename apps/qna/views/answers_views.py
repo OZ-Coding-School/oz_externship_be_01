@@ -29,7 +29,7 @@ class AnswerCreateView(APIView):
         request=AnswerCreateSerializer,
         responses=AnswerListSerializer,
         description="질문에 대한 답변 생성",
-        tags=["answer"],
+        tags=["QNA-answer"],
     )
     def post(self, request: Request, question_id: int) -> Response:
         # IsAuthenticated permission으로 인해 request.user는 항상 User 타입
@@ -40,9 +40,7 @@ class AnswerCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         # 답변 생성
-        answer = Answer.objects.create(
-            question=question, author=user, content=serializer.validated_data.get("content")
-        )
+        answer = Answer.objects.create(question=question, author=user, content=serializer.validated_data.get("content"))
 
         # 이미지 파일 처리
         image_files = serializer.validated_data.get("image_files", [])
@@ -70,7 +68,7 @@ class AnswerUpdateView(APIView):
         request=AnswerUpdateSerializer,
         responses=AnswerListSerializer,
         description="질문에 대한 답변 수정",
-        tags=["answer"],
+        tags=["QNA-answer"],
     )
     def put(self, request: Request, question_id: int, answer_id: int) -> Response:
         user = cast(User, request.user)
@@ -111,7 +109,7 @@ class AdoptAnswerView(APIView):
 
     @extend_schema(
         description="답변 채택",
-        tags=["answer"],
+        tags=["QNA-answer"],
         parameters=[
             OpenApiParameter(name="question_id", type=int, location=OpenApiParameter.PATH, description="질문 ID"),
             OpenApiParameter(name="answer_id", type=int, location=OpenApiParameter.PATH, description="채택할 답변 ID"),
@@ -147,7 +145,7 @@ class AnswerCommentCreateView(APIView):
     @extend_schema(
         request=AnswerCommentCreateSerializer,
         description="답변에 대한 댓글 생성",
-        tags=["answer"],
+        tags=["QNA-answer"],
     )
     def post(self, request: Request, answer_id: int) -> Response:
         user = cast(User, request.user)

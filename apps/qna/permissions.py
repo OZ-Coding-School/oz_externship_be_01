@@ -11,6 +11,7 @@ class IsStaffPermission(permissions.BasePermission):
     스태프 권한 (조교, 러닝 코치, 운영 매니저)
     TA, LC, OM 역할을 가진 사용자만 접근 가능
     """
+
     message = "스태프 권한이 필요합니다. (조교, 러닝 코치, 운영 매니저만 접근 가능)"
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -32,6 +33,7 @@ class IsStudentPermission(permissions.BasePermission):
     수강생 권한
     STUDENT 역할을 가진 사용자만 접근 가능
     """
+
     message = "수강생 권한이 필요합니다."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -52,6 +54,7 @@ class IsGeneralUserPermission(permissions.BasePermission):
     모든 이용자 권한
     인증된 모든 사용자가 접근 가능 (GENERAL 포함)
     """
+
     message = "로그인이 필요합니다."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -72,6 +75,7 @@ class IsAdminPermission(permissions.BasePermission):
     관리자 권한
     ADMIN 역할을 가진 사용자만 접근 가능
     """
+
     message = "관리자 권한이 필요합니다."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -93,6 +97,7 @@ class IsStudentOrStaffPermission(permissions.BasePermission):
     수강생 또는 스태프 권한
     답변 작성, 댓글 작성에 사용
     """
+
     message = "수강생 또는 스태프 권한이 필요합니다."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
@@ -114,6 +119,7 @@ class IsStudentOrStaffOrAdminPermission(permissions.BasePermission):
     수강생, 스태프 또는 관리자 권한
     대부분의 QNA 기능에 사용
     """
+
     message = "답변 작성 권한이 없습니다. (수강생, 조교, 러닝 코치, 운영 매니저, 관리자만 가능)"
 
     def has_permission(self, request: Request, view: APIView) -> bool:

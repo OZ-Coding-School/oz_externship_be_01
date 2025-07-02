@@ -3,10 +3,18 @@ from typing import Any
 from rest_framework import serializers
 
 from apps.qna.models import Answer, AnswerComment, AnswerImage
+from apps.users.models import User
+
+
+class AuthorSerializer(serializers.ModelSerializer[User]):
+    # 작성자 정보를 위한 별도 시리얼라이저
+    class Meta:
+        model = User
+        fields = ["id", "nickname", "profile_image_url", "role"]
 
 
 class AnswerListSerializer(serializers.ModelSerializer[Answer]):
-    author = serializers.SerializerMethodField()
+    author = AuthorSerializer(read_only=True)
 
     class Meta:
         model = Answer
@@ -19,16 +27,6 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
             "created_at",
             "updated_at",
         ]
-
-    def get_author(self, obj: Answer) -> dict[str, Any]:
-        author = getattr(obj, "author", None)
-
-        return {
-            "id": getattr(author, "id", None),
-            "nickname": getattr(author, "nickname", ""),
-            "profile_image": getattr(author, "profile_image_url", ""),
-            "role": getattr(author, "role", ""),
-        }
 
 
 class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
