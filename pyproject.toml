@@ -49,6 +49,12 @@ profile="black"
 plugins = ["mypy_django_plugin.main"]
 python_version = 3.12
 
+# 마이파이가 못읽어서 이렇게 해야 통과 된다는데...흠...
+[mypy-twilio.rest]
+ignore_missing_imports = true
+
+[mypy-environ]
+ignore_missing_imports = true
 
 
 [tool.django-stubs]
