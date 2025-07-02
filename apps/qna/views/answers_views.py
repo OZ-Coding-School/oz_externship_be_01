@@ -1,3 +1,4 @@
+from typing import cast
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -29,13 +30,12 @@ class AnswerCreateView(APIView):
         tags=["answer"],
     )
     def post(self, request: Request, question_id: int) -> Response:
-        # request.user 타입이 User 인지 AnonymousUser인지 거르기
-        if not isinstance(request.user, User):
-            return Response({"detail": "인증되지 않은 사용자입니다."}, status=status.HTTP_403_FORBIDDEN)
+        # IsAuthenticated permission으로 인해 request.user는 항상 User 타입
+        user = cast(User, request.user)
 
         # 권한 확인: 수강생, 조교, 러닝 코치, 운영매니저, 어드민만 가능
         allowed_roles = [User.Role.STUDENT, User.Role.TA, User.Role.LC, User.Role.OM, User.Role.ADMIN]
-        if request.user.role not in allowed_roles:
+        if user.role not in allowed_roles:
             return Response({"detail": "답변 작성 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         question = get_object_or_404(Question, pk=question_id)
@@ -76,11 +76,13 @@ class AnswerUpdateView(APIView):
         tags=["answer"],
     )
     def put(self, request: Request, question_id: int, answer_id: int) -> Response:
+        user = cast(User, request.user)
+
         question = get_object_or_404(Question, pk=question_id)
         answer = get_object_or_404(Answer, pk=answer_id, question=question)
 
         # 권한 확인: 본인이 작성한 답변만 수정 가능
-        if answer.author != request.user:
+        if answer.author != user:
             return Response({"detail": "본인이 작성한 답변만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.serializer_class(data=request.data)
@@ -120,18 +122,17 @@ class AdoptAnswerView(APIView):
         responses={200: OpenApiTypes.OBJECT},
     )
     def post(self, request: Request, question_id: int, answer_id: int) -> Response:
+        user = cast(User, request.user)
+
         question = get_object_or_404(Question, pk=question_id)
         answer = get_object_or_404(Answer, pk=answer_id, question=question)
 
-        if not isinstance(request.user, User):
-            return Response({"detail": "인증되지 않은 사용자입니다."}, status=status.HTTP_403_FORBIDDEN)
-
         # 권한 확인 : 질문 작성자가 아닌 경우
-        if question.author != request.user:
+        if question.author != user:
             return Response({"detail": "본인의 질문에만 답변을 채택할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         # 권한 확인: 수강생만 채택 가능
-        if request.user.role != "STUDENT":
+        if user.role != "STUDENT":
             return Response({"detail": "수강생만 답변을 채택할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         # 이미 채택된 답변인경우
@@ -156,14 +157,13 @@ class AnswerCommentCreateView(APIView):
         tags=["answer"],
     )
     def post(self, request: Request, answer_id: int) -> Response:
-        answer = get_object_or_404(Answer, pk=answer_id)
+        user = cast(User, request.user)
 
-        if not isinstance(request.user, User):
-            return Response({"detail": "인증되지 않은 사용자입니다."}, status=status.HTTP_403_FORBIDDEN)
+        answer = get_object_or_404(Answer, pk=answer_id)
 
         # 권한 확인: 수강생, 조교, 러닝코치, 운영매니저, 관리자만 가능
         allowed_roles = [User.Role.STUDENT, User.Role.TA, User.Role.LC, User.Role.OM, User.Role.ADMIN]
-        if request.user.role not in allowed_roles:
+        if user.role not in allowed_roles:
             return Response({"detail": "댓글 작성 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.serializer_class(data=request.data)
