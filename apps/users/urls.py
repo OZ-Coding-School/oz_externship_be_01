@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+
 from apps.users.views.admin_dashboard_views import (
     AdminEnrollmentTrendView,
     AdminJoinTrendView,

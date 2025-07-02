@@ -135,10 +135,10 @@ AUTH_USER_MODEL = "users.User"
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': False,
+    "ROTATE_REFRESH_TOKENS": False,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    'SIGNING_KEY': SECRET_KEY,
+    "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
