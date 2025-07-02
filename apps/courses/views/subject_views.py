@@ -11,11 +11,11 @@ from drf_spectacular.utils import (
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import FormParser, MultiPartParser  # <--- 이 줄을 추가합니다.
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 # 실제 Subject, Course 모델 임포트
 from apps.courses.models import Course, Subject
@@ -40,7 +40,7 @@ class SubjectListCreateAPIView(APIView):
 
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser] # <--- 이 줄을 추가합니다. 파일 업로드를 위해 필요합니다.
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 목록 조회",
@@ -192,7 +192,9 @@ class SubjectListCreateAPIView(APIView):
         # --- 페이지네이션 로직 ---
         paginator: PageNumberPagination = self.pagination_class()
 
-        limit_param: Optional[str] = request.query_params.get(cast(str, paginator.page_size_query_param))
+        limit_param: Optional[str] = request.query_params.get(
+            cast(str, paginator.page_size_query_param)
+        )
         if limit_param is not None:
             try:
                 limit_value = int(limit_param)
@@ -338,7 +340,7 @@ class SubjectDetailAPIView(APIView):
     """
 
     permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser] # <--- 이 줄을 추가합니다. 파일 업로드를 위해 필요합니다.
 
     def get_object(self, subject_id: int) -> Subject:
         try:
@@ -596,3 +598,4 @@ class SubjectDetailAPIView(APIView):
         instance = self.get_object(subject_id)
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
