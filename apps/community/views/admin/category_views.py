@@ -16,6 +16,7 @@ from apps.community.serializers.category_serializers import (
     CategoryRenameResponseSerializer,
     CategoryStatusUpdateRequestSerializer,
     CategoryStatusUpdateResponseSerializer,
+    CategoryListResponseSerializer,
 )
 
 # 카테고리 게시판 상세 조회
@@ -141,7 +142,6 @@ class CategoryStatusOffAPIView(APIView):
         return Response(response.data, status=200)
 
 
-from apps.community.serializers.category_serializers import CategoryListResponseSerializer
 # 카테고리 목록 조회
 class AdminCategoryListAPIView(APIView):
     permission_classes = [AllowAny]
@@ -150,10 +150,11 @@ class AdminCategoryListAPIView(APIView):
         tags=["[Admin-category]"],
         summary="카테고리 목록 조회",
         description="카테고리 목록을 조회합니다.",
+        responses={200: CategoryListResponseSerializer},
     )
     def get(self, request: Request) -> Response:
-        categories = PostCategory.objects.all().order_by('-created_at')
-        if not categories and categories.count() == 0:
+        categories = PostCategory.objects.all().order_by("-created_at")
+        if not categories:
             return Response({"detail": "등록된 카테고리가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
         serializer = CategoryListResponseSerializer(categories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
