@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -11,6 +13,11 @@ class Course(models.Model):
     thumbnail_img_url = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(args, kwargs)
+        self.total_students = None
+        self.id = None
 
     def __str__(self) -> str:
         return self.name
@@ -32,6 +39,10 @@ class Generation(models.Model):
     class Meta:
         unique_together = ("course", "number")
         db_table = "generations"
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(args, kwargs)
+        self.registered_students = None
 
     def __str__(self) -> str:
         return f"{self.course.name} - {self.number}기"
