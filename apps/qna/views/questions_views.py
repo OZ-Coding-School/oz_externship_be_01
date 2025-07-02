@@ -92,7 +92,7 @@ class QuestionDetailView(APIView):
 
 # 3. 새 질문 생성 (POST)
 class QuestionCreateView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny]  # TODO: IsAuthenticated, IsStudentUser
     parser_classes = [MultiPartParser]
 
     @extend_schema(
@@ -101,32 +101,11 @@ class QuestionCreateView(APIView):
         description="새 질문 생성",
         tags=["questions"],
     )
-    def post(self, request: Request) -> Response:
-        serializer = QuestionCreateSerializer(data=request.data)
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        question = Question(
-            id=1,
-            category=QuestionCategory(
-                id=serializer.validated_data["category_id"],
-                name="예시 카테고리",
-            ),
-            title=serializer.validated_data["title"],
-            content=serializer.validated_data["content"],
-            author=User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock.png"),
-            view_count=10,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-        question_images = [
-            QuestionImage(
-                id=i,
-                img_url=f"/media/{image.name}",
-            )
-            for i, image in enumerate(serializer.validated_data["image_files"])
-        ]
-        response_data = QuestionCreateSerializer(question).data
-        response_data["images"] = [image.img_url for image in question_images]
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        question = serializer.save()
+        return Response({"id": question.id}, status=status.HTTP_201_CREATED)
 
 
 # 4. 질문 부분 수정 (PATCH)
