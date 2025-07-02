@@ -1,6 +1,7 @@
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,104 +22,25 @@ from apps.tests.serializers.test_submission_serializers import (
 @extend_schema(
     tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestStartSerializer,
-    responses=UserTestDeploymentSerializer,
 )
 class TestSubmissionStartView(APIView):
     permission_classes = [AllowAny]
+    # permission_classes = [IsAuthenticated]
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer
 
     def post(self, request: Request, test_id: int) -> Response:
         """
         이 API는 쪽지 시험 응시를 위한 test_id, access_code의 유효성을 판별합니다.
-        :param request: test_id, access_code
-        :return: 생략
         """
+        serializer = self.request_serializer_class(data=request.data, context={'test_id':test_id})
+        serializer.is_valid(raise_exception=True)
 
-        access_code = "abc123"
+        access_code = serializer.validated_data['access_code']
+        deployment = get_object_or_404(TestDeployment, access_code=access_code, test_id=test_id)
 
-        # 클라이언트가 요청한 값
-        data = request.data
-
-        # mock data
-        mock_data = TestDeployment(
-            id=1,
-            test=Test(
-                id=test_id,
-                title="프론트엔드 기초 쪽지시험",
-                subject=Subject(id=1, title="프론트엔드 기초"),
-                thumbnail_img_url="https://cdn.example.com/images/frontend_basic_quiz_thumbnail.png",
-            ),
-            duration_time=60,
-            questions_snapshot_json=[
-                {
-                    "question_id": 1,
-                    "type": "multiple_choice",  # 객관식 단일 선택
-                    "question": "HTML의 기본 구조를 이루는 태그는?",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["A. <html>", "B. <head>", "C. <body>", "D. <div>"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 2,
-                    "type": "ox",  # "ox문제"
-                    "question": "CSS는 프로그래밍 언어이다.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["O", "X"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 3,
-                    "type": "ordering",  # 순서 정렬"
-                    "question": "다음 HTML 요소들을 웹 페이지에 표시되는 순서대로 정렬하세요.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["<head>", "<html>", "<body>", "<title>"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 4,
-                    "type": "short_answer",  # 주관식 단답형
-                    "question": "다음 문장의 빈칸을 채우세요.",
-                    "prompt": "HTML에서 문서의 제목을 설정할 때 사용하는 태그는 <____>이다.",
-                    "blank_count": 1,
-                    "options_json": [],
-                    "point": 5,
-                },
-                {
-                    "question_id": 5,
-                    "type": "fill_in_blank",  # 빈칸 채우기
-                    "question": "다음 문장의 빈칸을 채우세요.",
-                    "prompt": "HTML의 <____> 태그는 문서의 제목을 정의하고, <____> 태그 안에 위치한다.",
-                    "blank_count": 2,
-                    "options_json": [],
-                    "point": 5,
-                },
-                {
-                    "question_id": 6,
-                    "type": "multiple_choice_multiple",  # 객관식 다중 선택
-                    "question": "다음 중 CSS에서 글자 색상과 관련된 속성을 모두 고르세요.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["A. color", "B. background-color", "C. font-size", "D. text-align"],
-                    "point": 5,
-                },
-            ],
-        )
-
-        # 유효성 검증
-        # request.data에 access_code가 없으면 에러 반환
-        if "access_code" not in data:
-            return Response({"message": "시험 코드를 입력해 주세요."}, status=400)
-
-        # access_code 불일치 시 에러 반환
-        if access_code != data.get("access_code"):
-            return Response({"message": "등록 되지 않은 시험 코드 입니다."}, status=403)
-
-        serializer = self.response_serializer_class(instance=mock_data)
-        return Response({"message": "쪽지시험 응시 시작 완료", "data": serializer.data}, status=status.HTTP_200_OK)
+        response_serializer = self.response_serializer_class(instance=deployment)
+        return Response({"message": "Test started successfully.", "data": response_serializer.data}, status=status.HTTP_200_OK)
 
 
 # 쪽지 시험 제출

@@ -144,17 +144,17 @@ class UserTestSerializer(serializers.ModelSerializer[Test]):
         fields = ("id", "subject", "title", "thumbnail_img_url")
 
 
-# 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminListSubjectSerializer(serializers.ModelSerializer[Subject]):
+# 관리자 쪽지 시험 응시 전체 목록 조회, 사용자 응시
+class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
 
     class Meta:
         model = Subject
         fields = ("title",)
 
 
-# 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminListSerializer(serializers.ModelSerializer[Test]):
-    subject = AdminListSubjectSerializer(read_only=True)
+# 관리자 쪽지 시험 응시 전체 목록 조회, 사용자 응시
+class CommonTestSerializer(serializers.ModelSerializer[Test]):
+    subject = CommonSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test

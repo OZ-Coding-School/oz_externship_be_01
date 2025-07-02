@@ -4,10 +4,12 @@ from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
 from apps.tests.models import Test, TestDeployment
+from apps.tests.models import TestDeployment, TestQuestion
+from apps.tests.serializers.test_question_serializers import UserTestQuestionStartSerializer
 from apps.tests.serializers.test_serializers import (
-    AdminListSerializer,
-    AdminTestSerializer,
-    UserTestSerializer,
+
+    AdminTestSerializer, CommonTestSerializer,
+
 )
 
 
@@ -63,7 +65,7 @@ class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment])
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = AdminListSerializer(read_only=True)
+    test = CommonTestSerializer(read_only=True)
     generation = AdminListGenerationSerializer(read_only=True)
 
     class Meta:
@@ -76,7 +78,8 @@ class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployme
 
 # 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용
 class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = UserTestSerializer(read_only=True)
+    test = CommonTestSerializer(read_only=True)
+    questions_snapshot_json = serializers.SerializerMethodField()
 
     class Meta:
         model = TestDeployment
@@ -87,15 +90,17 @@ class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
             "questions_snapshot_json",
         )
 
+    def get_questions_snapshot_json(self, obj):
+        question_ids = [q["id"] for q in obj.questions_snapshot_json]
+        questions = TestQuestion.objects.filter(id__in=question_ids)
 
-# 사용자 쪽지 시험 응시: 요청, access_code 검증용
-class UserTestStartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TestDeployment
-        fields = ("access_code",)
-        extra_kwargs = {
-            "access_code": {"write_only": True},
-        }
+        # 질문 ID 순서 보존 (questions는 쿼리셋이라 순서가 안 맞을 수 있음)
+        id_to_question = {q.id: q for q in questions}
+        ordered_questions = [id_to_question[qid] for qid in question_ids if qid in id_to_question]
+
+        return UserTestQuestionStartSerializer(ordered_questions, many=True).data
+
+
 
 
 # 🔹 공통 timestamp serializer (선택적)
