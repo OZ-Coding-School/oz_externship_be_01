@@ -23,7 +23,7 @@ MOCK_USERS: dict[str, dict[str, Any]] = {
     request=UserCodeValidationSerializer,
     responses={200: dict, 400: dict, 404: dict},
     summary="쪽지시험 참가코드 검증 API",
-    description="path로 test_id를 받고, body로 access_code만 받아 참가코드를 검증합니다.",
+    description="path로 test_deployment_id를 받고, body로 access_code만 받아 참가코드를 검증합니다.",
 )
 class UserCodeValidationView(APIView):
 
