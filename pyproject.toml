@@ -20,6 +20,7 @@ dependencies = [
     "djangorestframework-simplejwt (>=5.5.0,<6.0.0)",
     "django-filter (>=25.1,<26.0)",
     "pillow (>=11.2.1,<12.0.0)",
+    "boto3 (>=1.39.0,<2.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -31,6 +32,7 @@ mypy = "^1.16.0"
 coverage = "^7.8.2"
 django-debug-toolbar = "^5.2.0"
 django-stubs = "^5.2.0"
+boto3-stubs = "^1.39.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
