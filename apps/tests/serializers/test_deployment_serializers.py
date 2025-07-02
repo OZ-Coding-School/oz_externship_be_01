@@ -207,3 +207,10 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
 
 class UserCodeValidationSerializer(serializers.Serializer[Any]):
     access_code = serializers.CharField(max_length=64, help_text="참가 코드만 입력")
+
+
+class TestDeploymentStatusValidateSerializer(serializers.Serializer):
+    deployment_id = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=["Activated", "Deactivated"])
+    open_at = serializers.DateTimeField()
+    close_at = serializers.DateTimeField()
