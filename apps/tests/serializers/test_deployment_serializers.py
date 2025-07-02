@@ -82,9 +82,6 @@ class UserTestStartSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestDeployment
         fields = ("access_code",)
-        # extra_kwargs = {
-        #     "access_code": {"write_only": True},
-        # }
         extra_kwargs = {
             "access_code": {
                 "write_only": True,
@@ -93,12 +90,8 @@ class UserTestStartSerializer(serializers.ModelSerializer):
             }
         }
 
-        # access_code 유효성 검사
-
+    # access_code 유효성 검사
     def validate_access_code(self, value: str) -> str:
-        """
-        access_code 유효 여부 확인
-        """
         if not TestDeployment.objects.filter(access_code=value).exists():
             raise serializers.ValidationError("등록되지 않은 시험 코드입니다.")
         return value
@@ -122,7 +115,6 @@ class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
         question_ids = [q["id"] for q in obj.questions_snapshot_json]
         questions = TestQuestion.objects.filter(id__in=question_ids)
 
-        # 질문 ID 순서 보존 (questions는 쿼리셋이라 순서가 안 맞을 수 있음)
         id_to_question = {q.id: q for q in questions}
         ordered_questions = [id_to_question[qid] for qid in question_ids if qid in id_to_question]
 
