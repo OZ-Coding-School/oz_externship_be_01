@@ -1,9 +1,5 @@
-from typing import Any
-
 from rest_framework import serializers
-from rest_framework.serializers import Serializer
 
-
-class EmailLoginSerializer(Serializer[Any]):
+class EmailLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    code = serializers.CharField()
+    password = serializers.CharField()

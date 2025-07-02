@@ -1,5 +1,5 @@
 from django.urls import path
-
+from rest_framework_simplejwt.views import TokenRefreshView
 from apps.users.views.admin_dashboard_views import (
     AdminEnrollmentTrendView,
     AdminJoinTrendView,
@@ -41,6 +41,7 @@ urlpatterns = [
     path("email/send-code", SendEmailCodeView.as_view(), name="send_email_code"),
     path("email/verify-code", VerifyEmailCodeView.as_view(), name="verify_email_code"),
     path("login/email", EmailLoginAPIView.as_view(), name="email_login"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("signup", SignUpAPIView.as_view(), name="sign_up"),
     path("login/kakao", KakaoLoginAPIView.as_view(), name="kakao_login"),
     path("login/naver", NaverLoginAPIView.as_view(), name="naver_login"),
