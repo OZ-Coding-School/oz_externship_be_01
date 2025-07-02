@@ -13,8 +13,10 @@ class MockEnrollmentSerializer(serializers.Serializer[Any]):
     )
 
 
-class RejectEnrollmentRequestSerializer(serializers.Serializer[Any]):
-    enrollments = MockEnrollmentSerializer(many=True, help_text="반려할 수강신청 ID + 상태 목록")
+class RejectEnrollmentRequestSerializer(serializers.Serializer):
+    enrollment_request_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), allow_empty=False, help_text="반려할 수강생 등록 신청 ID 목록"
+    )
 
 
 # 반려 응답
