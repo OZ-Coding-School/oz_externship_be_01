@@ -1,9 +1,11 @@
 # core/utils/s3_file_upload.py
 
+from typing import IO, Optional, cast
+
 import boto3
 from botocore.exceptions import NoCredentialsError
-from typing import IO, Optional, cast
 from django.conf import settings
+from django.core.files.uploadedfile import UploadedFile
 
 
 # 파일업로드 공통 유틸 클래스, 프로젝트 내 여러 앱에서 재사용할 수 있도록 core에 정의
@@ -23,7 +25,7 @@ class S3Uploader:
         )
 
     # 단일 파일 업로드 후 URL 반환. 실패 시 None 반환
-    def upload_file(self, file_obj: IO, s3_key: str) -> Optional[str]:
+    def upload_file(self, file_obj: UploadedFile, s3_key: str) -> Optional[str]:
 
         try:
             self.client.upload_fileobj(
