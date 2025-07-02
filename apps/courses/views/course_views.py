@@ -17,28 +17,36 @@ from apps.courses.serializers.course_serializers import (
     EnrollmentRequestSerializer,
 )
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
+from apps.users.permissions import IsAdminOrStaff
 
 
-class CourseListCreateView(APIView):
-    permission_classes = [AllowAny]
+class CourseListCreateView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    serializer_class = CourseAdminListSerializer
+    pagination_class = PageNumberPagination
 
-    @extend_schema(summary="과정 목록 조회", responses=CourseListSerializer(many=True), tags=["course"])
+    @extend_schema(summary="과정 목록 조회", tags=["course"])
     def get(self, request: Request) -> Response:
-        courses = Course.objects.all()
-        serializer = CourseListSerializer(instance=courses, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = Course.objects.prefetch_related("generation_set").all()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @extend_schema(summary="과정 등록", request=CourseSerializer, responses=CourseSerializer, tags=["course"])
     def post(self, request: Request) -> Response:
         serializer = CourseSerializer(data=request.data)
         if serializer.is_valid():
             course = serializer.save()
-            return Response(CourseSerializer(course).data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CourseDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(summary="과정 상세 조회", responses=CourseSerializer, tags=["course"])
     def get(self, request: Request, course_id: int) -> Response:
@@ -52,18 +60,28 @@ class CourseDetailView(APIView):
         serializer = CourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
             updated_course = serializer.save()
-            return Response(CourseSerializer(updated_course).data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @extend_schema(summary="과정 삭제", responses={200: CourseSerializer}, tags=["course"])
+    @extend_schema(summary="과정 삭제", tags=["course"])
     def delete(self, request: Request, course_id: int) -> Response:
         course = get_object_or_404(Course, id=course_id)
+        generations = Generation.objects.filter(course=course)
+
+        for generation in generations:
+            if StudentEnrollmentRequest.objects.filter(generation=generation).exists():
+                return Response(
+                    {"detail": "해당 과정에 등록된 수강생이 있어 삭제할 수 없습니다."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        generations.delete()
         course.delete()
         return Response({"detail": f"{course_id}번 과정이 삭제되었습니다."}, status=status.HTTP_200_OK)
 
 
 class CourseEnrollmentStatsView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(summary="과정별 수강 등록 통계 조회", responses=CourseEnrollmentStatsSerializer, tags=["course"])
     def get(self, request: Request, course_id: int) -> Response:
@@ -112,7 +130,7 @@ class CourseEnrollmentStatsView(APIView):
 
 
 class CourseEnrollmentListView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(summary="과정별 수강 등록 목록 조회", responses=CourseEnrollmentListSerializer, tags=["course"])
     def get(self, request: Request, course_id: int) -> Response:
