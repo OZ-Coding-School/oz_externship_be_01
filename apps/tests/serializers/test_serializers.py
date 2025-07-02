@@ -128,7 +128,7 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
 
 # 공통 AdminTestSerializer
 class AdminTestSerializer(serializers.ModelSerializer[Test]):
-    subject = SubjectSerializer(read_only=True)
+    subject = TestSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test
@@ -137,7 +137,7 @@ class AdminTestSerializer(serializers.ModelSerializer[Test]):
 
 # 공통 UserTestSerializer
 class UserTestSerializer(serializers.ModelSerializer[Test]):
-    subject = SubjectSerializer(read_only=True)
+    subject = TestSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test
