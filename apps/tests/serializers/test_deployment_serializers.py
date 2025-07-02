@@ -5,11 +5,12 @@ from rest_framework import serializers
 from apps.courses.models import Course, Generation
 from apps.tests.models import Test, TestDeployment
 from apps.tests.models import TestDeployment, TestQuestion
-from apps.tests.serializers.test_question_serializers import UserTestQuestionStartSerializer
+from apps.tests.serializers.test_question_serializers import (
+    UserTestQuestionStartSerializer,
+)
 from apps.tests.serializers.test_serializers import (
-
-    AdminTestSerializer, CommonTestSerializer,
-
+    AdminTestSerializer,
+    CommonTestSerializer,
 )
 
 
@@ -74,6 +75,33 @@ class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployme
             "test",
             "generation",
         )
+
+
+# 사용자 쪽지 시험 응시: 요청, access_code 검증용
+class UserTestStartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestDeployment
+        fields = ("access_code",)
+        # extra_kwargs = {
+        #     "access_code": {"write_only": True},
+        # }
+        extra_kwargs = {
+            "access_code": {
+                "write_only": True,
+                "required": True,
+                "error_messages": {"required": "시험 코드를 입력해 주세요."},
+            }
+        }
+
+        # access_code 유효성 검사
+
+    def validate_access_code(self, value: str) -> str:
+        """
+        access_code 유효 여부 확인
+        """
+        if not TestDeployment.objects.filter(access_code=value).exists():
+            raise serializers.ValidationError("등록되지 않은 시험 코드입니다.")
+        return value
 
 
 # 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용

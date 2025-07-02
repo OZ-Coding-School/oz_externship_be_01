@@ -33,14 +33,16 @@ class TestSubmissionStartView(APIView):
         """
         이 API는 쪽지 시험 응시를 위한 test_id, access_code의 유효성을 판별합니다.
         """
-        serializer = self.request_serializer_class(data=request.data, context={'test_id':test_id})
+        serializer = self.request_serializer_class(data=request.data, context={"test_id": test_id})
         serializer.is_valid(raise_exception=True)
 
-        access_code = serializer.validated_data['access_code']
+        access_code = serializer.validated_data["access_code"]
         deployment = get_object_or_404(TestDeployment, access_code=access_code, test_id=test_id)
 
         response_serializer = self.response_serializer_class(instance=deployment)
-        return Response({"message": "Test started successfully.", "data": response_serializer.data}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Test started successfully.", "data": response_serializer.data}, status=status.HTTP_200_OK
+        )
 
 
 # 쪽지 시험 제출

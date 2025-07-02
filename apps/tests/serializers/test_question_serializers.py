@@ -83,11 +83,4 @@ class ErrorResponseSerializer(serializers.Serializer):  # type: ignore
 class UserTestQuestionStartSerializer(serializers.ModelSerializer[TestQuestion]):
     class Meta:
         model = TestQuestion
-        fields = (
-            'type',
-            'question',
-            'prompt',
-            'blank_count',
-            'options_json',
-            'point'
-        )
+        fields = ("type", "question", "prompt", "blank_count", "options_json", "point")
