@@ -1,7 +1,4 @@
-from typing import Any, Dict
-
 from rest_framework import serializers
-from rest_framework.serializers import ListSerializer
 
 
 class GenerationAverageSerializer(serializers.Serializer):  # type: ignore

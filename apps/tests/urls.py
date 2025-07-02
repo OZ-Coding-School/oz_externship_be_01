@@ -19,7 +19,6 @@ from .views.admin_testdeployments_views import (
     DeploymentListView,
     TestDeploymentCreateView,
     TestDeploymentDeleteView,
-    TestDeploymentStatusView,
 )
 from .views.admin_testsubmission_views import (
     AdminTestSubmissionDeleteView,
@@ -34,6 +33,7 @@ from .views.user_testsubmission_views import (
 )
 from .views.user_deploymentstatus_views import TestDeploymentStatusView
 from .views.admin_dashboard_views import TestDashboardView
+
 app_name = "tests"
 
 urlpatterns = [

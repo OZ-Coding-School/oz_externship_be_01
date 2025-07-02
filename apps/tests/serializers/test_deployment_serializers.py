@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from typing import Any, Dict
 from apps.courses.models import Course, Generation
 from apps.tests.models import Test, TestDeployment
 from apps.tests.serializers.test_serializers import (
@@ -205,6 +205,7 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
 
 class UserCodeValidationSerializer(serializers.Serializer[Any]):
     access_code = serializers.CharField(max_length=64, help_text="참가 코드만 입력")
+
 
 class TestDeploymentStatusValidateSerializer(serializers.Serializer):
     deployment_id = serializers.IntegerField()
