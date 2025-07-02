@@ -1,6 +1,8 @@
 from django.conf import settings
 from rest_framework.permissions import BasePermission
 
+from apps.users.models import User
+
 
 # 관리자(ADMIN) 또는 스태프(OM: 운영매니저, LC: 러닝코치, TA: 조교) 역할을 가진 사용자만 허용
 class IsAdminOrStaff(BasePermission):
@@ -21,8 +23,9 @@ class IsAdminOrStaff(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        # 역할 기반 권한 판별: ADMIN, OM, LC, TA만 허용
-        allowed_roles = ["ADMIN", "OM", "LC", "TA"]
+        # User.Role.choices 기반으로 GENERAL, STUDENT만 제외하고 나머지 역할을 허용
+        excluded_roles = {User.Role.GENERAL, User.Role.STUDENT}
+        allowed_roles = [role for role, _ in User.Role.choices if role not in excluded_roles]
 
         if user.role in allowed_roles:
             return True

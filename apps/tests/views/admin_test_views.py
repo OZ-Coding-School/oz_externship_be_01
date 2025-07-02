@@ -1,13 +1,9 @@
-import datetime
 import uuid
-from typing import Any, Dict, cast
 
-import boto3
-from botocore.exceptions import NoCredentialsError
 from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import parsers, permissions, status
+from rest_framework import parsers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -26,6 +22,7 @@ from apps.tests.serializers.test_serializers import (
     TestQuestionSimpleSerializer,
 )
 from apps.users.models import User
+from core.utils.s3_file_upload import S3Uploader
 
 
 @extend_schema(
@@ -241,8 +238,8 @@ class AdminTestCreateAPIView(APIView):
 
         thumbnail_file = validated_data.pop("thumbnail_file")
 
-        # 2) DB에 Test를 먼저 생성해 id 확보
-        test = Test.objects.create(
+        # 2) DB에 Test 인스턴스만 생성 (즉시 저장 X)
+        test = Test(
             title=validated_data["title"],
             subject=subject,
             thumbnail_img_url="",  # 업로드 전이라 임시로 빈 값 저장
@@ -255,37 +252,19 @@ class AdminTestCreateAPIView(APIView):
         random_str = uuid.uuid4().hex[:6]
         s3_key = f"oz_externship_be/tests/thumbnail_images/{test.id}_{random_str}.png"
 
-        # settings의 AWS 키 값들은 Django 설정 특성상 mypy에서 Any로 추론되므로,
-        # boto3.client()에 넘기기 전에 명확히 str로 타입 고정
-        aws_access_key_id = cast(str, settings.AWS_ACCESS_KEY_ID)
-        aws_secret_access_key = cast(str, settings.AWS_SECRET_ACCESS_KEY)
-        aws_region = cast(str, settings.AWS_REGION)
-        aws_bucket = cast(str, settings.AWS_STORAGE_BUCKET_NAME)
-
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            region_name=aws_region,
-        )
-
-        try:
-            s3_client.upload_fileobj(
-                thumbnail_file,
-                aws_bucket,
-                s3_key,
-                ExtraArgs={"ContentType": thumbnail_file.content_type},  # ACL 없이 업로드된 객체라도 퍼블릭에 접근 가능
+        # 4) core 유틸을 사용해 업로드
+        uploader = S3Uploader()
+        thumbnail_img_url = uploader.upload_file(thumbnail_file, s3_key)
+        if thumbnail_img_url is None:
+            return Response(
+                {"error": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-            thumbnail_img_url = f"https://{aws_bucket}.s3.{aws_region}.amazonaws.com/{s3_key}"
 
-        # 예외 처리
-        except NoCredentialsError:
-            return Response({"error": "AWS 자격증명이 누락되었습니다. AWS 키 설정을 확인하세요."}, status=500)
-
-        # 4) 업로드 완료 후 Test에 실제 thumbnail_img_url 업데이트
+        # 5) 업로드 완료 후 Test에 실제 thumbnail_img_url 업데이트
         test.thumbnail_img_url = thumbnail_img_url
         test.save()
 
-        # 5) 생성된 객체 직렬화하여 응답
+        # 6) 생성된 객체 직렬화하여 응답
         response_serializer = self.serializer_class(instance=test)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
