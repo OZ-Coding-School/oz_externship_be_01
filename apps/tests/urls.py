@@ -13,16 +13,6 @@ from .views.admin_test_views import (
     AdminTestListView,
     AdminTestUpdateAPIView,
 )
-from .views.admin_testsubmission_views import (
-    AdminTestSubmissionDeleteView,
-    AdminTestSubmissionDetailView,
-    AdminTestSubmissionsView,
-)
-from .views.user_testsubmission_views import (
-    TestSubmissionResultView,
-    TestSubmissionStartView,
-    TestSubmissionSubmitView,
-)
 from .views.admin_testdeployments_views import (
     DeploymentDetailView,
     DeploymentListView,
@@ -30,7 +20,17 @@ from .views.admin_testdeployments_views import (
     TestDeploymentDeleteView,
     TestDeploymentStatusView,
 )
+from .views.admin_testsubmission_views import (
+    AdminTestSubmissionDeleteView,
+    AdminTestSubmissionDetailView,
+    AdminTestSubmissionsView,
+)
 from .views.user_testdeployments_views import UserCodeValidationView
+from .views.user_testsubmission_views import (
+    TestSubmissionResultView,
+    TestSubmissionStartView,
+    TestSubmissionSubmitView,
+)
 
 app_name = "tests"
 
