@@ -33,8 +33,8 @@ urlpatterns = [
     path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
     path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
     path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
-    # 참가 코드 검증 (Admin용)
-    path("tests/validate-code/", UserCodeValidationView.as_view(), name="user-code-validate"),
+    # 참가 코드 검증 (user용)
+    path("tests/<int:test_deployment_id>/validate/", UserCodeValidationView.as_view(), name="user-code-validate"),
     # 배포 상태 변경 (Activated ↔ Deactivated)
     path(
         "admin/test-deployments/<int:deployment_id>/status/",

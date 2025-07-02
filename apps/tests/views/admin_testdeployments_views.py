@@ -32,8 +32,8 @@ MOCK_GENERATIONS: Dict[int, Dict[str, Any]] = {
 MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
     101: {
         "id": 101,
+        "test": MOCK_TESTS[1],
         "generation": MOCK_GENERATIONS[1],
-        "course_name": "웹프로그래밍",
         "total_participants": 15,
         "average_score": 85.6,
         "duration_time": 60,
@@ -53,8 +53,8 @@ MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
     },
     102: {
         "id": 102,
+        "test": MOCK_TESTS[1],
         "generation": MOCK_GENERATIONS[2],
-        "course_name": "디자인",
         "total_participants": 10,
         "average_score": 78.2,
         "duration_time": 90,
@@ -187,7 +187,7 @@ class DeploymentDetailView(APIView):
     request=DeploymentCreateSerializer,
     responses={201: dict},
     summary="시험 배포 생성",
-    description="course_name(웹프로그래밍)와 기수 ID(1) 시간 (60)을 넣어 새로운 시험 배포를 생성합니다.참가코드는 무작위로 자동 생성되며, 문제 스냅샷도 포함됩니다.",
+    description="시험 ID(test_id (1) )와 기수 ID(generation(1)), 시험 시간 (60)(duration_time)을 입력하여 새로운 시험 배포를 생성합니다. 참가 코드는 무작위로 자동 생성되며, 문제 스냅샷이 포함됩니다.",
 )
 # TestDeployment 배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
@@ -199,37 +199,35 @@ class TestDeploymentCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         validated: Dict[str, Any] = serializer.validated_data
 
-        course_name: str = validated["course_name"]  # 사용자 입력: "웹프로그래밍"
-        generation_id: int = validated["generation"]  # 사용자 입력: 1 등
+        test_id: int = validated["test_id"]
+        generation_id: int = validated["generation"]
 
-        #  course_name으로 시험 찾기 (subject.title 기준)
-        test_info = None
-        for test in MOCK_TESTS.values():
-            if test["subject"]["title"] == course_name:
-                test_info = test
-                break
-
+        test_info = MOCK_TESTS.get(test_id)
         generation_info: Optional[Dict[str, Any]] = MOCK_GENERATIONS.get(generation_id)
 
         if not test_info:
             return Response(
-                {"detail": "해당 과목에 해당하는 시험이 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "해당 시험 ID에 해당하는 시험이 존재하지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         if not generation_info:
-            return Response({"detail": "존재하지 않는 기수입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "존재하지 않는 기수입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        now: str = datetime.now().isoformat()
-        new_id: int = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
+        now_iso = datetime.now().isoformat()
+        new_id = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
 
-        new_data: Dict[str, Any] = {
+        new_deployment: Dict[str, Any] = {
             "id": new_id,
             "test": test_info,
             "generation": generation_info,
             "duration_time": validated.get("duration_time", 60),
             "access_code": str(uuid4())[:6],
             "status": "Activated",
-            "open_at": validated.get("open_at", now),
-            "close_at": validated.get("close_at", now),
+            "open_at": validated.get("open_at", now_iso),
+            "close_at": validated.get("close_at", now_iso),
             "questions_snapshot_json": {
                 "1": {
                     "question": "3 + 5 = ?",
@@ -237,17 +235,17 @@ class TestDeploymentCreateView(APIView):
                     "answer": "8",
                 }
             },
-            "created_at": now,
-            "updated_at": now,
+            "created_at": now_iso,
+            "updated_at": now_iso,
         }
 
-        MOCK_DEPLOYMENTS[new_id] = new_data
+        MOCK_DEPLOYMENTS[new_id] = new_deployment
 
-        response_data: Dict[str, Any] = {
-            "deployment_id": new_data["id"],
-            "access_code": new_data["access_code"],
-            "status": new_data["status"],
-            "snapshot": new_data["questions_snapshot_json"],
+        response_data = {
+            "deployment_id": new_deployment["id"],
+            "access_code": new_deployment["access_code"],
+            "status": new_deployment["status"],
+            "snapshot": new_deployment["questions_snapshot_json"],
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
