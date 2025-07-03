@@ -62,7 +62,6 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
 
         course_instance = validated_data.pop("course")  # source='course'로 들어온 ID 값
 
-
         # 기수 상태 자동 계산
         start_date = validated_data.get("start_date")
         end_date = validated_data.get("end_date")

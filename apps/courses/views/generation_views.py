@@ -21,6 +21,7 @@ from apps.courses.serializers.generation_serializer import (
 )
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
+
 @extend_schema(
     tags=["Admin - 기수관리"],
 )
@@ -102,6 +103,7 @@ class GenerationDetailView(APIView):
         serializer = self.serializer_class(gen)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @extend_schema(
     tags=["Admin - 기수관리"],
 )
@@ -120,6 +122,7 @@ class GenerationUpdateView(APIView):
             return Response(GenerationDetailSerializer(gen).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @extend_schema(
     tags=["Admin - 기수관리"],
 )
@@ -137,6 +140,7 @@ class GenerationDeleteView(APIView):
 
         gen.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 @extend_schema(
     tags=["Admin - 기수관리"],
@@ -203,6 +207,7 @@ class CourseTrendView(APIView):
         except Exception as e:
             return Response({"detail": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 @extend_schema(
     tags=["Admin - 기수관리"],
 )
@@ -262,6 +267,7 @@ class MonthlyCourseView(APIView):
 
         except Exception as e:
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @extend_schema(
     tags=["Admin - 기수관리"],
