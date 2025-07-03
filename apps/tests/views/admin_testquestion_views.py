@@ -7,12 +7,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.models import TestQuestion
+from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_question_serializers import (
     TestListItemSerializer,
     TestQuestionCreateSerializer,
     TestQuestionUpdateSerializer,
 )
-from apps.tests.permissions import IsAdminOrStaff
+from apps.users.models import User
+
 
 # 문제 생성
 class TestQuestionCreateView(APIView):
@@ -85,7 +87,7 @@ class TestQuestionListView(APIView):
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
     # permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated,IsAdminOrStaff]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
@@ -116,12 +118,12 @@ class TestQuestionUpdateDeleteView(APIView):
         },
     )
     def delete(self, request: Request, question_id: int) -> Response:
-        question = get_object_or_404(TestQuestion, id=question_id)
+        question = TestQuestion.objects.filter(id=question_id).first()
 
-        if not request.user.is_authenticated or not request.User.Role.ADMIN:
+        if not question:
             return Response(
-                {"detail": "이 작업을 수행할 권한이 없습니다."},
-                status=status.HTTP_403_FORBIDDEN,
+                {"detail": "문제를 찾을 수 없음"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         question.delete()
