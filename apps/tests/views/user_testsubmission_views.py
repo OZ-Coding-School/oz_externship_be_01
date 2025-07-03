@@ -54,79 +54,33 @@ class TestSubmissionStartView(APIView):
     request=UserTestSubmitSerializer,
 )
 class TestSubmissionSubmitView(APIView):
-    # permission_classes = [AllowAny]
-    permission_classes = [IsStudent]
+    # 실제 구현 시 수강생 권한 부여
+    permission_classes = [AllowAny]
     serializer_class = UserTestSubmitSerializer
 
     def post(self, request: Request, deployment_id: int) -> Response:
         """
         쪽지 시험 제출 API
         """
-        try:
-            deployment = TestDeployment.objects.get(id=deployment_id)
-        except TestDeployment.DoesNotExist:
-            return Response({"detail": "배포된 시험이 존재하지 않습니다."}, status=404)
-
-        # try:
-        #     student = PermissionsStudent.objects.filter(user=request.user.id).first()
-        #     print(student)
-        #     if not student:
-        #         return Response({"detail": "수강생 정보가 없습니다?????????????."}, status=400)
-        # except Exception as e:
-        #     return Response({"detail": str(e)}, status=400)
-
-        student_id = request.data.get("student_id")
-        if not student_id:
-            return Response({"detail": "student_id가 필요합니다."}, status=400)
-
-        if not request.user or not request.user.is_authenticated:
-            return Response({"detail": "로그인한 사용자만 접근 가능합니다."}, status=401)
-
-        try:
-            student = PermissionsStudent.objects.get(user=request.user)
-        except PermissionsStudent.DoesNotExist:
-            return Response({"detail": "수강생 정보가 없습니다."}, status=400)
-
-        # try:
-        #     # 인증된 사용자여야 함
-        #     user = request.user
-        #     # if not user.is_authenticated:
-        #     #     return Response({"detail": "인증이 필요합니다."}, status=401)
-        #
-        #     # 역할 체크 (선택 사항)
-        #     if user.role != User.Role.STUDENT:
-        #         return Response({"detail": "수강생 권한이 필요합니다."}, status=403)
-        #
-        #     # PermissionsStudent 객체 조회
-        #     student = PermissionsStudent.objects.filter(user=user).first()
-        #     if not student:
-        #         return Response({"detail": "수강생 정보가 없습니다."}, status=400)
-        #
-        # except Exception as e:
-        #     return Response({"detail": str(e)}, status=400)
-
-        data = request.data.copy()
+        deployment = get_object_or_404(TestDeployment, id=deployment_id)
+        student = get_object_or_404(PermissionsStudent, user=request.user)
 
         serializer = self.serializer_class(
-            data=data, context={"request": request, "deployment": deployment, "student": student}
+            data=request.data,
+            context={
+                "request": request,
+                "deployment": deployment,
+                "student": student,
+            },
         )
         serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        now = timezone.now()
+        # 자동 제출 메시지로 응답
+        auto_msg = getattr(serializer, "auto_submit_message", None)
+        if auto_msg:
+            return Response({"detail": auto_msg}, status=200)
 
-        # 시험 제출 시간 만료 시 자동 제출 처리
-        if deployment.close_at and deployment.close_at < now:
-            serializer.save(started_at=now, deployment=deployment)
-            return Response({"detail": "시험 제출 시간이 지나 자동 제출 되었습니다."}, status=status.HTTP_200_OK)
-
-        # 부정행위 3회 이상 적발 시 자동 제출
-        cheating_count = data.get("cheating_count")
-        if cheating_count is not None and int(cheating_count) >= 3:
-            serializer.save(started_at=now, deployment=deployment)
-            return Response({"detail": "부정행위 3회 이상 적발되어 자동 제출 처리되었습니다."})
-
-        # db 저장s
-        serializer.save(started_at=now, deployment=deployment)
         return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
 
 

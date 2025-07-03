@@ -3,8 +3,7 @@ from typing import Any, Dict
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
-from apps.tests.models import Test, TestDeployment
-from apps.tests.models import TestDeployment, TestQuestion
+from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
 )
@@ -119,8 +118,6 @@ class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
         ordered_questions = [id_to_question[qid] for qid in question_ids if qid in id_to_question]
 
         return UserTestQuestionStartSerializer(ordered_questions, many=True).data
-
-
 
 
 # 🔹 공통 timestamp serializer (선택적)

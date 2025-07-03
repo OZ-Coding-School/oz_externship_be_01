@@ -75,7 +75,6 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
 
 # 수강생 쪽지 시험 제출
 class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
-    # student_id = StudentSerializer(write_only=True)
     student = serializers.PrimaryKeyRelatedField(queryset=PermissionsStudent.objects.all())
     answers_json = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
 
@@ -89,59 +88,46 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
         )
         read_only_fields = ("started_at",)
 
-    # 유효성 검사
     def validate(self, data):
-        deployment = self.context.get("deployment")
+        deployment = self.context["deployment"]
+        permission_student = self.context["student"]
+        user = self.context["request"].user
         now = timezone.now()
 
-        # 답안 제출 확인
+        if permission_student.user != user:
+            raise serializers.ValidationError("인증된 사용자와 수강생 정보가 일치하지 않습니다.")
+
+        if permission_student.id != data.get("student").id:
+            raise serializers.ValidationError("사용자의 수강생 ID와 일치하지 않습니다.")
+
         if not data.get("answers_json"):
             raise serializers.ValidationError("모든 답안이 제출되지 않았습니다.")
 
-        # 시험 제출시간 확인
         if deployment is None:
             raise serializers.ValidationError("시험 정보가 없습니다.")
 
         if deployment.close_at and deployment.close_at < now:
             raise serializers.ValidationError("시험 제출 시간이 지났습니다.")
 
-        # 중복 제출(질문하기)
-
         return data
 
     def create(self, validated_data):
         deployment = self.context["deployment"]
-        student_id = validated_data.pop("student_id")
+        now = timezone.now()
 
-        try:
-            permission_student = PermissionsStudent.objects.get(id=student_id)
-        except PermissionsStudent.DoesNotExist:
-            raise serializers.ValidationError("수강생 정보가 없습니다.")
+        # 자동 제출 조건 처리
+        self.auto_submit_message = None
+        cheating_count = validated_data.get("cheating_count", 0)
+
+        if deployment.close_at and deployment.close_at < now:
+            self.auto_submit_message = "시험 제출 시간이 지나 자동 제출 되었습니다."
+        elif int(cheating_count) >= 3:
+            self.auto_submit_message = "부정행위 3회 이상 적발되어 자동 제출 처리되었습니다."
 
         validated_data["deployment"] = deployment
-        validated_data["student"] = permission_student
+        validated_data["started_at"] = timezone.now()
 
         return super().create(validated_data)
-
-    # def create(self, validated_data):
-    #     deployment = self.context['deployment'] or validated_data.get('deployment')
-    #     user = self.context['request'].user
-    #
-    #     if not user.is_authenticated:
-    #         raise serializers.ValidationError("인증된 사용자만 접근 가능합니다.")
-    #
-    #     try:
-    #         permission_student = PermissionsStudent.objects.get(user=student_id)
-    #     except PermissionsStudent.DoesNotExist:
-    #         raise serializers.ValidationError("수강생 정보가 없습니다.")
-    #
-    #     if permission_student.id != validated_data.get('student_id'):
-    #         raise serializers.ValidationError("사용자의 수강생 ID와 일치하지 않습니다.")
-    #
-    #     validated_data['deployment'] = deployment
-    #     validated_data['student'] = permission_student
-    #
-    #     return super().create(validated_data)
 
 
 # 사용자 쪽지 시험 결과 조회
