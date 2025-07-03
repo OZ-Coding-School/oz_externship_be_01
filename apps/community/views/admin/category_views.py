@@ -176,7 +176,6 @@ class AdminCategoryRenameAPIView(APIView):
             return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         category.name = serializer.validated_data["name"]
-        category.updated_at = datetime.now()
         category.save()
 
         response = CategoryRenameResponseSerializer(category)
