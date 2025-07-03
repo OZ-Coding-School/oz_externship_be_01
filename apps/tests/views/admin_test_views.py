@@ -46,9 +46,6 @@ class AdminTestDeleteAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     def delete(self, request: Request, test_id: int) -> Response:
-        if settings.DEBUG:
-            # 개발환경에서는 테스트용 관리자 계정을 request.user로 강제 설정
-            request.user = User.objects.get(email="testadmin@example.com")
 
         try:
             # 삭제 대상 쪽지시험 조회
@@ -223,11 +220,6 @@ class AdminTestCreateAPIView(APIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def post(self, request: Request) -> Response:
-
-        if settings.DEBUG:
-            # 개발환경에서만 request.user를 임의로 세팅
-            request.user = User.objects.get(email="testadmin@example.com")
-            # print("[INFO] 개발용 request.user 주입: testadmin@example.com")
 
         serializer = self.serializer_class(data=request.data, context={"request": request})
 
