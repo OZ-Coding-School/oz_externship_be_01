@@ -2,6 +2,7 @@ from datetime import datetime
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -18,6 +19,8 @@ from apps.community.serializers.category_serializers import (
     CategoryStatusUpdateRequestSerializer,
     CategoryStatusUpdateResponseSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
+from apps.users.models.user import User
 
 # 카테고리 게시판 상세 조회
 mock_valid_ids = [1, 2, 3]
@@ -69,7 +72,7 @@ class AdminCommunityCategoryDetailAPIView(APIView):
 
 # 카테고리 생성
 class AdminCommunityCategoryCreateAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
