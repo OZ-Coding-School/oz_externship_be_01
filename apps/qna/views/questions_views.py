@@ -102,9 +102,18 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
+        # 이미지가 빈 값이면 제거
+        data = request.data.copy()
+        if "image_files" in data:
+            images = data.getlist("image_files") if hasattr(data, "getlist") else data["image_files"]
+            if isinstance(images, list):
+                if hasattr(data, "setlist"):
+                    data.setlist("image_files", [img for img in images if img])
+                else:
+                    data["image_files"] = [img for img in images if img]
+        serializer = QuestionCreateSerializer(data=data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        question = serializer.save()
+        question = serializer.save(author=request.user)
         return Response({"id": question.id}, status=status.HTTP_201_CREATED)
 
 

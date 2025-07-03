@@ -1,10 +1,12 @@
+import uuid
 from typing import Any
 
-from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
+from core.utils.s3_file_upload import S3Uploader
 
 
 class SafeImageListField(serializers.ListField):
@@ -27,7 +29,7 @@ class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
 
 # 질문 생성
 class QuestionCreateSerializer(serializers.ModelSerializer):
-    image_files = SafeImageListField(
+    image_files = serializers.ListField(
         child=serializers.ImageField(), write_only=True, required=False, allow_empty=True, max_length=5
     )
     category_id = serializers.IntegerField(write_only=True)
@@ -42,8 +44,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         except QuestionCategory.DoesNotExist:
             raise serializers.ValidationError("존재하지 않는 카테고리입니다.")
 
-        # TODO: depth 필드가 생기면 이 조건은 수정 필요
-        if category.parent is None or category.parent.parent is None:
+        if category.category_type != "minor":
             raise serializers.ValidationError("소분류 카테고리만 선택할 수 있습니다.")
 
         return category
@@ -54,17 +55,35 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data: dict[str, Any]) -> Question:
+        # TODO : 개발 단계: AnonymousUser 처리 이후 삭제 필요
+        from django.contrib.auth.models import AnonymousUser
+
+        from apps.users.models import User
+
         image_files: list[UploadedFile] = validated_data.pop("image_files", [])
         category: QuestionCategory = validated_data.pop("category_id")
-        user = self.context["request"].user  # TODO: 사용자 처리 검토
+        author = validated_data.pop("author")
+        # TODO : 개발 단계: AnonymousUser일 경우 더미 사용자로 대체/ 개발 이후 삭제 필요
+        if isinstance(author, AnonymousUser):
+            author, _ = User.objects.get_or_create(
+                email="testuser@example.com", defaults={"nickname": "test", "profile_image_url": "", "is_active": True}
+            )
 
-        question = Question.objects.create(category=category, author=user, **validated_data)
+        with transaction.atomic():
+            question = Question.objects.create(category=category, author=author, **validated_data)
 
-        for img in image_files:
-            # TODO: 외부 스토리지 정책 확인
-            path = default_storage.save(f"questions/{img.name}", img)
-            url = default_storage.url(path)
-            QuestionImage.objects.create(question=question, img_url=url)
+            uploader = S3Uploader()
+            for img in image_files:
+                img_name = img.name or ""
+                if "." in img_name:
+                    ext = img_name.split(".")[-1]
+                else:
+                    ext = "bin"
+                s3_key = f"questions/{uuid.uuid4().hex}.{ext}"
+                url = uploader.upload_file(img, s3_key)
+                if not url:
+                    raise serializers.ValidationError("이미지 업로드에 실패했습니다.")
+                QuestionImage.objects.create(question=question, img_url=url)
 
         return question
 

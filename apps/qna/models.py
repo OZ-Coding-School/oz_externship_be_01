@@ -4,8 +4,10 @@ from apps import users
 
 
 class QuestionCategory(models.Model):
+    CATEGORY_TYPES = [("major", "대분류"), ("middle", "중분류"), ("minor", "소분류"), ("general", "일반질문")]
     parent = models.ForeignKey("self", on_delete=models.CASCADE, related_name="subcategories", null=True, blank=True)
     name = models.CharField(max_length=15)
+    category_type = models.CharField(max_length=10, choices=CATEGORY_TYPES, default="general")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
