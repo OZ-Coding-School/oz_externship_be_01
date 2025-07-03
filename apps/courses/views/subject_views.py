@@ -1,6 +1,7 @@
 import datetime
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast  # 'cast' 임포트 확인
 
+from django.http import QueryDict  # QueryDict 임포트 유지
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -11,7 +12,7 @@ from drf_spectacular.utils import (
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import FormParser, MultiPartParser  # 추가됨
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -20,10 +21,8 @@ from rest_framework.views import APIView
 # 실제 Subject, Course 모델 임포트
 from apps.courses.models import Course, Subject
 from apps.courses.serializers.subject_serializers import (
-    SubjectDropdownSerializer,  # 새로 추가된 시리얼라이저 임포트
-)
-from apps.courses.serializers.subject_serializers import (
     SubjectDetailSerializer,
+    SubjectDropdownSerializer,
     SubjectListSerializer,
     SubjectSerializer,
     SubjectUpdateSerializer,
@@ -43,7 +42,7 @@ class SubjectListCreateAPIView(APIView):
 
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
-    parser_classes = [MultiPartParser, FormParser]  # 파일 업로드를 위해 필요합니다.
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 목록 조회",
@@ -111,7 +110,7 @@ class SubjectListCreateAPIView(APIView):
                                 "status": True,
                                 "created_at": "2025-06-23T10:30:00Z",
                                 "updated_at": "2025-06-23T10:30:00Z",
-                                "thumbnail_img_url": "http://example.com/db_intro.jpg",  # 응답 예시에 thumbnail_img_url 포함
+                                "thumbnail_img_url": "http://example.com/db_intro.jpg",
                             },
                             {
                                 "id": 2,
@@ -172,16 +171,13 @@ class SubjectListCreateAPIView(APIView):
         """
         (Admin) 과목 목록을 조회합니다 (실제 DB 연동).
         """
-        # 실제 DB에서 Subject 객체 쿼리
-        queryset = Subject.objects.all().select_related(
-            "course"
-        )  # course_name을 위해 related_name 'course'를 사용 (ForeignKey 필드명)
+        queryset = Subject.objects.all().select_related("course")
 
-        course_id_param: Optional[str] = request.query_params.get("course_id")
-        status_param: Optional[str] = request.query_params.get("status")
-        search_query: Optional[str] = request.query_params.get("search")
+        query_params: QueryDict = request.query_params
+        course_id_param: Optional[str] = query_params.get(cast(str, "course_id"))
+        status_param: Optional[str] = query_params.get(cast(str, "status"))
+        search_query: Optional[str] = query_params.get(cast(str, "search"))
 
-        # 필터링 로직 (실제 DB 쿼리)
         if course_id_param:
             try:
                 course_id_int: int = int(course_id_param)
@@ -196,10 +192,9 @@ class SubjectListCreateAPIView(APIView):
         if search_query:
             queryset = queryset.filter(title__icontains=search_query)
 
-        # --- 페이지네이션 로직 ---
         paginator = self.pagination_class()
 
-        limit_param = request.query_params.get(paginator.page_size_query_param)
+        limit_param = query_params.get(cast(str, paginator.page_size_query_param))
         if limit_param:
             try:
                 limit_value = int(limit_param)
@@ -222,14 +217,12 @@ class SubjectListCreateAPIView(APIView):
         summary="(Admin) 새 과목 등록",
         operation_id="subject_create",
         description="관리자 권한으로 새로운 과목을 시스템에 등록합니다. 등록되는 과목은 특정 과정에 종속됩니다.",
-        request=SubjectSerializer,  # SubjectSerializer는 thumbnail_img_file을 받습니다.
+        request=SubjectSerializer,
         examples=[
             OpenApiExample(
                 "과목 등록 요청 예시 (파일 포함)",
-                # JSON이 아닌 multipart/form-data 요청 본문 예시
-                # Swagger UI에서 파일 입력 필드로 렌더링될 안내 문구
                 value={
-                    "course_id": 1,  # 실제 존재하는 Course ID
+                    "course_id": 1,
                     "title": "데이터베이스 개론",
                     "number_of_days": 4,
                     "number_of_hours": 16,
@@ -237,19 +230,19 @@ class SubjectListCreateAPIView(APIView):
                     "status": True,
                 },
                 request_only=True,
-                media_type="multipart/form-data",  # <--- media_type 변경
+                media_type="multipart/form-data",
             ),
             OpenApiExample(
                 "과목 등록 요청 예시 (파일 미포함)",
                 value={
-                    "course_id": 1,  # 실제 존재하는 Course ID
+                    "course_id": 1,
                     "title": "네트워크 기초",
                     "number_of_days": 3,
                     "number_of_hours": 12,
                     "status": False,
                 },
                 request_only=True,
-                media_type="multipart/form-data",  # <--- media_type 변경
+                media_type="multipart/form-data",
             ),
             OpenApiExample(
                 "과목 등록 성공 응답 예시 (201 OK)",
@@ -259,7 +252,7 @@ class SubjectListCreateAPIView(APIView):
                     "title": "데이터베이스 개론",
                     "number_of_days": 4,
                     "number_of_hours": 16,
-                    "thumbnail_img_url": "http://actual-s3-bucket.com/media/1/db_intro.jpg",  # 실제 생성된 URL 반영
+                    "thumbnail_img_url": "http://actual-s3-bucket.com/media/1/db_intro.jpg",
                     "status": True,
                     "created_at": "2025-06-23T10:30:00Z",
                     "updated_at": "2025-06-23T10:30:00Z",
@@ -330,11 +323,9 @@ class SubjectListCreateAPIView(APIView):
         except ValidationError as e:
             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
 
-        # 시리얼라이저의 create 메서드에서 실제 DB 저장이 이루어짐
         instance = serializer.save()
 
-        # 실제 DB에 저장된 인스턴스를 바탕으로 응답 데이터 생성
-        response_serializer = SubjectSerializer(instance)  # 생성된 인스턴스로 시리얼라이저 다시 생성
+        response_serializer = SubjectSerializer(instance)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -350,13 +341,11 @@ class SubjectDetailAPIView(APIView):
     """
 
     permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]  # 파일 업로드를 위해 필요합니다.
+    parser_classes = [MultiPartParser, FormParser]
 
     # 객체를 가져오는 헬퍼 메서드
     def get_object(self, subject_id: int) -> Subject:
         try:
-            # 실제 DB에서 Subject 객체 쿼리
-            # course_name을 위해 course 관계를 미리 가져옴
             return Subject.objects.select_related("course").get(id=subject_id)
         except Subject.DoesNotExist:
             raise NotFound(detail=f"Subject with id '{subject_id}' not found.")
@@ -430,7 +419,7 @@ class SubjectDetailAPIView(APIView):
         """
         특정 과목의 상세 정보를 조회합니다 (실제 DB 연동).
         """
-        instance = self.get_object(subject_id)  # 실제 DB에서 객체 가져오기
+        instance = self.get_object(subject_id)
         serializer = SubjectDetailSerializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -438,19 +427,19 @@ class SubjectDetailAPIView(APIView):
         summary="(Admin) 등록된 수강 과목 상세 수정",
         operation_id="subject_partial_update",
         description="특정 ID를 가진 과목의 정보를 부분적으로 수정합니다.",
-        request=SubjectUpdateSerializer,  # SubjectUpdateSerializer는 thumbnail_img_file을 받습니다.
+        request=SubjectUpdateSerializer,
         examples=[
             OpenApiExample(
                 "과목 부분 수정 요청 예시 (파일 포함)",
                 value={
                     "title": "데이터베이스 심화 (개정판)",
-                    "thumbnail_img_file": "파일 선택 (바이너리 데이터)",  # Swagger UI에서 파일 입력 필드로 렌더링될 안내 문구
+                    "thumbnail_img_file": "파일 선택 (바이너리 데이터)",
                     "number_of_days": 5,
                     "number_of_hours": 20,
                     "status": True,
                 },
                 request_only=True,
-                media_type="multipart/form-data",  # <--- media_type 변경
+                media_type="multipart/form-data",
             ),
             OpenApiExample(
                 "과목 부분 수정 요청 예시 (파일 미포함)",
@@ -461,7 +450,7 @@ class SubjectDetailAPIView(APIView):
                     "status": True,
                 },
                 request_only=True,
-                media_type="multipart/form-data",  # <--- media_type 변경
+                media_type="multipart/form-data",
             ),
             OpenApiExample(
                 "과목 부분 수정 성공 응답 예시 (200 OK)",
@@ -471,7 +460,7 @@ class SubjectDetailAPIView(APIView):
                     "title": "데이터베이스 심화 (개정판)",
                     "number_of_days": 5,
                     "number_of_hours": 20,
-                    "thumbnail_img_url": "http://actual-s3-bucket.com/media/db_advanced_revised.jpg",  # 응답은 URL
+                    "thumbnail_img_url": "http://actual-s3-bucket.com/media/db_advanced_revised.jpg",
                     "status": True,
                     "created_at": "2025-06-23T10:30:00Z",
                     "updated_at": "2025-06-23T11:45:00Z",
@@ -482,7 +471,6 @@ class SubjectDetailAPIView(APIView):
         ],
         responses={
             200: OpenApiResponse(response=SubjectUpdateSerializer, description="과목 부분 수정 성공"),
-            # 응답 시리얼라이저를 SubjectUpdateSerializer로 변경하는게 정확
             400: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
                 description="잘못된 요청 (유효성 검사 실패)",
@@ -543,7 +531,7 @@ class SubjectDetailAPIView(APIView):
         """
         특정 과목의 정보를 부분적으로 수정합니다 (실제 DB 연동).
         """
-        instance = self.get_object(subject_id)  # 실제 DB에서 객체 가져오기
+        instance = self.get_object(subject_id)
         serializer = SubjectUpdateSerializer(instance, data=request.data, partial=True)
         try:
             serializer.is_valid(raise_exception=True)
@@ -609,8 +597,8 @@ class SubjectDetailAPIView(APIView):
         """
         특정 과목을 삭제합니다 (실제 DB 연동).
         """
-        instance = self.get_object(subject_id)  # 실제 DB에서 객체 가져오기
-        instance.delete()  # 실제 DB에서 삭제
+        instance = self.get_object(subject_id)
+        instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -729,7 +717,8 @@ class SubjectDropdownListAPIView(APIView):
 
         queryset = Subject.objects.filter(course=course)
 
-        status_param: Optional[str] = request.query_params.get("status")
+        status_param: Optional[str] = request.query_params.get(cast(str, "status"))
+
         if status_param is not None:
             if status_param.lower() in ["true", "false"]:
                 expected_status: bool = status_param.lower() == "true"
