@@ -159,26 +159,24 @@ class AdminCategoryListAPIView(APIView):
 
 # 커뮤니티 게시판 카테고리 수정
 class AdminCategoryRenameAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리명 수정",
         request=CategoryRenameRequestSerializer,
-        responses={200: CategoryRenameResponseSerializer},
+        responses={200: CategoryRenameResponseSerializer, 400: CategoryRenameResponseSerializer},
     )
     def patch(self, request: Request, category_id: int) -> Response:
+        category = PostCategory.objects.get(id=category_id)
+
         serializer = CategoryRenameRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         if not serializer.is_valid():
-            return Response({"detail": "입력값이 유효하지 않습니다."}, status=400)
+            return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        validated = serializer.validated_data
-        mock_instance = {
-            "id": category_id,
-            "name": validated["name"],
-            "status": True,
-            "updated_at": datetime.now(),
-        }
+        category.name = serializer.validated_data["name"]
+        category.save()
 
-        response = CategoryRenameResponseSerializer(mock_instance)
+        response = CategoryRenameResponseSerializer(category)
         return Response(response.data, status=200)
