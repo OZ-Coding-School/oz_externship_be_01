@@ -1,11 +1,8 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from apps.users.models.permissions import PermissionsStaff, PermissionsTrainingAssistant
 from apps.users.serializers.admin_withdrawal_restore_serializers import (
     AdminWithdrawalRestoreSerializer,
 )
@@ -15,17 +12,12 @@ from apps.users.serializers.admin_withdrawal_restore_serializers import (
 class IsAdminOrStaff(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if user.is_authenticated and (
-            user.is_role
-            or PermissionsStaff.objects.filter(user=user).exists()
-            or PermissionsTrainingAssistant.objects.filter(user=user).exists()
-        ):
-            return True
-        raise PermissionDenied(detail="해당 작업을 수행할 권한이 없습니다.")
-
+        if not user.is_authenticated or not user.role in ['ADMIN', 'TA', 'OM' , 'LC']:
+            raise PermissionDenied(detail="해당 작업을 수행할 권한이 없습니다.")
+        return True
 
 class AdminWithdrawalRestoreAPIView(APIView):
-    permission_classes = [AllowAny]  # JWT > IsAdminOrStaff 로 수정
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(tags=["withdrawal"], summary="어드민 회원탈퇴 복구")
     def post(self, request, user_id):
