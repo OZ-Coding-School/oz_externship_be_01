@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
 
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
@@ -99,14 +99,20 @@ class NaverLoginAPIView(APIView):
 
         # 유저 생성 및 기본 유저 확인
         created = False
+
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
+            email = cast(str, naver_user_info.get("email"))
+            name = cast(str, naver_user_info.get("name"))
+            nickname = cast(str, naver_user_info.get("nickname"))
+            phone_number = cast(str, naver_user_info.get("mobile"))
+
             user = User.objects.create(
                 email=email,
-                name=naver_user_info.get("name"),
-                nickname=naver_user_info.get("nickname"),
-                phone_number=naver_user_info.get("mobile"),
+                name=name,
+                nickname=nickname,
+                phone_number=phone_number,
                 birthday=self._parse_birthday(naver_user_info),
                 gender=self._parse_gender(naver_user_info.get("gender")),
             )
