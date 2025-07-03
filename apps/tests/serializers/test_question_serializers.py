@@ -72,8 +72,3 @@ class TestListItemSerializer(serializers.ModelSerializer):  # type: ignore
             "score",
             "correct_count",
         ]
-
-
-# 삭제 응답
-class DeleteResponseSerializer(serializers.Serializer):  # type: ignore
-    detail = serializers.CharField(help_text="에러 메시지 설명")

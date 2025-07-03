@@ -8,13 +8,11 @@ from rest_framework.views import APIView
 
 from apps.tests.models import TestQuestion
 from apps.tests.serializers.test_question_serializers import (
-    DeleteResponseSerializer,
     TestListItemSerializer,
     TestQuestionCreateSerializer,
     TestQuestionUpdateSerializer,
 )
-from apps.tests.testquestion_permissions import IsAdminOrStaffByGroup
-
+from apps.tests.permissions import IsAdminOrStaff
 
 # 문제 생성
 class TestQuestionCreateView(APIView):
@@ -87,7 +85,7 @@ class TestQuestionListView(APIView):
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
     # permission_classes = [AllowAny]
-    permission_classes = [IsAuthenticated, IsAdminOrStaffByGroup]
+    permission_classes = [IsAuthenticated,IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
@@ -113,11 +111,18 @@ class TestQuestionUpdateDeleteView(APIView):
         description="어드민이 등록한 쪽지시험 문제를 삭제합니다.",
         responses={
             204: OpenApiResponse(description="삭제 성공"),
-            403: OpenApiResponse(response=DeleteResponseSerializer, description="이 작업을 수행할 권한이 없습니다."),
-            404: OpenApiResponse(response=DeleteResponseSerializer, description="문제를 찾을 수 없음"),
+            403: OpenApiResponse(description="이 작업을 수행할 권한이 없습니다."),
+            404: OpenApiResponse(description="문제를 찾을 수 없음"),
         },
     )
     def delete(self, request: Request, question_id: int) -> Response:
         question = get_object_or_404(TestQuestion, id=question_id)
+
+        if not request.user.is_authenticated or not request.User.Role.ADMIN:
+            return Response(
+                {"detail": "이 작업을 수행할 권한이 없습니다."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         question.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
