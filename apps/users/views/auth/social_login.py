@@ -38,24 +38,31 @@ class KakaoLoginAPIView(APIView):
         code = serializer.validated_data["code"]
 
         # access_token 요청
-        access_token = get_kakao_access_token(code)
+        access_token, error = get_kakao_access_token(code)
+
         if not access_token:
-            return Response({"detail": "카카오 access_token 요청 실패"}, status=status.HTTP_400_BAD_REQUEST)
+            if "invalid_grant" in (error or ""):
+                return Response({"detail": "잘못된 인가 코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": f"카카오 서버 오류: {error or '알 수 없는 오류'}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         # 사용자 정보 요청
         user_info = get_kakao_user_info(access_token)
         if not user_info or not user_info.get("email") or not user_info.get("kakao_id"):
             return Response(
-                {"detail": "카카오 사용자 정보 요청 실패 또는 필수 정보 누락"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "카카오 사용자 정보 요청 실패 또는 필수 정보 누락"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         # 사용자 정보 파싱
-        kakao_id = user_info["kakao_id"]
-        email = user_info["email"]
-        raw_nickname = user_info.get("nickname") or f"kakao_{email.split('@')[0]}"
+        kakao_id = user_info.get("kakao_id")
+        email = user_info.get("email")
+        raw_nickname = user_info.get("nickname") or (f"kakao_{email.split('@')[0]}" if email else None)
         nickname = generate_unique_nickname(raw_nickname)
-        name = user_info.get("name", "")
-        phone_number = user_info.get("phone_number", "")
+        name = user_info.get("name")
+        phone_number = user_info.get("phone_number")
         birthday = format_full_birthday(user_info.get("birthyear"), user_info.get("birthday"))
         profile_image_url = user_info.get("profile_image_url")
         gender = user_info.get("gender")
@@ -76,14 +83,13 @@ class KakaoLoginAPIView(APIView):
         if missing_fields:
             return Response(
                 {"detail": f"다음 필수 정보가 누락되었습니다: {', '.join(missing_fields)}"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         # 기존 소셜 유저 확인 또는 신규 생성
         try:
-            social_user = SocialUser.objects.get(provider="KAKAO", provider_id=kakao_id)
-            user = social_user.user
-        except SocialUser.DoesNotExist:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
             user = User.objects.create(
                 email=email,
                 name=name,
@@ -93,7 +99,8 @@ class KakaoLoginAPIView(APIView):
                 profile_image_url=profile_image_url,
                 gender=gender,
             )
-            SocialUser.objects.create(user=user, provider="KAKAO", provider_id=kakao_id)
+
+        SocialUser.objects.get_or_create(user=user, provider="KAKAO", provider_id=kakao_id)
 
         # JWT 발급
         tokens = generate_jwt_token_pair(user.id)

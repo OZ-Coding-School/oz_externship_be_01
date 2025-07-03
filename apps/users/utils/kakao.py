@@ -2,14 +2,14 @@ import os
 import random
 import string
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import requests
 
 from apps.users.models import User
 
 
-def get_kakao_access_token(code: str) -> Optional[str]:
+def get_kakao_access_token(code: str) -> Tuple[Optional[str], Optional[str]]:
     url = "https://kauth.kakao.com/oauth/token"
     data = {
         "grant_type": "authorization_code",
@@ -21,9 +21,13 @@ def get_kakao_access_token(code: str) -> Optional[str]:
     response = requests.post(url, data=data)
 
     if response.status_code != 200:
-        return None
+        try:
+            error_description = response.json().get("error_description", "")
+        except Exception:
+            error_description = "카카오 서버 응답 파싱 실패"
+        return None, error_description
 
-    return response.json().get("access_token")
+    return response.json().get("access_token"), None
 
 
 def get_kakao_user_info(access_token: str) -> Optional[Dict[str, Optional[str]]]:
