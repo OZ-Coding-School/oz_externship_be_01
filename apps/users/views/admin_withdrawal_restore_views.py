@@ -3,6 +3,7 @@ from rest_framework import permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from apps.users.serializers.admin_withdrawal_restore_serializers import (
     AdminWithdrawalRestoreSerializer,
 )
@@ -12,9 +13,10 @@ from apps.users.serializers.admin_withdrawal_restore_serializers import (
 class IsAdminOrStaff(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated or not user.role in ['ADMIN', 'TA', 'OM' , 'LC']:
+        if not user.is_authenticated or not user.role in ["ADMIN", "TA", "OM", "LC"]:
             raise PermissionDenied(detail="해당 작업을 수행할 권한이 없습니다.")
         return True
+
 
 class AdminWithdrawalRestoreAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
