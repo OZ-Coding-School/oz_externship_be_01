@@ -1,6 +1,7 @@
-from rest_framework import serializers
+from django.utils import timezone
+from rest_framework import request, serializers
 
-from apps.tests.models import TestSubmission
+from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
     AdminTestListDeploymentSerializer,
@@ -16,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer[User]):
         fields = ("id", "name", "nickname")
 
 
-# 공통 Admin
+# 공통 Admin & User
 class StudentSerializer(serializers.ModelSerializer[PermissionsStudent]):
     user = UserSerializer(read_only=True)
 
@@ -72,27 +73,59 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
         )
 
 
-# 사용자 쪽지 시험 제출
+# 수강생 쪽지 시험 제출
 class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
+    student = serializers.PrimaryKeyRelatedField(queryset=PermissionsStudent.objects.all())
+    answers_json = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
+
     class Meta:
         model = TestSubmission
         fields = (
-            "id",
-            "deployment",
+            "student",
             "started_at",
             "cheating_count",
             "answers_json",
-            "created_at",
-            "updated_at",
         )
-        read_only_fields = (
-            "id",
-            "deployment",
-            "started_at",
-            "cheating_count",
-            "created_at",
-            "updated_at",
-        )
+
+    def validate(self, data):
+        deployment = self.context["deployment"]
+        permission_student = self.context["student"]
+        user = self.context["request"].user
+        now = timezone.now()
+
+        if permission_student.user != user:
+            raise serializers.ValidationError("인증된 사용자와 수강생 정보가 일치하지 않습니다.")
+
+        if permission_student.id != data.get("student").id:
+            raise serializers.ValidationError("사용자의 수강생 ID와 일치하지 않습니다.")
+
+        if not data.get("answers_json"):
+            raise serializers.ValidationError("모든 답안이 제출되지 않았습니다.")
+
+        if deployment is None:
+            raise serializers.ValidationError("시험 정보가 없습니다.")
+
+        if deployment.close_at and deployment.close_at < now:
+            raise serializers.ValidationError("시험 제출 시간이 지났습니다.")
+
+        return data
+
+    def create(self, validated_data):
+        deployment = self.context["deployment"]
+        now = timezone.now()
+
+        # 자동 제출 조건 처리
+        self.auto_submit_message = None
+        cheating_count = validated_data.get("cheating_count", 0)
+
+        if deployment.close_at and deployment.close_at < now:
+            self.auto_submit_message = "시험 제출 시간이 지나 자동 제출 되었습니다."
+        elif int(cheating_count) >= 3:
+            self.auto_submit_message = "부정행위 3회 이상 적발되어 자동 제출 처리되었습니다."
+
+        validated_data["deployment"] = deployment
+
+        return super().create(validated_data)
 
 
 # 사용자 쪽지 시험 결과 조회

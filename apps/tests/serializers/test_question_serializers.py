@@ -72,3 +72,15 @@ class TestListItemSerializer(serializers.ModelSerializer):  # type: ignore
             "score",
             "correct_count",
         ]
+
+
+# 삭제 응답
+class ErrorResponseSerializer(serializers.Serializer):  # type: ignore
+    detail = serializers.CharField()
+
+
+# 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용
+class UserTestQuestionStartSerializer(serializers.ModelSerializer[TestQuestion]):
+    class Meta:
+        model = TestQuestion
+        fields = ("type", "question", "prompt", "blank_count", "options_json", "point")

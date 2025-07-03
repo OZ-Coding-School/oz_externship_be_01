@@ -3,11 +3,13 @@ from typing import Any, Dict
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
-from apps.tests.models import Test, TestDeployment
+from apps.tests.models import Test, TestDeployment, TestQuestion
+from apps.tests.serializers.test_question_serializers import (
+    UserTestQuestionStartSerializer,
+)
 from apps.tests.serializers.test_serializers import (
-    AdminListSerializer,
     AdminTestSerializer,
-    UserTestSerializer,
+    CommonTestSerializer,
 )
 
 
@@ -63,7 +65,7 @@ class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment])
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = AdminListSerializer(read_only=True)
+    test = CommonTestSerializer(read_only=True)
     generation = AdminListGenerationSerializer(read_only=True)
 
     class Meta:
@@ -74,9 +76,30 @@ class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployme
         )
 
 
+# 사용자 쪽지 시험 응시: 요청, access_code 검증용
+class UserTestStartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestDeployment
+        fields = ("access_code",)
+        extra_kwargs = {
+            "access_code": {
+                "write_only": True,
+                "required": True,
+                "error_messages": {"required": "시험 코드를 입력해 주세요."},
+            }
+        }
+
+    # access_code 유효성 검사
+    def validate_access_code(self, value: str) -> str:
+        if not TestDeployment.objects.filter(access_code=value).exists():
+            raise serializers.ValidationError("등록되지 않은 시험 코드입니다.")
+        return value
+
+
 # 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용
 class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = UserTestSerializer(read_only=True)
+    test = CommonTestSerializer(read_only=True)
+    questions_snapshot_json = serializers.SerializerMethodField()
 
     class Meta:
         model = TestDeployment
@@ -87,15 +110,14 @@ class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
             "questions_snapshot_json",
         )
 
+    def get_questions_snapshot_json(self, obj):
+        question_ids = [q["id"] for q in obj.questions_snapshot_json]
+        questions = TestQuestion.objects.filter(id__in=question_ids)
 
-# 사용자 쪽지 시험 응시: 요청, access_code 검증용
-class UserTestStartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TestDeployment
-        fields = ("access_code",)
-        extra_kwargs = {
-            "access_code": {"write_only": True},
-        }
+        id_to_question = {q.id: q for q in questions}
+        ordered_questions = [id_to_question[qid] for qid in question_ids if qid in id_to_question]
+
+        return UserTestQuestionStartSerializer(ordered_questions, many=True).data
 
 
 # 🔹 공통 timestamp serializer (선택적)

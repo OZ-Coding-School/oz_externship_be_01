@@ -1,12 +1,16 @@
+from django.conf import settings
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import Generation, Subject
+from apps.courses.models import Generation, Subject, User
 from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.permissions import IsStudent
 from apps.tests.serializers.test_deployment_serializers import (
     UserTestDeploymentSerializer,
     UserTestStartSerializer,
@@ -15,166 +19,69 @@ from apps.tests.serializers.test_submission_serializers import (
     UserTestResultSerializer,
     UserTestSubmitSerializer,
 )
+from apps.users.models import PermissionsStudent
 
 
 # 쪽지 시험 응시
 @extend_schema(
     tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestStartSerializer,
-    responses=UserTestDeploymentSerializer,
 )
-class TestSubmissionStartView(APIView):
-    permission_classes = [AllowAny]
+class TestStartView(APIView):
+    permission_classes = [IsAuthenticated]
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer
 
     def post(self, request: Request, test_id: int) -> Response:
         """
         이 API는 쪽지 시험 응시를 위한 test_id, access_code의 유효성을 판별합니다.
-        :param request: test_id, access_code
-        :return: 생략
         """
+        serializer = self.request_serializer_class(data=request.data, context={"test_id": test_id})
+        serializer.is_valid(raise_exception=True)
 
-        access_code = "abc123"
+        access_code = serializer.validated_data["access_code"]
+        deployment = get_object_or_404(TestDeployment, access_code=access_code, test_id=test_id)
 
-        # 클라이언트가 요청한 값
-        data = request.data
-
-        # mock data
-        mock_data = TestDeployment(
-            id=1,
-            test=Test(
-                id=test_id,
-                title="프론트엔드 기초 쪽지시험",
-                subject=Subject(id=1, title="프론트엔드 기초"),
-                thumbnail_img_url="https://cdn.example.com/images/frontend_basic_quiz_thumbnail.png",
-            ),
-            duration_time=60,
-            questions_snapshot_json=[
-                {
-                    "question_id": 1,
-                    "type": "multiple_choice",  # 객관식 단일 선택
-                    "question": "HTML의 기본 구조를 이루는 태그는?",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["A. <html>", "B. <head>", "C. <body>", "D. <div>"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 2,
-                    "type": "ox",  # "ox문제"
-                    "question": "CSS는 프로그래밍 언어이다.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["O", "X"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 3,
-                    "type": "ordering",  # 순서 정렬"
-                    "question": "다음 HTML 요소들을 웹 페이지에 표시되는 순서대로 정렬하세요.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["<head>", "<html>", "<body>", "<title>"],
-                    "point": 5,
-                },
-                {
-                    "question_id": 4,
-                    "type": "short_answer",  # 주관식 단답형
-                    "question": "다음 문장의 빈칸을 채우세요.",
-                    "prompt": "HTML에서 문서의 제목을 설정할 때 사용하는 태그는 <____>이다.",
-                    "blank_count": 1,
-                    "options_json": [],
-                    "point": 5,
-                },
-                {
-                    "question_id": 5,
-                    "type": "fill_in_blank",  # 빈칸 채우기
-                    "question": "다음 문장의 빈칸을 채우세요.",
-                    "prompt": "HTML의 <____> 태그는 문서의 제목을 정의하고, <____> 태그 안에 위치한다.",
-                    "blank_count": 2,
-                    "options_json": [],
-                    "point": 5,
-                },
-                {
-                    "question_id": 6,
-                    "type": "multiple_choice_multiple",  # 객관식 다중 선택
-                    "question": "다음 중 CSS에서 글자 색상과 관련된 속성을 모두 고르세요.",
-                    "prompt": None,
-                    "blank_count": None,
-                    "options_json": ["A. color", "B. background-color", "C. font-size", "D. text-align"],
-                    "point": 5,
-                },
-            ],
+        response_serializer = self.response_serializer_class(instance=deployment)
+        return Response(
+            {"message": "Test started successfully.", "data": response_serializer.data}, status=status.HTTP_200_OK
         )
 
-        # 유효성 검증
-        # request.data에 access_code가 없으면 에러 반환
-        if "access_code" not in data:
-            return Response({"message": "시험 코드를 입력해 주세요."}, status=400)
 
-        # access_code 불일치 시 에러 반환
-        if access_code != data.get("access_code"):
-            return Response({"message": "등록 되지 않은 시험 코드 입니다."}, status=403)
-
-        serializer = self.response_serializer_class(instance=mock_data)
-        return Response({"message": "쪽지시험 응시 시작 완료", "data": serializer.data}, status=status.HTTP_200_OK)
-
-
-# 쪽지 시험 제출
+# 수강생 쪽지 시험 제출
 @extend_schema(
     tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestSubmitSerializer,
-    examples=[
-        OpenApiExample(
-            name="제출 예시",
-            value={
-                "id": 1,
-                "deployment": 1,
-                "started_at": "2025-06-20T10:30:00",
-                "cheating_count": 2,
-                # "answers_json": [
-                #     # 객관식 단일 선택
-                #     {"question_id": 1, "answer": ["A"]},
-                #     # ox 문제
-                #     {"question_id": 2, "answer": ["x"]},
-                #     # 순서 정렬 답안
-                #     {"question_id": 3, "answer": ["<html>", "<head>", "<body>", "<title>"]},
-                #     # 주관식 단답형
-                #     {"question_id": 4, "answer": ["title"]},
-                #     # 빈칸 채우기, 답안 미작성
-                #     {"question_id": 5, "answer": [""]},
-                #     # 객관식 다중 선택
-                #     {"question_id": 6, "answer": ["A", "B"]},
-                # ],
-                "answers_json": {
-                    1: ["A"],
-                    2: ["X"],
-                    3: ["<html>", "<head>", "<body>", "<title>"],
-                    4: ["title"],
-                    5: [""],
-                    6: ["A", "B"],
-                },
-            },
-        )
-    ],
 )
 class TestSubmissionSubmitView(APIView):
+    # 실제 구현 시 수강생 권한 부여
     permission_classes = [AllowAny]
     serializer_class = UserTestSubmitSerializer
 
     def post(self, request: Request, deployment_id: int) -> Response:
-        # 클라이언트가 요청한 값
-        data = request.data
+        """
+        쪽지 시험 제출 API
+        """
+        deployment = get_object_or_404(TestDeployment, id=deployment_id)
+        student = get_object_or_404(PermissionsStudent, user=request.user)
 
-        serializer = self.serializer_class(data=data)
-        if not serializer.is_valid():
-            return Response(
-                {"message": "유효하지 않은 데이터입니다.", "errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = self.serializer_class(
+            data=request.data,
+            context={
+                "request": request,
+                "deployment": deployment,
+                "student": student,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        return Response({"message": "쪽지시험 제출 완료", "data": serializer.data}, status=status.HTTP_200_OK)
+        # 자동 제출 메시지로 응답
+        auto_msg = getattr(serializer, "auto_submit_message", None)
+        if auto_msg:
+            return Response({"detail": auto_msg}, status=200)
+
+        return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
 
 
 # 쪽지 시험 결과 조회
