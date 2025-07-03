@@ -1,8 +1,12 @@
 import os
+import random
+import string
 from datetime import datetime
 from typing import Dict, Optional
 
 import requests
+
+from apps.users.models import User
 
 
 def get_kakao_access_token(code: str) -> Optional[str]:
@@ -16,6 +20,9 @@ def get_kakao_access_token(code: str) -> Optional[str]:
 
     response = requests.post(url, data=data)
 
+    if response.status_code != 200:
+        return None
+
     return response.json().get("access_token")
 
 
@@ -23,6 +30,9 @@ def get_kakao_user_info(access_token: str) -> Optional[Dict[str, Optional[str]]]
     url = "https://kapi.kakao.com/v2/user/me"
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        return None
 
     kakao_account = response.json().get("kakao_account", {})
     profile = kakao_account.get("profile", {})
@@ -45,3 +55,12 @@ def format_full_birthday(year: Optional[str], mmdd: Optional[str]) -> Optional[s
         return datetime.strptime(f"{year}{mmdd}", "%Y%m%d").date().isoformat()
     except ValueError:
         return None
+
+
+def generate_unique_nickname(base: str) -> str:
+    base = base[:10]  # 너무 길면 자름
+    while True:
+        suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
+        nickname = f"{base}_{suffix}"
+        if not User.objects.filter(nickname=nickname).exists():
+            return nickname

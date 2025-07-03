@@ -24,7 +24,6 @@ from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeV
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
 from apps.users.views.auth.social_login import (
-    KakaoCodeOnlyCallbackAPIView,
     KakaoLoginAPIView,
     NaverLoginAPIView,
 )
@@ -94,5 +93,4 @@ urlpatterns = [
         RejectEnrollmentRequestView.as_view(),
         name="admin-student-enrollments-reject",
     ),
-    path("kakao/callback/", KakaoCodeOnlyCallbackAPIView.as_view(), name="kakao-callback"),
 ]
