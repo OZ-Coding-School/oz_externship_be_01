@@ -72,8 +72,9 @@ class AnswerUpdateView(APIView):
         # 권한 확인: 본인이 작성한 답변만 수정 가능
         if answer.author != user:
             return Response({"detail": "본인이 작성한 답변만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
+
         # 요청 정보 가져오고 valid 확인
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(answer, data=request.data)
         serializer.is_valid(raise_exception=True)
 
         # Serializer에서 답변 수정 및 이미지 처리

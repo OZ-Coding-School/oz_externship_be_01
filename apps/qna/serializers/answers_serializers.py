@@ -9,6 +9,14 @@ from core.utils.s3_file_upload import S3Uploader
 # View는 HTTP 처리, Serializer는 데이터 처리
 
 
+class AnswerImageSerializer(serializers.ModelSerializer[AnswerImage]):
+    """답변 이미지 정보를 위한 시리얼라이저"""
+
+    class Meta:
+        model = AnswerImage
+        fields = ["id", "img_url"]
+
+
 class AuthorSerializer(serializers.ModelSerializer[User]):
     # 작성자 정보를 위한 별도 시리얼라이저
     class Meta:
@@ -34,7 +42,7 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
 
 class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
-    image_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
+    image_urls = AnswerImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Answer
@@ -81,16 +89,10 @@ class AnswerCreateSerializer(serializers.ModelSerializer[Answer]):
                 # 추후에 더 디테일하게 처리 예정
                 pass
 
-    def to_representation(self, instance: Answer) -> dict:
-        """응답 데이터에 image_urls 추가"""
-        data = super().to_representation(instance)
-        data["image_urls"] = [img.img_url for img in instance.images.all()]
-        return data
-
 
 class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
     image_files = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
-    image_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
+    image_urls = AnswerImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Answer
@@ -151,12 +153,6 @@ class AnswerUpdateSerializer(serializers.ModelSerializer[Answer]):
         # (새 업로드가 성공한 후에 삭제하여 데이터 손실 방지)
         for old_url in old_s3_urls:
             s3_uploader.delete_file(old_url)
-
-    def to_representation(self, instance: Answer) -> dict:
-        """응답 데이터에 image_urls 추가"""
-        data = super().to_representation(instance)
-        data["image_urls"] = [img.img_url for img in instance.images.all()]
-        return data
 
 
 class AnswerCommentCreateSerializer(serializers.ModelSerializer[AnswerComment]):
