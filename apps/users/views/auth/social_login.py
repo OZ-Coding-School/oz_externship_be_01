@@ -11,7 +11,6 @@ from rest_framework.views import APIView
 from apps.users.models import SocialUser, User
 from apps.users.serializers.auth.social_login import SocialLoginSerializer
 from apps.users.utils.jwt import generate_jwt_token_pair
-from apps.users.utils.naver import verify_naver_token
 from apps.users.utils.social_auth import verify_kakao_token, verify_naver_token
 
 
@@ -69,31 +68,42 @@ class NaverLoginAPIView(APIView):
         if naver_user_info is None:
             return Response({"detail": "Invalid Naver token."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 필수 정보 검증
+        required_fields = ["email", "profile_image", "nickname", "name", "mobile", "birthyear", "birthday", "gender"]
+        missing_fields = [field for field in required_fields if not naver_user_info.get(field)]
+        if missing_fields:
+            return Response(
+                {"detail": f"필수 정보 누락: {', '.join(missing_fields)}. 네이버 제공 정보에 모두 동의해야 합니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         email = naver_user_info.get("email")
         provider_id = naver_user_info.get("id")
 
-        if not email or not provider_id:
-            return Response({"detail": "Naver account email and id are required."}, status=400)
+        if not provider_id:
+            return Response({"detail": "Naver account ID is required."}, status=400)
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "name": naver_user_info.get("name") or "",
-                "nickname": naver_user_info.get("nickname") or "",
-                "phone_number": "",
-                "birthday": None,
-            },
-        )
+        created = False
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            user = User.objects.create(
+                email=email or "",
+                name=naver_user_info.get("name") or "",
+                nickname=naver_user_info.get("nickname") or "",
+                phone_number=naver_user_info.get("mobile") or "",
+                birthday=self._parse_birthday(naver_user_info),
+                gender=self._parse_gender(naver_user_info.get("gender")),
+            )
+            created = True
 
-        # 기존 유저인데 네이버 연동 이력 없는 경우 예외 처리
         if not created:
-            existing_social_user = user.social_accounts.filter(provider=SocialUser.Provider.NAVER).first()
-            if not existing_social_user:
+            if not user.social_accounts.filter(provider=SocialUser.Provider.NAVER).exists():
                 return Response(
                     {"detail": "이미 가입된 이메일입니다. 일반 로그인을 사용하거나 소셜 계정을 연동해주세요."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        # 소셜 유저 연결 정보 저장
+
         else:
             try:
                 SocialUser.objects.create(
@@ -109,3 +119,17 @@ class NaverLoginAPIView(APIView):
 
         jwt_tokens: Dict[str, str] = generate_jwt_token_pair(user.id)
         return Response(jwt_tokens, status=status.HTTP_200_OK)
+
+    def _parse_birthday(self, info: Dict[str, Optional[str]]) -> str:
+        birthyear = info.get("birthyear")
+        birthday = info.get("birthday")
+        if birthyear and birthday:
+            return f"{birthyear}-{birthday}"
+        return ""
+
+    def _parse_gender(self, gender: Optional[str]) -> str:
+        if gender == "M":
+            return User.Gender.MALE
+        elif gender == "F":
+            return User.Gender.FEMALE
+        return ""
