@@ -1,3 +1,5 @@
+from typing import List
+
 from django.utils import timezone
 
 from apps.qna.models import (
@@ -13,12 +15,12 @@ from apps.users.models import User
 # 더미 데이터
 
 DUMMY_USER = User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock_user.png")
-DUMMY_CATEGORY = []
-DUMMY_QUESTIONS = []
-DUMMY_QUESTION_IMAGES = []
-DUMMY_ANSWERS = []
-DUMMY_ANSWER_IMAGES = []
-DUMMY_ANSWER_COMMENTS = []
+DUMMY_CATEGORY: List[QuestionCategory] = []
+DUMMY_QUESTIONS: List[Question] = []
+DUMMY_QUESTION_IMAGES: List[QuestionImage] = []
+DUMMY_ANSWERS: List[Answer] = []
+DUMMY_ANSWER_IMAGES: List[AnswerImage] = []
+DUMMY_ANSWER_COMMENTS: List[AnswerComment] = []
 
 
 # 1. 대분류 (parent 없음)
