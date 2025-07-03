@@ -45,7 +45,7 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
 
 
 # 쪽지시험 상세조회 (Test 모델의 ForeignKey 필드로 연결된 Subject를 직렬화)
-class SubjectSerializer(serializers.ModelSerializer[Test]):
+class TestSubjectSerializer(serializers.ModelSerializer[Test]):
     name = serializers.CharField(source="title")  # api 명세서 맞춤 / 식별용 문자 name 사용
 
     class Meta:
@@ -62,7 +62,7 @@ class TestQuestionSimpleSerializer(serializers.ModelSerializer["TestQuestion"]):
 
 # 쪽지시험 상세조회 Nested Serializer
 class TestDetailSerializer(serializers.ModelSerializer[Test]):
-    subject = SubjectSerializer()
+    subject = TestSubjectSerializer()
     questions = TestQuestionSimpleSerializer(many=True)
     question_count = serializers.SerializerMethodField()
 
@@ -128,7 +128,7 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
 
 # 공통 AdminTestSerializer
 class AdminTestSerializer(serializers.ModelSerializer[Test]):
-    subject = SubjectSerializer(read_only=True)
+    subject = TestSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test
@@ -137,7 +137,7 @@ class AdminTestSerializer(serializers.ModelSerializer[Test]):
 
 # 공통 UserTestSerializer
 class UserTestSerializer(serializers.ModelSerializer[Test]):
-    subject = SubjectSerializer(read_only=True)
+    subject = TestSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test

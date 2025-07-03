@@ -1,8 +1,9 @@
-import datetime
+import uuid
 
+from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import parsers, permissions, status
+from rest_framework import parsers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ from apps.courses.models import Subject
 
 # 내부 앱 - models
 from apps.tests.models import Test, TestQuestion
+from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_serializers import (
     AdminTestUpdateSerializer,
     TestCreateSerializer,
@@ -19,6 +21,8 @@ from apps.tests.serializers.test_serializers import (
     TestListSerializer,
     TestQuestionSimpleSerializer,
 )
+from apps.users.models import User
+from core.utils.s3_file_upload import S3Uploader
 
 
 @extend_schema(
@@ -204,31 +208,63 @@ class AdminTestListView(APIView):
 @extend_schema(
     tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 생성 API",
-    description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
-    auth=[],
+    description="JWT 인증이 필요하며, 관리자/스태프 권한을 가진 사용자만 접근할 수 있습니다.",
     request={"multipart/form-data": TestCreateSerializer},
 )
 class AdminTestCreateAPIView(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
     serializer_class = TestCreateSerializer
+    permission_classes = [IsAdminOrStaff]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def post(self, request: Request) -> Response:
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            # 실제 DB 저장 없이 mock 객체 생성 / mock값 지정이 안될때 return값이 api명세서와 다름
-            subject_id = serializer.validated_data.get("subject_id")
 
-            test = Test(
-                id=3,
-                title=serializer.validated_data.get("title"),
-                subject_id=subject_id,
-                thumbnail_img_url="https://oz.com/sample_thumbnail.jpg",
-                created_at=timezone.now(),
-                updated_at=timezone.now(),
+        if settings.DEBUG:
+            # 개발환경에서만 request.user를 임의로 세팅
+            request.user = User.objects.get(email="testadmin@example.com")
+            # print("[INFO] 개발용 request.user 주입: testadmin@example.com")
+
+        serializer = self.serializer_class(data=request.data, context={"request": request})
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        validated_data = serializer.validated_data
+
+        # 1) 과목 유효성 검증
+        try:
+            subject = Subject.objects.get(id=validated_data["subject_id"])
+        except Subject.DoesNotExist:
+            return Response({"subject_id": ["해당 과목이 존재하지 않습니다."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        thumbnail_file = validated_data.pop("thumbnail_file")
+
+        # 2) DB에 Test 인스턴스만 생성 (즉시 저장 X)
+        test = Test(
+            title=validated_data["title"],
+            subject=subject,
+            thumbnail_img_url="",  # 업로드 전이라 임시로 빈 값 저장
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+
+        # 3) S3 업로드 key에 test.id 포함 + 난수 추가
+
+        random_str = uuid.uuid4().hex[:6]
+        s3_key = f"oz_externship_be/tests/thumbnail_images/{test.id}_{random_str}.png"
+
+        # 4) core 유틸을 사용해 업로드
+        uploader = S3Uploader()
+        thumbnail_img_url = uploader.upload_file(thumbnail_file, s3_key)
+        if thumbnail_img_url is None:
+            return Response(
+                {"error": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-            serializer = self.serializer_class(instance=test)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # 5) 업로드 완료 후 Test에 실제 thumbnail_img_url 업데이트
+        test.thumbnail_img_url = thumbnail_img_url
+        test.save()
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # 6) 생성된 객체 직렬화하여 응답
+        response_serializer = self.serializer_class(instance=test)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
