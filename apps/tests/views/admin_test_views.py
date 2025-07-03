@@ -58,14 +58,8 @@ class AdminTestDeleteAPIView(APIView):
         # S3에 업로드된 썸네일 이미지 삭제
         if test.thumbnail_img_url:
             uploader = S3Uploader()
-            try:
-                # S3 key 추출: URL에서 key만 분리
-                s3_url_prefix = f"https://{uploader.bucket}.s3.{settings.AWS_REGION}.amazonaws.com/"
-                s3_key = test.thumbnail_img_url.replace(s3_url_prefix, "")
-                uploader.delete_file(s3_key)
-            except Exception as e:
-                # 이미지 삭제 실패는 주요 기능과 무관하므로 경고만 출력
-                print(f"[WARNING] S3 이미지 삭제 실패: {e}")
+            if not uploader.delete_file(test.thumbnail_img_url):
+                print("[WARNING] S3 이미지 삭제 실패")
 
         # Test와 연결된 문제(TestQuestion)는 CASCADE로 Hard Delete 처리
         test.delete()
