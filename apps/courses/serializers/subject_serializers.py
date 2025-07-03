@@ -156,3 +156,22 @@ class SubjectUpdateSerializer(serializers.ModelSerializer[Subject]):
             updated_instance.save()
 
         return updated_instance
+
+
+# --- SubjectDropdownSerializer (프론트 요청 사항) ---
+class SubjectDropdownSerializer(serializers.ModelSerializer[Subject]):
+    """
+    (Admin) 특정 과정의 과목 목록 조회 API (상태 필터링)를 위한 시리얼라이저.
+    드롭다운 목록에 필요한 'id'와 'title' 필드만 포함합니다.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Subject
+        fields = [
+            "id",
+            "title",
+        ]
+        read_only_fields = fields
