@@ -38,3 +38,15 @@ class S3Uploader:
 
         except NoCredentialsError:
             return None
+
+    def delete_file(self, s3_url: str) -> bool:
+        """S3 URL에서 파일 삭제"""
+        try:
+            # URL에서 S3 키 추출
+            # https://bucket.s3.region.amazonaws.com/answers/filename.jpg -> answers/filename.jpg
+            s3_key = s3_url.split(f"{self.bucket}.s3.{settings.AWS_REGION}.amazonaws.com/")[-1]
+
+            self.client.delete_object(Bucket=self.bucket, Key=s3_key)
+            return True
+        except Exception as e:
+            return False

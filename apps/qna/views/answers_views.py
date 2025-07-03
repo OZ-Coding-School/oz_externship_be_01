@@ -1,3 +1,4 @@
+import time
 from typing import cast
 
 from django.shortcuts import get_object_or_404
@@ -18,6 +19,7 @@ from apps.qna.serializers.answers_serializers import (
     AnswerUpdateSerializer,
 )
 from apps.users.models import User
+from core.utils.s3_file_upload import S3Uploader
 
 
 class AnswerCreateView(APIView):
@@ -46,12 +48,29 @@ class AnswerCreateView(APIView):
         image_files = serializer.validated_data.get("image_files", [])
         answer_images = []
 
-        for image_file in image_files:
-            # 실제 파일 저장 로직 필요 (예: AWS S3, 로컬 파일 시스템)
-            # 여기서는 간단히 파일명으로 URL 생성
-            img_url = f"/media/answers/{answer.id}/{image_file.name}"
-            answer_image = AnswerImage.objects.create(answer=answer, img_url=img_url)
-            answer_images.append(answer_image)
+        # 등록할 이미지가 있는 경우에만
+        if image_files:
+            # S3 업로드 클래스
+            s3_uploader = S3Uploader()
+
+            for index, image_file in enumerate(image_files, 1):
+                # 직관적인 + 유일한 파일명 생성: question_ID_answer_ID_image_순번_타임스탬프.확장자
+                file_extension = image_file.name.split(".")[-1] if "." in image_file.name else "jpg"
+                timestamp = int(time.time() * 1000)
+                filename = f"question_{question.id}_answer_{answer.id}_image_{index}_{timestamp}.{file_extension}"
+                s3_key = f"qna/answers/{filename}"
+
+                # S3에 파일 업로드
+                s3_url = s3_uploader.upload_file(image_file, s3_key)
+
+                if s3_url:
+                    # 업로드 성공 시 DB에 URL 저장
+                    answer_image = AnswerImage.objects.create(answer=answer, img_url=s3_url)
+                    answer_images.append(answer_image)
+                else:
+                    # 업로드 실패 시 로그 또는 에러 처리
+                    # 추후에 더 디테일하게 처리 예정
+                    pass
 
         # 응답 데이터 구성
         response_data = AnswerListSerializer(answer).data
@@ -87,16 +106,47 @@ class AnswerUpdateView(APIView):
         answer.content = serializer.validated_data.get("content", answer.content)
         answer.save()
 
-        # 기존 이미지 삭제 후 새 이미지 업로드
-        # 실제로는 기존 이미지 파일도 삭제해야 함
-        answer.images.all().delete()
-
         image_files = serializer.validated_data.get("image_files", [])
         answer_images = []
-        for image_file in image_files:
-            img_url = f"/media/answers/{answer.id}/{image_file.name}"
-            answer_image = AnswerImage.objects.create(answer=answer, img_url=img_url)
-            answer_images.append(answer_image)
+        # 새로 입력받은 이미지가 있는 경우에만
+        if image_files:
+            # 기존 이미지들의 S3 URL 수집 (삭제용)
+            old_images = answer.images.all()
+            old_s3_urls = [img.img_url for img in old_images]
+
+            # DB에서 기존 이미지 레코드 삭제
+            old_images.delete()
+
+            # S3 업로드 클래스
+            s3_uploader = S3Uploader()
+
+            # 수정할 새 이미지들 업로드
+            for index, image_file in enumerate(image_files, 1):
+                # 직관적인 + 유일한 파일명 생성: question_ID_answer_ID_image_순번_타임스탬프.확장자
+                file_extension = image_file.name.split(".")[-1] if "." in image_file.name else "jpg"
+                timestamp = int(time.time() * 1000)
+                filename = f"question_{question.id}_answer_{answer.id}_image_{index}_{timestamp}.{file_extension}"
+                s3_key = f"qna/answers/{filename}"
+
+                # S3에 파일 업로드
+                s3_url = s3_uploader.upload_file(image_file, s3_key)
+
+                if s3_url:
+                    answer_image = AnswerImage.objects.create(answer=answer, img_url=s3_url)
+                    answer_images.append(answer_image)
+                else:
+                    # 업로드 실패 시 로그 또는 에러 처리
+                    # 추후에 더 디테일하게 처리 예정
+                    pass
+
+            # 새 이미지 업로드 완료 후 기존 S3 파일들 삭제
+            # (새 업로드가 성공한 후에 삭제하여 데이터 손실 방지)
+            for old_url in old_s3_urls:
+                s3_uploader.delete_file(old_url)
+
+        else:
+            # 이미지 변경이 없는 경우 기존 이미지 유지
+            answer_images = list(answer.images.all())
 
         # 응답 데이터 구성
         response_data = AnswerListSerializer(answer).data
