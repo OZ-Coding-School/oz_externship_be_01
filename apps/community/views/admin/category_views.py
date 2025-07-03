@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
@@ -31,29 +32,21 @@ mock_data_by_id = {
 }
 
 
+# 커뮤니티 게시판 카테고리 상세 조회 APIView
 class AdminCommunityCategoryDetailAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
-        summary="커뮤니티 게시판 상세 조회",
-        description="카테고리 ID로 커뮤니티 카테고리 상세정보를 조회합니다.",
+        summary="커뮤니티 게시판 카테고리 상세 조회",
+        description="카테고리 ID로 커뮤니티 게시판 카테고리 상세정보를 조회합니다.",
+        responses={200: CategoryDetailResponseSerializer, 404: CategoryDetailResponseSerializer},
     )
     def get(self, request: Request, category_id: int) -> Response:
-        if category_id not in mock_valid_ids:
-            return Response({"detail": "해당 카테고리를 찾을 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        category = get_object_or_404(PostCategory, id=category_id)
 
-        data = mock_data_by_id[category_id]
-        response = {
-            **data,
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
-        }
-        # post_category = PostCategory.objects.get(id=1)
-        # serializer = CategoryDetailResponseSerializer(instance=post_category)
-        # return Response(serializer.data, status=status.HTTP_200_OK)
-
-        return Response(response, status=status.HTTP_200_OK)
+        serializer = CategoryDetailResponseSerializer(instance=category)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 카테고리 삭제 API뷰
     @extend_schema(
