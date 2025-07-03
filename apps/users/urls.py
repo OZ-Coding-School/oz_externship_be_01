@@ -23,7 +23,11 @@ from apps.users.views.admin_user_withdrawal_views import AdminDetailWithdrawalVi
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
-from apps.users.views.auth.social_login import KakaoLoginAPIView, NaverLoginAPIView
+from apps.users.views.auth.social_login import (
+    KakaoCodeOnlyCallbackAPIView,
+    KakaoLoginAPIView,
+    NaverLoginAPIView,
+)
 from apps.users.views.find_account_views import (
     EmailFindView,
     PasswordChangeView,
@@ -90,4 +94,5 @@ urlpatterns = [
         RejectEnrollmentRequestView.as_view(),
         name="admin-student-enrollments-reject",
     ),
+    path("kakao/callback/", KakaoCodeOnlyCallbackAPIView.as_view(), name="kakao-callback"),
 ]

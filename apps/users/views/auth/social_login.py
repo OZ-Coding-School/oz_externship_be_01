@@ -1,6 +1,7 @@
 from typing import Dict, Optional, cast
 
 from django.db import IntegrityError
+import requests
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -11,9 +12,9 @@ from rest_framework.views import APIView
 from apps.users.models import SocialUser, User
 from apps.users.serializers.auth.social_login import SocialLoginSerializer
 from apps.users.utils.jwt import generate_jwt_token_pair
+from apps.users.utils.kakao import format_full_birthday, get_kakao_user_info
 from apps.users.utils.social_auth import (
     get_naver_access_token,
-    verify_kakao_token,
     verify_naver_token,
 )
 
@@ -26,30 +27,53 @@ class KakaoLoginAPIView(APIView):
         responses={200: Dict[str, str], 400: Dict[str, str]},
         tags=["auth"],
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request):
         serializer = SocialLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        access_token: str = serializer.validated_data["access_token"]
+        access_token = serializer.validated_data["access_token"]
 
-        kakao_user_info: Optional[Dict[str, Optional[str]]] = verify_kakao_token(access_token)
-        if kakao_user_info is None:
-            return Response({"detail": "Invalid Kakao token."}, status=status.HTTP_400_BAD_REQUEST)
+        # 사용자 정보 요청
+        user_info = get_kakao_user_info(access_token)
+        if not user_info:
+            return Response({"detail": "카카오 사용자 정보 요청 실패"}, status=status.HTTP_400_BAD_REQUEST)
 
-        email: Optional[str] = kakao_user_info.get("email")
-        if email is None:
-            return Response({"detail": "Kakao account email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        email = user_info.get("email")
+        if not email:
+            return Response({"detail": "카카오 계정에 이메일이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "name": kakao_user_info.get("nickname") or "",
-                "nickname": kakao_user_info.get("nickname") or "",
-                "phone_number": "",
-                "birthday": None,
-            },
+        user_response = requests.get(
+            "https://kapi.kakao.com/v2/user/me", headers={"Authorization": f"Bearer {access_token}"}
         )
+        kakao_id = str(user_response.json().get("id"))
 
+        # 기타 사용자 정보
+        nickname = user_info.get("nickname") or f"kakao_{kakao_id[:5]}"
+        name = user_info.get("name", "")
+        phone_number = user_info.get("phone_number", "")
+        birthyear = user_info.get("birthyear")
+        mmdd = user_info.get("birthday")
+        birthday = format_full_birthday(birthyear, mmdd)
+        profile_image_url = user_info.get("profile_image_url")
+        gender = user_info.get("gender")
+
+        # 기존 소셜 유저 확인 또는 신규 생성
+        try:
+            social_user = SocialUser.objects.get(provider="KAKAO", provider_id=kakao_id)
+            user = social_user.user
+        except SocialUser.DoesNotExist:
+            user = User.objects.create(
+                email=email,
+                name=name,
+                nickname=nickname,
+                phone_number=phone_number,
+                birthday=birthday,
+                profile_image_url=profile_image_url,
+                gender=gender,
+            )
+            SocialUser.objects.create(user=user, provider="KAKAO", provider_id=kakao_id)
+
+        # JWT 발급
         jwt_tokens: Dict[str, str] = generate_jwt_token_pair(user.id)
         return Response(jwt_tokens, status=status.HTTP_200_OK)
 
