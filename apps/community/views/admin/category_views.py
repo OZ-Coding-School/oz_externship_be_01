@@ -76,19 +76,14 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         summary="커뮤니티 게시판 카테고리 생성",
         description="새로운 커뮤니티 카테고리를 생성합니다.",
         request=CategoryCreateRequestSerializer,
+        responses={201: CategoryCreateResponseSerializer, 400: CategoryCreateResponseSerializer},
     )
     def post(self, request: Request) -> Response:
         serializer = CategoryCreateRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
-        category_data = PostCategory(
-            id=1,
-            name=serializer.validated_data.get("name"),
-            status=serializer.validated_data.get("status", True),
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-        rsp_serializer = CategoryCreateResponseSerializer(category_data)
+        category = serializer.save()
+        rsp_serializer = CategoryCreateResponseSerializer(category)
         return Response(rsp_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -165,7 +160,7 @@ class AdminCategoryRenameAPIView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin-Category]"],
+        tags=["[Admin-category]"],
         summary="카테고리명 수정",
         request=CategoryRenameRequestSerializer,
         responses={200: CategoryRenameResponseSerializer},
