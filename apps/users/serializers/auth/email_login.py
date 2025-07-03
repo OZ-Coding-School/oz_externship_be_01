@@ -1,9 +1,12 @@
 from rest_framework import serializers
+
 from apps.users.models import User
+
 
 class EmailLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
 
 class EmailLoginResponseSerializer(serializers.ModelSerializer):
     class Meta:

@@ -8,8 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import User
 from apps.users.serializers.auth.email_login import (
-    EmailLoginSerializer,
     EmailLoginResponseSerializer,
+    EmailLoginSerializer,
 )
 
 
@@ -36,8 +36,10 @@ class EmailLoginAPIView(APIView):
                         "message": "이메일 로그인에 성공했습니다.",
                         "access": str(refresh.access_token),
                         "refresh": str(refresh),
-                        "user": user_data
-                }, status=status.HTTP_200_OK)
+                        "user": user_data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
 
             return Response({"detail": "이메일 또는 비밀번호가 올바르지 않습니다."}, status=401)
         return Response(serializer.errors, status=400)
