@@ -40,8 +40,9 @@ class Post(models.Model):
 # 게시글 첨부 파일
 class PostAttachment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="attachments")
-    file_url = models.URLField()  # 파일 URL (외부 저장소 경로)
-    file_name = models.CharField(max_length=50)  # 원본 파일명
+    file_url = models.URLField()
+    file_name = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "post_attachments"
@@ -53,9 +54,9 @@ class PostAttachment(models.Model):
 # 게시글 이미지 파일
 class PostImage(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="images")  # 삽입된 게시글
-    img_url = models.TextField()  # 이미지 경로(URL)
+    image_url = models.URLField()
+    image_name = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "post_images"
