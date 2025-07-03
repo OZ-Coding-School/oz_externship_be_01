@@ -10,7 +10,7 @@ from apps.community.serializers.attachment_serializers import (
     PostImageRequestSerializer,
     PostImageResponseSerializer,
 )
-from apps.community.serializers.comment_serializer import CommentResponseSerializer
+from apps.community.serializers.comment_serializers import CommentResponseSerializer
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 
 
