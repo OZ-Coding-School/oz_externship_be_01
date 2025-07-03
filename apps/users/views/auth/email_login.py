@@ -39,6 +39,7 @@ class EmailLoginAPIView(APIView):
                             "gender": user.gender,
                             "birthday": str(user.birthday),
                             "profile_image_url": user.profile_image_url,
+                            "role": user.role,
                         },
                     },
                     status=status.HTTP_200_OK,
