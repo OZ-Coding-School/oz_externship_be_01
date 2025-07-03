@@ -5,12 +5,11 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Post
+from apps.community.models import Post, PostAttachment, PostImage
 from apps.community.serializers.post_pagination_serializers import (
     AdminPostPaginationSerializer,
 )
@@ -19,11 +18,13 @@ from apps.community.serializers.post_serializers import (
     PostListSerializer,
     PostUpdateSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
+from core.utils.s3_file_upload import S3Uploader
 
 
 # 어드민 게시글 목록 조회
 class AdminPostListView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
 
     def get(self, request: Request) -> Response:
         queryset = Post.objects.select_related("category", "author").all()
@@ -93,7 +94,7 @@ class AdminPostListView(APIView):
 
 # 어드민 게시글 상세 조회
 class AdminPostDetailView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
 
     def get(self, request: Request, post_id: int) -> Response:
         from django.shortcuts import get_object_or_404
@@ -113,7 +114,7 @@ class AdminPostDetailView(APIView):
 
 # 어드민 게시글 수정
 class AdminPostUpdateView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
     parser_classes = [MultiPartParser, FormParser]
 
     def patch(self, request: Request, post_id: int) -> Response:
@@ -122,13 +123,28 @@ class AdminPostUpdateView(APIView):
 
         if serializer.is_valid():
             serializer.save()
+            uploader = S3Uploader()
+
+            # 파일 업로드 처리
+            for file in request.FILES.getlist("attachments"):
+                s3_key = f"attachments/{file.name}"
+                url = uploader.upload_file(file, s3_key)
+                if url:
+                    PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
+
+            for image in request.FILES.getlist("images"):
+                s3_key = f"images/{image.name}"
+                url = uploader.upload_file(image, s3_key)
+                if url:
+                    PostImage.objects.create(post=post, image_url=url, image_name=image.name)
+
             return Response(PostDetailSerializer(post).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 게시글 삭제
 class AdminPostDeleteView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
 
     def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
@@ -138,7 +154,7 @@ class AdminPostDeleteView(APIView):
 
 # 게시글 노출 on/off
 class AdminPostVisibilityToggleView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
 
     def patch(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
