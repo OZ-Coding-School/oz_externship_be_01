@@ -56,7 +56,12 @@ class TestDeployment(models.Model):
     # ERD 기준: generation_id
     generation = models.ForeignKey("courses.Generation", on_delete=models.CASCADE, related_name="test_deployments")
     # ERD 기준: test_id
-    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="deployments")
+    test = models.ForeignKey(
+        Test,
+        on_delete=models.SET_NULL,  # 기존 CASCADE → SET_NULL로 변경
+        null=True,  # SET_NULL을 위해 필드 null 허용 필요 -> 배포 담당에게 전달
+        related_name="deployments",
+    )
     duration_time = models.PositiveSmallIntegerField(default=60)
     access_code = models.CharField(max_length=64)
     open_at = models.DateTimeField()
