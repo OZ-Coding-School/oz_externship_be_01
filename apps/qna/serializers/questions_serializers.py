@@ -1,3 +1,4 @@
+import time
 import uuid
 from typing import Any
 
@@ -7,7 +8,7 @@ from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
 from core.utils.s3_file_upload import S3Uploader
-import time
+
 
 # 질문 이미지
 class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
@@ -65,7 +66,11 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             uploader = S3Uploader()
             for index, img in enumerate(image_files, 1):
                 # 직관적이고 유일한 파일명: question_질문ID_image_순번_타임스탬프.확장자
-                file_extension = img.name.split(".")[-1] if "." in img.name else "jpg"
+                img_name = getattr(img, "name", None)
+                if isinstance(img_name, str) and "." in img_name:
+                    file_extension = img_name.split(".")[-1]
+                else:
+                    file_extension = "jpg"
                 timestamp = int(time.time() * 1000)
                 filename = f"question_{question.id}_image_{index}_{timestamp}.{file_extension}"
                 s3_key = f"qna/questions/{filename}"
