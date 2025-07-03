@@ -2,10 +2,10 @@ from django.db import transaction
 from django.utils.timezone import now
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 
 from apps.users.models import PermissionsStudent, StudentEnrollmentRequest, User
 from apps.users.serializers.admin_enrollments_rejection_serializers import (
@@ -73,4 +73,3 @@ class RejectEnrollmentRequestView(APIView):
         }
 
         return Response(RejectionResponseSerializer(response_data).data, status=status.HTTP_200_OK)
-
