@@ -205,8 +205,11 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
 #     access_code = serializers.CharField(max_length=64, help_text="참가 코드")
 
 
-class UserCodeValidationSerializer(serializers.Serializer[Any]):
-    access_code = serializers.CharField(max_length=64, help_text="참가 코드만 입력")
+# 참가 코드 검증 (user)
+class UserCodeValidationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestDeployment
+        fields = ["access_code"]
 
 
 class TestDeploymentStatusValidateSerializer(serializers.Serializer):
