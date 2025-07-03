@@ -82,7 +82,7 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         serializer = CategoryCreateRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
-        category = serializer.save()
+        category = serializer.save()  # 실제 DB에 저장합니다 !
         rsp_serializer = CategoryCreateResponseSerializer(category)
         return Response(rsp_serializer.data, status=status.HTTP_201_CREATED)
 
