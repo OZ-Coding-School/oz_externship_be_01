@@ -7,17 +7,7 @@ from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
 from core.utils.s3_file_upload import S3Uploader
-
-
-class SafeImageListField(serializers.ListField):
-    def to_internal_value(self, data):
-        # DRF 내부에서 "" 도 `child.to_internal_value()` 하려다 죽기 때문에,
-        # 여기서 "" 필터링 해줘야 함
-        if isinstance(data, list):
-            # 빈 문자열/None은 제거
-            data = [item for item in data if item not in ["", None]]
-        return super().to_internal_value(data)
-
+import time
 
 # 질문 이미지
 class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
@@ -73,13 +63,12 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             question = Question.objects.create(category=category, author=author, **validated_data)
 
             uploader = S3Uploader()
-            for img in image_files:
-                img_name = img.name or ""
-                if "." in img_name:
-                    ext = img_name.split(".")[-1]
-                else:
-                    ext = "bin"
-                s3_key = f"questions/{uuid.uuid4().hex}.{ext}"
+            for index, img in enumerate(image_files, 1):
+                # 직관적이고 유일한 파일명: question_질문ID_image_순번_타임스탬프.확장자
+                file_extension = img.name.split(".")[-1] if "." in img.name else "jpg"
+                timestamp = int(time.time() * 1000)
+                filename = f"question_{question.id}_image_{index}_{timestamp}.{file_extension}"
+                s3_key = f"qna/questions/{filename}"
                 url = uploader.upload_file(img, s3_key)
                 if not url:
                     raise serializers.ValidationError("이미지 업로드에 실패했습니다.")
