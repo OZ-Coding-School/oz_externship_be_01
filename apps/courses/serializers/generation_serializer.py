@@ -59,8 +59,9 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
 
     def create(self, validated_data: Dict[str, Any]) -> Generation:
         # validated_data에는 이제 'course_id' 대신 'course' 키로 Course 객체의 ID가 들어있음
-        course_id_from_validated_data = validated_data.pop("course")  # source='course'로 들어온 ID 값
-        course_instance = Course.objects.get(id=course_id_from_validated_data)  # ID로 Course 객체 가져옴
+
+        course_instance = validated_data.pop("course")  # source='course'로 들어온 ID 값
+
 
         # 기수 상태 자동 계산
         start_date = validated_data.get("start_date")

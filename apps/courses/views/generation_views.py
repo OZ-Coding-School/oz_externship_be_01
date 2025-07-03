@@ -21,7 +21,9 @@ from apps.courses.serializers.generation_serializer import (
 )
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 # 기수 등록 API
 class GenerationCreateView(APIView):
     permission_classes = [AllowAny]
@@ -71,6 +73,9 @@ class GenerationCreateView(APIView):
 
 
 # 기수 목록 API
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class GenerationListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
@@ -82,6 +87,9 @@ class GenerationListView(APIView):
 
 
 # 기수 상세 정보 API
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class GenerationDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
@@ -94,7 +102,9 @@ class GenerationDetailView(APIView):
         serializer = self.serializer_class(gen)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class GenerationUpdateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
@@ -110,7 +120,9 @@ class GenerationUpdateView(APIView):
             return Response(GenerationDetailSerializer(gen).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class GenerationDeleteView(APIView):
     permission_classes = [AllowAny]
 
@@ -126,7 +138,9 @@ class GenerationDeleteView(APIView):
         gen.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class CourseTrendView(APIView):
     permission_classes = [AllowAny]
     serializer_class = CourseTrendSerializer
@@ -189,7 +203,9 @@ class CourseTrendView(APIView):
         except Exception as e:
             return Response({"detail": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class MonthlyCourseView(APIView):
     permission_classes = [AllowAny]
     serializer_class = MonthlyCourseSerializer
@@ -247,7 +263,9 @@ class MonthlyCourseView(APIView):
         except Exception as e:
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 class OngoingCourseView(APIView):
     permission_classes = [AllowAny]
 
