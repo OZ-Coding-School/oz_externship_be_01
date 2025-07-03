@@ -43,7 +43,7 @@ class UserCodeValidationView(APIView):
 
         return Response(
             {
-                "message": "참가코드가 유효합니다.",
+                "detail": "참가코드가 유효합니다.",
                 "test_title": deployment.test.title,
                 "deployment_id": deployment.id,
                 "duration_time": deployment.duration_time,
