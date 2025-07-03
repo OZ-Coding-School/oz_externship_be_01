@@ -46,7 +46,7 @@ class AdminCategoryDeleteView(APIView):
 
     @extend_schema(
         tags=["(Admin) QnA"],
-        description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.",
+        description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.(미완성)",
         summary="카테고리 삭제",
         request=AdminCategoryListSerializer,
         responses=AdminCategoryListSerializer,
