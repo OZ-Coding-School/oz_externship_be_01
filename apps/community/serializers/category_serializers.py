@@ -10,7 +10,7 @@ from apps.community.models import PostCategory
 class CategoryDetailResponseSerializer(ModelSerializer[PostCategory]):
     class Meta:
         model = PostCategory
-        fields = ["id", "name", "status"]
+        fields = ["id", "name", "status", "created_at", "updated_at"]
 
 
 # 카테고리 생성 요청 시리얼라이저
