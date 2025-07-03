@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.db.models.functions import Coalesce, TruncMonth
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -27,12 +27,47 @@ class GenerationCreateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
 
+    @extend_schema(
+        summary="신규 기수 등록",
+        description="관리자 또는 스태프 권한이 있으면 새로운 기수를 등록할 수 있습니다.",
+        responses={
+            status.HTTP_201_CREATED: GenerationListSerializer,
+            status.HTTP_400_BAD_REQUEST: {
+                "description": "유효성 검증 실패 (Request Body 오류, 날짜 오류, 인원 오류 등)"
+            },
+            status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
+            status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
+            status.HTTP_404_NOT_FOUND: {"description": "과정을 찾을 수 없음 (제공된 course_id에 해당하는 과정 없음)"},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
+        },
+        examples=[
+            OpenApiExample(
+                "기수 등록 요청 성공 예시",
+                value={
+                    "course_id": 1,
+                    "number": 1,
+                    "max_student": 45,
+                    "start_date": "2025-07-01",
+                    "end_date": "2025-12-31",
+                },
+                request_only=True,
+                media_type="application/json",
+            ),
+        ],
+    )
     def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
+        serializer.is_valid(raise_exception=True)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            cohort = serializer.save()
+
+            return Response({"cohort": cohort}, status=status.HTTP_201_CREATED)
+
+        except Course.DoesNotExist:
+            return Response({"detail": "해당 course_id의 과정이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # 기수 목록 API

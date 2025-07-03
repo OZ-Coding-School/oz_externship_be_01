@@ -9,28 +9,79 @@ from apps.courses.models import Course, Generation
 
 # 기수 등록
 class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
-    course = serializers.IntegerField()
+    course_id = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(),  # 유효성 검사를 위해 모든 Course 객체를 쿼리셋으로 넘겨줌
+        source="course",  # 클라이언트로부터 'course_id'를 받아서 모델의 'course' 필드에 매핑
+        write_only=True,  # 입력 전용 필드
+        help_text="등록할 과정의 고유 ID",
+    )
 
     class Meta:
         model = Generation
         fields = [
             "id",
-            "course",
+            "course_id",
             "number",
             "max_student",
             "start_date",
             "end_date",
             "status",
+            "created_at",
+            "updated_at",
         ]
 
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "created_at", "updated_at")
+
+        extra_kwargs = {
+            "status": {"read_only": True},
+        }
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         start = attrs.get("start_date")
         end = attrs.get("end_date")
         if start and end and start > end:
             raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
+
+        max_student = attrs.get("max_student")
+        if max_student is not None and (max_student < 1 or max_student > 60):
+            raise serializers.ValidationError(
+                {"max_student": "최대 등록 인원(max_student)은 1 이상 60 이하여야 합니다."}
+            )
+
+        course_id_from_input = attrs.get("course")
+        if course_id_from_input:
+            try:
+                Course.objects.get(id=course_id_from_input)
+            except Course.DoesNotExist:
+                raise serializers.ValidationError({"course_id": "해당 course_id를 가진 과정이 존재하지 않습니다."})
+
         return attrs
+
+    def create(self, validated_data: Dict[str, Any]) -> Generation:
+        # validated_data에는 이제 'course_id' 대신 'course' 키로 Course 객체의 ID가 들어있음
+        course_id_from_validated_data = validated_data.pop("course")  # source='course'로 들어온 ID 값
+        course_instance = Course.objects.get(id=course_id_from_validated_data)  # ID로 Course 객체 가져옴
+
+        # 기수 상태 자동 계산
+        start_date = validated_data.get("start_date")
+        end_date = validated_data.get("end_date")
+        calculated_status = self._calculate_cohort_status(start_date, end_date)
+
+        # validated_data에서 'status' 필드를 명시적으로 제거 (혹시 모를 중복 전달 방지)
+        validated_data.pop("status", None)
+
+        # Generation 객체 생성 (course와 status 필드 추가)
+        generation = Generation.objects.create(course=course_instance, status=calculated_status, **validated_data)
+        return generation
+
+    def _calculate_cohort_status(self, start_date, end_date) -> str:
+        today = date.today()
+        if today > start_date:
+            return "Ready"
+        elif start_date <= today <= end_date:
+            return "Ongoing"
+        else:
+            return "Finished"
 
 
 # 기수 목록
