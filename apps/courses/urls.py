@@ -1,6 +1,9 @@
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
+from apps.courses.views.frontneeds_generation_views import (
+    GenerationDropdownListAPIView,  # 프론트 추가분
+)
 from apps.courses.views.generation_views import (
     CourseTrendView,
     GenerationCreateView,
@@ -37,4 +40,9 @@ urlpatterns = [
     path("generations/dashboard/trend", CourseTrendView.as_view(), name="generation_trend"),
     path("generations/dashboard/monthly", MonthlyCourseView.as_view(), name="generation_monthly"),
     path("generations/dashboard/ongoing", OngoingCourseView.as_view(), name="generation_ongoing"),
+    path(
+        "generations/<int:course_id>/dropdown-list/",
+        GenerationDropdownListAPIView.as_view(),
+        name="admin-generation-dropdown-list",
+    ),
 ]
