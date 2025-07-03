@@ -206,10 +206,14 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
 
 
 # 참가 코드 검증 (user)
-class UserCodeValidationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TestDeployment
-        fields = ["access_code"]
+class UserCodeValidationSerializer(serializers.Serializer):
+    access_code = serializers.CharField(write_only=True)
+
+    def validate_access_code(self, value: str) -> str:
+        test_deployment = self.context["test_deployment"]
+        if test_deployment.access_code != value:
+            raise serializers.ValidationError("유효하지 않은 참가코드입니다.")
+        return value
 
 
 class TestDeploymentStatusValidateSerializer(serializers.Serializer):
