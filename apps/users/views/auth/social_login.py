@@ -11,7 +11,11 @@ from rest_framework.views import APIView
 from apps.users.models import SocialUser, User
 from apps.users.serializers.auth.social_login import SocialLoginSerializer
 from apps.users.utils.jwt import generate_jwt_token_pair
-from apps.users.utils.social_auth import verify_kakao_token, verify_naver_token
+from apps.users.utils.social_auth import (
+    get_naver_access_token,
+    verify_kakao_token,
+    verify_naver_token,
+)
 
 
 class KakaoLoginAPIView(APIView):
@@ -62,11 +66,18 @@ class NaverLoginAPIView(APIView):
         serializer = SocialLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        access_token: str = serializer.validated_data["access_token"]
-        naver_user_info: Optional[Dict[str, Optional[str]]] = verify_naver_token(access_token)
+        code: str = serializer.validated_data["code"]
+        state: Optional[str] = serializer.validated_data.get("state")
 
+        # access token 발급
+        access_token = get_naver_access_token(code, state)
+        if access_token is None:
+            return Response({"detail": "네이버 토큰 발급에 실패했습니다. 잠시 후 다시 시도해주세요."}, status=400)
+
+        # 사용자 정보 조회
+        naver_user_info = verify_naver_token(access_token)
         if naver_user_info is None:
-            return Response({"detail": "Invalid Naver token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "네이버 사용자 정보 조회에 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 필수 정보 검증
         required_fields = ["email", "profile_image", "nickname", "name", "mobile", "birthyear", "birthday", "gender"]
@@ -81,17 +92,21 @@ class NaverLoginAPIView(APIView):
         provider_id = naver_user_info.get("id")
 
         if not provider_id:
-            return Response({"detail": "Naver account ID is required."}, status=400)
+            return Response(
+                {"detail": "네이버 서버의 일시적인 오류입니다. 잠시 후 다시 시도해주세요"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
+        # 유저 생성 및 기본 유저 확인
         created = False
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             user = User.objects.create(
-                email=email or "",
-                name=naver_user_info.get("name") or "",
-                nickname=naver_user_info.get("nickname") or "",
-                phone_number=naver_user_info.get("mobile") or "",
+                email=email,
+                name=naver_user_info.get("name"),
+                nickname=naver_user_info.get("nickname"),
+                phone_number=naver_user_info.get("mobile"),
                 birthday=self._parse_birthday(naver_user_info),
                 gender=self._parse_gender(naver_user_info.get("gender")),
             )
