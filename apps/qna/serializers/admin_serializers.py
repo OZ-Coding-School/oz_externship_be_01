@@ -78,7 +78,7 @@ class AdminCategoryCreateSerializer(serializers.ModelSerializer):
     def validate_parent(self, value):
         # 부모 카테고리 검증 및 3단계 제한
         if value:
-            if value.parent is not None and value.parent.parent is not None:
+            if value.type == "minor":
                 raise serializers.ValidationError("카테고리는 최대 3단계까지만 생성할 수 있습니다.")
         return value
 
