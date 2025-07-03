@@ -30,10 +30,7 @@ class UserCodeValidationView(APIView):
         except TestDeployment.DoesNotExist:
             return Response(data={"detail": "존재하지 않는 시험 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = self.serializer_class(
-            data=request.data,
-            context={"test_deployment": test_deployment}
-        )
+        serializer = self.serializer_class(data=request.data, context={"test_deployment": test_deployment})
         serializer.is_valid(raise_exception=True)
 
         return Response({"detail": "참가코드가 유효합니다."}, status=status.HTTP_200_OK)
