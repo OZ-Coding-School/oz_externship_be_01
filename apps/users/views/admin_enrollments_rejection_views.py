@@ -73,3 +73,4 @@ class RejectEnrollmentRequestView(APIView):
         }
 
         return Response(RejectionResponseSerializer(response_data).data, status=status.HTTP_200_OK)
+
