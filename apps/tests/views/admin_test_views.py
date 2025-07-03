@@ -31,6 +31,7 @@ from core.utils.s3_file_upload import S3Uploader
     description=(
         "관리자 또는 스태프 권한으로 특정 쪽지시험(Test)을 삭제합니다.\n"
         "- 연결된 문제(TestQuestion)는 함께 삭제되며,\n"
+        "- S3에 업로드된 썸네일 이미지도 함께 삭제됩니다.\n"
         "- 배포(TestDeployment), 응시(TestSubmission)는 보존됩니다."
     ),
     responses={
@@ -41,6 +42,7 @@ from core.utils.s3_file_upload import S3Uploader
     },
 )
 # 쪽지시험 삭제 API ( Test 및 연결된 TestQuestion Hard Delete / TestDeployment, TestSubmission은 보존)
+# S3에 업로드된 썸네일 이미지 파일도 함께 삭제
 class AdminTestDeleteAPIView(APIView):
 
     permission_classes = [IsAdminOrStaff]
@@ -52,6 +54,18 @@ class AdminTestDeleteAPIView(APIView):
             test = Test.objects.get(id=test_id)
         except Test.DoesNotExist:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # S3에 업로드된 썸네일 이미지 삭제
+        if test.thumbnail_img_url:
+            uploader = S3Uploader()
+            try:
+                # S3 key 추출: URL에서 key만 분리
+                s3_url_prefix = f"https://{uploader.bucket}.s3.{settings.AWS_REGION}.amazonaws.com/"
+                s3_key = test.thumbnail_img_url.replace(s3_url_prefix, "")
+                uploader.delete_file(s3_key)
+            except Exception as e:
+                # 이미지 삭제 실패는 주요 기능과 무관하므로 경고만 출력
+                print(f"[WARNING] S3 이미지 삭제 실패: {e}")
 
         # Test와 연결된 문제(TestQuestion)는 CASCADE로 Hard Delete 처리
         test.delete()
