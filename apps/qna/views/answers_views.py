@@ -36,45 +36,18 @@ class AnswerCreateView(APIView):
     def post(self, request: Request, question_id: int) -> Response:
         # IsAuthenticated permission으로 인해 request.user는 항상 User 타입
         user = cast(User, request.user)
-
+        # 질문 정보 가져오기
         question = get_object_or_404(Question, pk=question_id)
+
+        # 요청 정보 가져오고 valid 확인
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # 답변 생성
-        answer = Answer.objects.create(question=question, author=user, content=serializer.validated_data.get("content"))
-
-        # 이미지 파일 처리
-        image_files = serializer.validated_data.get("image_files", [])
-        answer_images = []
-
-        # 등록할 이미지가 있는 경우에만
-        if image_files:
-            # S3 업로드 클래스
-            s3_uploader = S3Uploader()
-
-            for index, image_file in enumerate(image_files, 1):
-                # 직관적인 + 유일한 파일명 생성: question_ID_answer_ID_image_순번_타임스탬프.확장자
-                file_extension = image_file.name.split(".")[-1] if "." in image_file.name else "jpg"
-                timestamp = int(time.time() * 1000)
-                filename = f"question_{question.id}_answer_{answer.id}_image_{index}_{timestamp}.{file_extension}"
-                s3_key = f"qna/answers/{filename}"
-
-                # S3에 파일 업로드
-                s3_url = s3_uploader.upload_file(image_file, s3_key)
-
-                if s3_url:
-                    # 업로드 성공 시 DB에 URL 저장
-                    answer_image = AnswerImage.objects.create(answer=answer, img_url=s3_url)
-                    answer_images.append(answer_image)
-                else:
-                    # 업로드 실패 시 로그 또는 에러 처리
-                    # 추후에 더 디테일하게 처리 예정
-                    pass
+        # Serializer에서 답변 생성 및 이미지 처리
+        answer = serializer.save(question=question, author=user)
 
         # 응답 데이터 구성
         response_data = AnswerListSerializer(answer).data
-        response_data["image_urls"] = [img.img_url for img in answer_images]
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
@@ -92,6 +65,7 @@ class AnswerUpdateView(APIView):
     def put(self, request: Request, question_id: int, answer_id: int) -> Response:
         user = cast(User, request.user)
 
+        # 수정할 답변 가져오기
         question = get_object_or_404(Question, pk=question_id)
         answer = get_object_or_404(Answer, pk=answer_id, question=question)
 
@@ -99,58 +73,15 @@ class AnswerUpdateView(APIView):
         if answer.author != user:
             return Response({"detail": "본인이 작성한 답변만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.serializer_class(data=request.data)
+        # 요청 정보 가져오고 valid 확인
+        serializer = self.serializer_class(answer, data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # 답변 내용 수정
-        answer.content = serializer.validated_data.get("content", answer.content)
-        answer.save()
-
-        image_files = serializer.validated_data.get("image_files", [])
-        answer_images = []
-        # 새로 입력받은 이미지가 있는 경우에만
-        if image_files:
-            # 기존 이미지들의 S3 URL 수집 (삭제용)
-            old_images = answer.images.all()
-            old_s3_urls = [img.img_url for img in old_images]
-
-            # DB에서 기존 이미지 레코드 삭제
-            old_images.delete()
-
-            # S3 업로드 클래스
-            s3_uploader = S3Uploader()
-
-            # 수정할 새 이미지들 업로드
-            for index, image_file in enumerate(image_files, 1):
-                # 직관적인 + 유일한 파일명 생성: question_ID_answer_ID_image_순번_타임스탬프.확장자
-                file_extension = image_file.name.split(".")[-1] if "." in image_file.name else "jpg"
-                timestamp = int(time.time() * 1000)
-                filename = f"question_{question.id}_answer_{answer.id}_image_{index}_{timestamp}.{file_extension}"
-                s3_key = f"qna/answers/{filename}"
-
-                # S3에 파일 업로드
-                s3_url = s3_uploader.upload_file(image_file, s3_key)
-
-                if s3_url:
-                    answer_image = AnswerImage.objects.create(answer=answer, img_url=s3_url)
-                    answer_images.append(answer_image)
-                else:
-                    # 업로드 실패 시 로그 또는 에러 처리
-                    # 추후에 더 디테일하게 처리 예정
-                    pass
-
-            # 새 이미지 업로드 완료 후 기존 S3 파일들 삭제
-            # (새 업로드가 성공한 후에 삭제하여 데이터 손실 방지)
-            for old_url in old_s3_urls:
-                s3_uploader.delete_file(old_url)
-
-        else:
-            # 이미지 변경이 없는 경우 기존 이미지 유지
-            answer_images = list(answer.images.all())
+        # Serializer에서 답변 수정 및 이미지 처리
+        updated_answer = serializer.save()
 
         # 응답 데이터 구성
-        response_data = AnswerListSerializer(answer).data
-        response_data["image_urls"] = [img.img_url for img in answer_images]
+        response_data = AnswerListSerializer(updated_answer).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
