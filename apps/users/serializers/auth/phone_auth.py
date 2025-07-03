@@ -1,7 +1,9 @@
-from django.utils import timezone
 from rest_framework import serializers
-
-from apps.users.models import PhoneVerificationCode
+from apps.users.models import User
+from apps.users.utils.redis import (
+    get_stored_phone_code,
+    mark_phone_as_verified,
+)
 
 
 class PhoneSendCodeSerializer(serializers.Serializer):
@@ -16,12 +18,18 @@ class PhoneVerifyCodeSerializer(serializers.Serializer):
         phone = data.get("phone_number")
         code = data.get("code")
 
-        try:
-            verification = PhoneVerificationCode.objects.filter(phone_number=phone, code=code).latest("created_at")
-        except PhoneVerificationCode.DoesNotExist:
+        # 유저 존재 확인
+        if not User.objects.filter(phone_number=phone).exists():
+            raise serializers.ValidationError("해당 전화번호의 유저가 존재하지 않습니다.")
+
+        # Redis에서 코드 조회
+        stored_code = get_stored_phone_code(phone)
+        if not stored_code:
+            raise serializers.ValidationError("인증코드가 존재하지 않거나 만료되었습니다.")
+        if stored_code != code:
             raise serializers.ValidationError("인증코드가 일치하지 않습니다.")
 
-        if verification.expires_at < timezone.now():
-            raise serializers.ValidationError("인증코드가 만료되었습니다.")
+        # 인증 성공 시 인증 완료 상태 저장 (선택)
+        mark_phone_as_verified(phone)
 
         return data
