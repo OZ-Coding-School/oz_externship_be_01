@@ -31,10 +31,9 @@ from core.utils.s3_file_upload import S3Uploader
     description=(
         "관리자 또는 스태프 권한으로 특정 쪽지시험(Test)을 삭제합니다.\n"
         "- 연결된 문제(TestQuestion)는 함께 삭제되며,\n"
-        "- 배포(TestDeployment), 응시(TestSubmission)는 보존됩니다.\n"
-        " 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요."
+        "- S3에 업로드된 썸네일 이미지도 함께 삭제됩니다.\n"
+        "- 배포(TestDeployment), 응시(TestSubmission)는 보존됩니다."
     ),
-    auth=[],
     responses={
         204: OpenApiResponse(description="삭제 성공 - 응답 본문 없음"),
         401: OpenApiResponse(description="인증 정보가 없거나 유효하지 않습니다."),
@@ -42,17 +41,29 @@ from core.utils.s3_file_upload import S3Uploader
         404: OpenApiResponse(description="Test not found."),
     },
 )
-# (admin) 쪽지시험 삭제
+# 쪽지시험 삭제 API ( Test 및 연결된 TestQuestion Hard Delete / TestDeployment, TestSubmission은 보존)
+# S3에 업로드된 썸네일 이미지 파일도 함께 삭제
 class AdminTestDeleteAPIView(APIView):
-    # 실제 구현시 관리자 권한 부여
-    permission_classes = [AllowAny]
+
+    permission_classes = [IsAdminOrStaff]
 
     def delete(self, request: Request, test_id: int) -> Response:
-        # mock: 존재하지 않는 시험 예외 처리
-        if test_id == 9999:
+
+        try:
+            # 삭제 대상 쪽지시험 조회
+            test = Test.objects.get(id=test_id)
+        except Test.DoesNotExist:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 정상 삭제 응답 (실제 삭제 로직 없이 204 응답만)
+        # S3에 업로드된 썸네일 이미지 삭제
+        if test.thumbnail_img_url:
+            uploader = S3Uploader()
+            if not uploader.delete_file(test.thumbnail_img_url):
+                print("[WARNING] S3 이미지 삭제 실패")
+
+        # Test와 연결된 문제(TestQuestion)는 CASCADE로 Hard Delete 처리
+        test.delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -217,11 +228,6 @@ class AdminTestCreateAPIView(APIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def post(self, request: Request) -> Response:
-
-        if settings.DEBUG:
-            # 개발환경에서만 request.user를 임의로 세팅
-            request.user = User.objects.get(email="testadmin@example.com")
-            # print("[INFO] 개발용 request.user 주입: testadmin@example.com")
 
         serializer = self.serializer_class(data=request.data, context={"request": request})
 

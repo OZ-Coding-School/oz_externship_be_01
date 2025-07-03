@@ -11,12 +11,6 @@ class IsAdminOrStaff(BasePermission):
 
     def has_permission(self, request, view):
 
-        # 개발환경(DEBUG=True)에서는 무조건 허용
-
-        if settings.DEBUG:
-            # print("[INFO] DEBUG 모드: permission 우회 허용")
-            return True
-
         user = request.user
 
         # 인증되지 않은 사용자면 거부
