@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.community.serializers.post_create_serializers import PostCreateAPIView
+from apps.community.serializers.post_list_serializers import PostListAPIView
 from apps.community.views.admin.category_views import (
     AdminCategoryListAPIView,
     AdminCategoryRenameAPIView,
@@ -64,4 +65,5 @@ urlpatterns = [
     path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
     path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
     path("posts/create/", PostCreateAPIView.as_view(), name="post-create"),
+    path("posts/list/", PostListAPIView.as_view(), name="post-list"),
 ]
