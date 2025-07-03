@@ -32,14 +32,14 @@ mock_data_by_id = {
 }
 
 
-# 커뮤니티 게시판 상세 조회 APIView
+# 커뮤니티 게시판 카테고리 상세 조회 APIView
 class AdminCommunityCategoryDetailAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
-        summary="카테고리 게시판 상세 조회",
-        description="카테고리 ID로 커뮤니티 게시판 상세정보를 조회합니다.",
+        summary="커뮤니티 게시판 카테고리 상세 조회",
+        description="카테고리 ID로 커뮤니티 게시판 카테고리 상세정보를 조회합니다.",
         responses={200: CategoryDetailResponseSerializer, 404: CategoryDetailResponseSerializer},
     )
     def get(self, request: Request, category_id: int) -> Response:
