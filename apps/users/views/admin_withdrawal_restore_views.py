@@ -16,7 +16,7 @@ class IsAdminOrStaff(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         if user.is_authenticated and (
-            user.is_superuser
+            user.is_role
             or PermissionsStaff.objects.filter(user=user).exists()
             or PermissionsTrainingAssistant.objects.filter(user=user).exists()
         ):
