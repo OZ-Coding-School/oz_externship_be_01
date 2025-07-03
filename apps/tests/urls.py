@@ -28,8 +28,8 @@ from .views.admin_testsubmission_views import (
 from .views.user_deploymentstatus_views import TestDeploymentStatusView
 from .views.user_testdeployments_views import UserCodeValidationView
 from .views.user_testsubmission_views import (
+    TestStartView,
     TestSubmissionResultView,
-    TestSubmissionStartView,
     TestSubmissionSubmitView,
 )
 
@@ -39,7 +39,7 @@ urlpatterns = [
     # 쪽지 시험 응시
     path(
         "test/submissions/<int:test_id>/start/",
-        TestSubmissionStartView.as_view(),
+        TestStartView.as_view(),
         name="submission_start",
     ),
     # 쪽지 시험 제출

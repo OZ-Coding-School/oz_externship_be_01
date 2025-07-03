@@ -49,9 +49,7 @@ class IsStudent(BasePermission):
             return False
 
         # User.Role.choices 기반으로 STUDENT만 역할을 허용
-        allowed_roles = {User.Role.STUDENT}
-
-        if user.role in allowed_roles:
+        if user.role == User.Role.STUDENT:
             return True
 
         # 위 조건을 모두 통과하지 못하면 접근 거부

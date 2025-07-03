@@ -27,7 +27,7 @@ from apps.users.models import PermissionsStudent
     tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestStartSerializer,
 )
-class TestSubmissionStartView(APIView):
+class TestStartView(APIView):
     permission_classes = [IsAuthenticated]
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer

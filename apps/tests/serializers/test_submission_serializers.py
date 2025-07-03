@@ -86,7 +86,6 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
             "cheating_count",
             "answers_json",
         )
-        read_only_fields = ("started_at",)
 
     def validate(self, data):
         deployment = self.context["deployment"]
@@ -125,7 +124,6 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
             self.auto_submit_message = "부정행위 3회 이상 적발되어 자동 제출 처리되었습니다."
 
         validated_data["deployment"] = deployment
-        validated_data["started_at"] = timezone.now()
 
         return super().create(validated_data)
 
