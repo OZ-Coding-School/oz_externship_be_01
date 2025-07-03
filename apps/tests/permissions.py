@@ -26,3 +26,33 @@ class IsAdminOrStaff(BasePermission):
 
         # 위 조건을 모두 통과하지 못하면 접근 거부
         return False
+
+
+# 수강생(STUDENT) 역할을 가진 사용자만 허용
+class IsStudent(BasePermission):
+
+    message = "수강생 권한이 필요합니다."
+
+    def has_permission(self, request, view):
+
+        # 개발환경(DEBUG=True)에서는 무조건 허용
+
+        if settings.DEBUG:
+            # print("[INFO] DEBUG 모드: permission 우회 허용")
+            return True
+
+        # request.user = User.objects.get(id=1)
+        user = request.user
+
+        # 인증되지 않은 사용자면 거부
+        if not user or not user.is_authenticated:
+            return False
+
+        # User.Role.choices 기반으로 STUDENT만 역할을 허용
+        allowed_roles = {User.Role.STUDENT}
+
+        if user.role in allowed_roles:
+            return True
+
+        # 위 조건을 모두 통과하지 못하면 접근 거부
+        return False
