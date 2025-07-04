@@ -87,7 +87,7 @@ class TestSubmissionSubmitView(APIView):
 # 쪽지 시험 결과 조회
 @extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
 class TestSubmissionResultView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestResultSerializer
 
     def get(self, request: Request, submission_id: int) -> Response:
