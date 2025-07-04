@@ -1,7 +1,8 @@
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -25,7 +26,7 @@ from apps.users.models import PermissionsStudent
     request=UserTestStartSerializer,
 )
 class TestStartView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStudent]
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer
 
@@ -33,12 +34,27 @@ class TestStartView(APIView):
         """
         쪽지 시험 응시 API
         """
-        serializer = self.request_serializer_class(data=request.data, context={"test_id": test_id})
+        test_deployment = get_object_or_404(TestDeployment, test_id=test_id)
+        now = timezone.now()
+
+        # 배포 상태 확인
+        if test_deployment.status != "Activated":
+            return Response({"detail": "해당 시험은 현재 응시할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 시험 시작 시간 확인
+        if test_deployment.open_at and test_deployment.open_at > now:
+            return Response({"detail": "아직 응시할 수 없는 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 시험 종료 시간 확인
+        if test_deployment.close_at and test_deployment.close_at < now:
+            return Response({"detail": "이미 종료된 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.request_serializer_class(
+            data=request.data, context={"request": request, "test": test_deployment}
+        )
         serializer.is_valid(raise_exception=True)
 
-        deployment = serializer.validated_data["deployment"]
-
-        response_serializer = self.response_serializer_class(instance=deployment)
+        response_serializer = self.response_serializer_class(instance=test_deployment)
         return Response(
             {"message": "시험 응시가 시작되었습니다.", "data": response_serializer.data}, status=status.HTTP_200_OK
         )
@@ -50,8 +66,7 @@ class TestStartView(APIView):
     request=UserTestSubmitSerializer,
 )
 class TestSubmissionSubmitView(APIView):
-    # 실제 구현 시 수강생 권한 부여
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestSubmitSerializer
 
     def post(self, request: Request, deployment_id: int) -> Response:

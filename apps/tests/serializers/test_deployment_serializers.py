@@ -93,55 +93,17 @@ class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployme
 
 
 # 사용자 쪽지 시험 응시: 요청, access_code 검증용
-class UserTestStartSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._validated_deployment = None
-
-    class Meta:
-        model = TestDeployment
-        fields = ("access_code",)
-        extra_kwargs = {
-            "access_code": {
-                "write_only": True,
-                "required": True,
-                "error_messages": {"required": "시험 코드를 입력해 주세요."},
-            }
-        }
+class UserTestStartSerializer(serializers.Serializer):
+    access_code = serializers.CharField(write_only=True)
 
     # access_code 유효성 검사
     def validate_access_code(self, value: str) -> str:
-        test_id = self.context["test_id"]
-        try:
-            deployment = TestDeployment.objects.get(access_code=value, test_id=test_id)
-        except TestDeployment.DoesNotExist:
-            raise serializers.ValidationError("등록되지 않은 시험 코드입니다.")
+        test_deployment = self.context["test"]
 
-        # access_code로 조회한 시험 배포 정보를 validate()에서 재사용하기 위해 임시 저장
-        self._validated_deployment = deployment
+        if test_deployment.access_code != value:
+            raise serializers.ValidationError("유효하지 않은 참가 코드입니다.")
+
         return value
-
-    def validate(self, data):
-        deployment = getattr(self, "_validated_deployment", None)
-        if not deployment:
-            raise serializers.ValidationError("시험 정보가 유효하지 않습니다.")
-
-        now = timezone.now()
-
-        # 배포 상태 확인
-        if deployment.status != "Activated":
-            raise serializers.ValidationError("해당 시험은 현재 응시할 수 없습니다.")
-
-        # 시험 시작 시간 확인
-        if deployment.open_at and deployment.open_at > now:
-            raise serializers.ValidationError("시작되지 않은 시험입니다.")
-
-        # 시험 종료 시간 확인
-        if deployment.close_at and deployment.close_at < now:
-            raise serializers.ValidationError("종료된 시험입니다.")
-
-        data["deployment"] = deployment
-        return data
 
 
 # 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용
