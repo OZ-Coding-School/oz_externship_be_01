@@ -47,62 +47,6 @@ class QuestionAIAnswer(models.Model):
         db_table = "question_ai_answers"
 
 
-##########################################################################################
-class ChatbotSession(models.Model):
-    STATUS_CHOICES = (
-        ("connected", "Connected"),
-        ("disconnected", "Disconnected"),
-        ("rejected", "Rejected"),
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="chatbot_sessions",
-    )
-    question = models.ForeignKey(
-        Question, on_delete=models.SET_NULL, null=True, blank=True, related_name="chatbot_sessions"
-    )
-    socket_id = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="connected")
-    rejection_reason = models.CharField(max_length=255, null=True, blank=True)
-    chat_count = models.PositiveIntegerField(default=0)  # 비로그인 유저 2회까지 허용 조건
-    is_waiting_reply = models.BooleanField(default=False)  # True일 경우 비활성화 상태로 처리 # 🤔
-    created_at = models.DateTimeField(auto_now_add=True)
-    disconnected_at = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self) -> str:
-        return f"Session {self.id} - {self.status}"
-
-    class Meta:
-        db_table = "chatbot_sessions"
-        ordering = ["-created_at"]
-
-
-class ChatbotMessage(models.Model):
-    SENDER_CHOICES = (
-        ("user", "User"),
-        ("ai", "AI"),
-    )
-
-    session = models.ForeignKey(ChatbotSession, on_delete=models.CASCADE, related_name="messages")
-    sender_type = models.CharField(max_length=10, choices=SENDER_CHOICES)
-    content = models.TextField()
-    is_question_related = models.BooleanField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self) -> str:
-        return f"{self.sender_type.capitalize()} Message in Session {self.session.id}"
-
-    class Meta:
-        db_table = "chatbot_messages"
-        ordering = ["created_at"]
-
-
-##########################################################################################
-
-
 class QuestionImage(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="images")
     img_url = models.CharField(max_length=255)

@@ -1,28 +1,14 @@
 from rest_framework import serializers
 
-from ..models import ChatbotMessage, ChatbotSession
+
+class AIRequestSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=1000)
 
 
-class ChatbotSessionSerializer(serializers.ModelSerializer[ChatbotSession]):
-    class Meta:
-        model = ChatbotSession
-        fields = [
-            "id",
-            "user",
-            "question",
-            "socket_id",
-            "status",
-            "rejection_reason",
-            "chat_count",
-            "is_waiting_reply",
-            "created_at",
-            "disconnected_at",
-        ]
-        read_only_fields = ["id", "created_at", "disconnected_at"]
+class AIResponseSerializer(serializers.Serializer):
+    response = serializers.CharField()
 
 
-class ChatbotMessageSerializer(serializers.ModelSerializer[ChatbotMessage]):
-    class Meta:
-        model = ChatbotMessage
-        fields = ["id", "session", "sender_type", "content", "is_question_related", "created_at"]
-        read_only_fields = ["id", "created_at"]
+class MenuClickSerializer(serializers.Serializer):
+    menu = serializers.CharField()
+    submenu = serializers.CharField(required=False)

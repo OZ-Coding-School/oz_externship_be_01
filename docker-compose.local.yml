@@ -11,7 +11,8 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             gunicorn --workers 3 --bind 0.0.0.0:8000 config.wsgi:application"
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application
+             "
     ports:
       - "8000:8000"
     volumes:
