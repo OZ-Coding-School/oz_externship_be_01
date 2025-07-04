@@ -277,8 +277,7 @@ class OngoingCourseView(APIView):
     def get(self, request: Request) -> Response:
         # 활성화된 Generation을 select_related로 Course와 함께 가져옴 ( N + 1 문제 해결 )
         active_generations = Generation.objects.select_related("course").filter(
-            ~Q(status=Generation.GenStatus.Finished)
-            & ~Q(status=Generation.GenStatus.Ready)
+            ~Q(status=Generation.GenStatus.Finished) & ~Q(status=Generation.GenStatus.Ready)
         )
 
         if not active_generations.exists():
