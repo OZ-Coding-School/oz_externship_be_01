@@ -15,7 +15,6 @@ from apps.community.serializers.category_serializers import (
     CategoryListResponseSerializer,
     CategoryRenameRequestSerializer,
     CategoryRenameResponseSerializer,
-    CategoryStatusUpdateRequestSerializer,
     CategoryStatusUpdateResponseSerializer,
 )
 from apps.tests.permissions import IsAdminOrStaff
@@ -30,7 +29,7 @@ class AdminCommunityCategoryDetailAPIView(APIView):
         tags=["[Admin-category]"],
         summary="커뮤니티 게시판 카테고리 상세 조회",
         description="카테고리 ID로 커뮤니티 게시판 카테고리 상세정보를 조회합니다.",
-        responses={200: CategoryDetailResponseSerializer, 404: CategoryDetailResponseSerializer},
+        responses={200: CategoryDetailResponseSerializer},
     )
     def get(self, request: Request, category_id: int) -> Response:
         category = get_object_or_404(PostCategory, id=category_id)
@@ -60,7 +59,7 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         summary="커뮤니티 게시판 카테고리 생성",
         description="새로운 커뮤니티 카테고리를 생성합니다.",
         request=CategoryCreateRequestSerializer,
-        responses={201: CategoryCreateResponseSerializer, 400: CategoryCreateResponseSerializer},
+        responses={201: CategoryCreateResponseSerializer},
     )
     def post(self, request: Request) -> Response:
         serializer = CategoryCreateRequestSerializer(data=request.data)
@@ -78,15 +77,15 @@ class CategoryStatusOnAPIView(APIView):
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 ON",
-        request=CategoryStatusUpdateRequestSerializer,
-        responses={200: CategoryStatusUpdateResponseSerializer, 400: CategoryStatusUpdateResponseSerializer},
+        responses={200: CategoryStatusUpdateResponseSerializer},
     )
-    def post(self, request, category_id: int) -> Response:
-        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({"detail": "요청이 유효하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        category = get_object_or_404(PostCategory, id=category_id)
+    def post(self, request: Request, category_id: int) -> Response:
+        category = PostCategory.objects.filter(id=category_id).first()
+        if not category:
+            return Response(
+                {"detail": "존재하지 않는 카테고리입니다."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         category.status = True
         category.save()
@@ -102,15 +101,15 @@ class CategoryStatusOffAPIView(APIView):
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 OFF",
-        request=CategoryStatusUpdateRequestSerializer,
-        responses={200: CategoryStatusUpdateResponseSerializer, 400: CategoryStatusUpdateResponseSerializer},
+        responses={200: CategoryStatusUpdateResponseSerializer},
     )
-    def post(self, request, category_id: int) -> Response:
-        serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({"detail": "요청이 유효하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        category = get_object_or_404(PostCategory, id=category_id)
+    def post(self, request: Request, category_id: int) -> Response:
+        category = PostCategory.objects.filter(id=category_id).first()
+        if not category:
+            return Response(
+                {"detail": "존재하지 않는 카테고리입니다."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         category.status = False
         category.save()
@@ -145,7 +144,7 @@ class AdminCategoryRenameAPIView(APIView):
         tags=["[Admin-category]"],
         summary="카테고리명 수정",
         request=CategoryRenameRequestSerializer,
-        responses={200: CategoryRenameResponseSerializer, 400: CategoryRenameResponseSerializer},
+        responses={200: CategoryRenameResponseSerializer},
     )
     def patch(self, request: Request, category_id: int) -> Response:
         category = PostCategory.objects.get(id=category_id)
