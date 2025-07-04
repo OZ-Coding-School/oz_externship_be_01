@@ -113,64 +113,34 @@ class AdminTestUpdateAPIView(APIView):
 
 
 # (admin)쪽지시험 상세조회
+
+
 @extend_schema(
     tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 상세조회 API",
-    description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
-    auth=[],
+    description="관리자/스태프 권한으로 등록된 특정 쪽지시험 상세 정보를 조회합니다.",
+    responses={
+        200: TestDetailSerializer,
+        401: OpenApiResponse(description="인증 정보가 없거나 유효하지 않습니다."),
+        403: OpenApiResponse(description="권한이 없습니다."),
+        404: OpenApiResponse(description="Test not found."),
+    },
 )
 class AdminTestDetailAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = TestDetailSerializer
 
-    def get(self, request: Request, test_id: int) -> Response:
-        # mock: 존재하지 않는 시험 예외 처리
-        if test_id == 9999:
+    def get(self, request, test_id: int):
+        try:
+            # Test + subject select_related, questions prefetch_related로 N+1 방지
+            test = Test.objects.select_related("subject").prefetch_related("questions").get(id=test_id)
+        except Test.DoesNotExist:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        subject = Subject(id=1, title="컴퓨터공학")
-
-        questions = [
-            TestQuestion(
-                id=101,
-                type="multiple_choice",
-                question="스택의 LIFO는 무엇의 약자인가요?",
-                point=5,
-            ),
-            TestQuestion(
-                id=102,
-                type="blank",
-                question="다음 문장을 완성하세요",
-                point=5,
-            ),
-        ]
-
-        # mock 문제에 상세 필드 추가
-        questions_data = TestQuestionSimpleSerializer(questions, many=True).data
-
-        # detail 필드를 응답 dict에 수동으로 추가
-        questions_data[0]["prompt"] = None
-        questions_data[0]["options"] = ["Last In", "First Out"]
-        questions_data[0]["answer"] = "Last In First Out"
-
-        questions_data[1]["prompt"] = "자료구조에서 큐는 ____ 구조입니다."
-        questions_data[1]["options"] = []
-        questions_data[1]["answer"] = "FIFO"
-
-        test = Test(
-            id=test_id,
-            title="자료구조 쪽지시험",
-            subject=subject,
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-
-        # 응답에 필요한 데이터 수동 조합
-        data = self.serializer_class(test).data
-        data["questions"] = questions_data
-        data["question_count"] = len(questions)
-
-        return Response(data, status=status.HTTP_200_OK)
+        # 문제 최대 20개로 제한해 시리얼라이저에 전달 / context로 questions 전달
+        questions = list(test.questions.all()[:20])
+        serializer = self.serializer_class(test, context={"questions": questions})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # (admin)쪽지시험 목록조회
