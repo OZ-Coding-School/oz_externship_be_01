@@ -3,7 +3,6 @@ from datetime import datetime
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,15 +20,6 @@ from apps.community.serializers.category_serializers import (
 )
 from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models.user import User
-
-# 카테고리 게시판 상세 조회
-mock_valid_ids = [1, 2, 3]
-
-mock_data_by_id = {
-    1: {"id": 1, "name": "공지사항", "status": True},
-    2: {"id": 2, "name": "자유게시판", "status": True},
-    3: {"id": 3, "name": "Q&A", "status": False},
-}
 
 
 # 커뮤니티 게시판 카테고리 상세 조회 APIView
@@ -76,7 +66,7 @@ class AdminCommunityCategoryCreateAPIView(APIView):
         serializer = CategoryCreateRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"detail": "카테고리 이름은 필수 항목입니다."}, status=status.HTTP_400_BAD_REQUEST)
-        category = serializer.save()  # 실제 DB에 저장합니다 !
+        category = serializer.save()
         rsp_serializer = CategoryCreateResponseSerializer(category)
         return Response(rsp_serializer.data, status=status.HTTP_201_CREATED)
 
