@@ -40,7 +40,7 @@ class Generation(models.Model):
         db_table = "generations"
 
     def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         self.registered_students = None
 
     def __str__(self) -> str:
