@@ -15,9 +15,8 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         self.total_students = None
-        self.id = None
 
     def __str__(self) -> str:
         return self.name
