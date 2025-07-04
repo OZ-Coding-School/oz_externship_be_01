@@ -19,12 +19,12 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
         fields = ("id", "title", "subject_id", "thumbnail_file", "thumbnail_img_url", "updated_at")
         read_only_fields = ("id", "updated_at")
 
-    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+    def validate(self, data):
         if not data:
             raise serializers.ValidationError("수정할 데이터가 없습니다.")
         return data
 
-    def update(self, instance: Test, validated_data: dict[str, Any]) -> Test:
+    def update(self, instance: Test, validated_data):
         # 제목 수정
         if "title" in validated_data:
             instance.title = validated_data["title"]
@@ -32,7 +32,6 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
         # 과목 수정
         if "subject_id" in validated_data:
             instance.subject_id = validated_data["subject_id"]
-
 
         # S3 업로드 URL로 로고 이미지 수정
         if "thumbnail_img_url" in validated_data:
