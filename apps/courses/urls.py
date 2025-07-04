@@ -1,9 +1,11 @@
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
-from apps.courses.views.dropdown_list_views import CourseDropdownListAPIView
 from apps.courses.views.dropdown_list_views import (
     GenerationDropdownListAPIView,  # 프론트 추가분
+)
+from apps.courses.views.dropdown_list_views import (
+    CourseDropdownListAPIView,
 )
 from apps.courses.views.generation_views import (
     CourseTrendView,
