@@ -33,15 +33,13 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
         if "subject_id" in validated_data:
             instance.subject_id = validated_data["subject_id"]
 
-        # 로고 이미지 수정
-        if "thumbnail_file" in validated_data:
-            thumbnail_file = validated_data.pop("thumbnail_file")
-            # 실제 서비스에서는 이미지 업로드 후 URL 생성 필요
 
-            instance.thumbnail_img_url = f"https://my-cdn.com/{thumbnail_file.name}"
+        # S3 업로드 URL로 로고 이미지 수정
+        if "thumbnail_img_url" in validated_data:
+            instance.thumbnail_img_url = validated_data["thumbnail_img_url"]
 
         instance.updated_at = timezone.now()
-        # instance.save() 추후  DB 반영
+        instance.save()
         return instance
 
 
