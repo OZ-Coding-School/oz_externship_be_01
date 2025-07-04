@@ -53,12 +53,11 @@ class AdminCommunityCategoryDetailAPIView(APIView):
         tags=["[Admin-category]"],
         operation_id="admin_category_delete",
         summary="관리자 카테고리 삭제",
-        description="1, 2, 3번 카테고리만 존재하는 것으로 간주하고 그 외 ID는 삭제 실패로 처리",
+        description="존재하는 카테고리를 삭제합니다.",
     )
     def delete(self, request: Request, category_id: int) -> Response:
-        mock_existing_ids = range(1, 4)
-        if category_id not in mock_existing_ids:
-            return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        category = get_object_or_404(PostCategory, id=category_id)
+        category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
