@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -83,57 +83,55 @@ class AdminCommunityCategoryCreateAPIView(APIView):
 
 # 카테고리 상태 ON API
 class CategoryStatusOnAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 ON",
         request=CategoryStatusUpdateRequestSerializer,
-        responses={200: CategoryStatusUpdateResponseSerializer},
+        responses={200: CategoryStatusUpdateResponseSerializer, 400: CategoryStatusUpdateResponseSerializer},
     )
-    def post(self, request, category_id):
+    def post(self, request, category_id: int) -> Response:
         serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({"detail": "요청이 유효하지 않습니다."}, status=400)
+            return Response({"detail": "요청이 유효하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        validated = serializer.validated_data
-        mock_instance = {
-            "status": True,
-            "updated_at": datetime.now(),
-        }
+        category = get_object_or_404(PostCategory, id=category_id)
 
-        response = CategoryStatusUpdateResponseSerializer(mock_instance)
-        return Response(response.data, status=200)
+        category.status = True
+        category.save()
+
+        response = CategoryStatusUpdateResponseSerializer(instance=category)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 # 카테고리 상태 OFF API
 class CategoryStatusOffAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
         summary="카테고리 상태 OFF",
         request=CategoryStatusUpdateRequestSerializer,
-        responses={200: CategoryStatusUpdateResponseSerializer},
+        responses={200: CategoryStatusUpdateResponseSerializer, 400: CategoryStatusUpdateResponseSerializer},
     )
-    def post(self, request, category_id):
+    def post(self, request, category_id: int) -> Response:
         serializer = CategoryStatusUpdateRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response({"detail": "요청이 유효하지 않습니다."}, status=400)
+            return Response({"detail": "요청이 유효하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        validated = serializer.validated_data
-        mock_instance = {
-            "status": False,
-            "updated_at": datetime.now(),
-        }
+        category = get_object_or_404(PostCategory, id=category_id)
 
-        response = CategoryStatusUpdateResponseSerializer(mock_instance)
-        return Response(response.data, status=200)
+        category.status = False
+        category.save()
+
+        response = CategoryStatusUpdateResponseSerializer(instance=category)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 # 카테고리 목록 조회
 class AdminCategoryListAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin-category]"],
