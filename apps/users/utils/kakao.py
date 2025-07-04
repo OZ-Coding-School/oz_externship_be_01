@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import string
 from datetime import datetime
 from typing import Dict, Optional, Tuple
@@ -68,3 +69,23 @@ def generate_unique_nickname(base: str) -> str:
         nickname = f"{base}_{suffix}"
         if not User.objects.filter(nickname=nickname).exists():
             return nickname
+
+
+# 전화번호 정규화
+def normalize_phone_number(phone: str) -> str:
+    if not phone:
+        return ""
+
+    # +82 10-1234-5678 → 010-1234-5678
+    phone = phone.strip().replace(" ", "").replace("+82", "0")
+
+    # 숫자만 남기기
+    digits = re.sub(r"[^\d]", "", phone)
+
+    # 번호 조합 (010 포함 10자리 or 11자리)
+    if len(digits) == 11:
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    elif len(digits) == 10:
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    else:
+        return phone

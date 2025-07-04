@@ -16,6 +16,7 @@ from apps.users.utils.kakao import (
     generate_unique_nickname,
     get_kakao_access_token,
     get_kakao_user_info,
+    normalize_phone_number,
 )
 from apps.users.utils.social_auth import (
     get_naver_access_token,
@@ -62,13 +63,15 @@ class KakaoLoginAPIView(APIView):
         raw_nickname = user_info.get("nickname") or (f"kakao_{email.split('@')[0]}" if email else None)
         nickname = generate_unique_nickname(raw_nickname)
         name = user_info.get("name")
-        phone_number = user_info.get("phone_number")
+        raw_phone_number = user_info.get("phone_number")
+        phone_number = normalize_phone_number(raw_phone_number)
         birthday = format_full_birthday(user_info.get("birthyear"), user_info.get("birthday"))
         profile_image_url = user_info.get("profile_image_url")
         gender = user_info.get("gender")
 
         # 필수값 누락 여부 검사
         required_fields = {
+            "kakao_id": kakao_id,
             "email": email,
             "nickname": nickname,
             "name": name,
@@ -82,7 +85,7 @@ class KakaoLoginAPIView(APIView):
 
         if missing_fields:
             return Response(
-                {"detail": f"다음 필수 정보가 누락되었습니다: {', '.join(missing_fields)}"},
+                {"detail": "잠시 후 다시 시도해주세요."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
