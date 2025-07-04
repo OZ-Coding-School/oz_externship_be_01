@@ -12,11 +12,11 @@ class EmailSendCodeSerializer(Serializer[Any]):
 
 class EmailVerifyCodeSerializer(Serializer[Any]):
     email: EmailField = EmailField()
-    code: CharField = CharField()
+    verification_code: CharField = CharField()
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         email = data["email"]
-        code = data["code"]
+        code = data["verification_code"]
 
         stored_code = get_stored_email_code(email)
         if stored_code is None:

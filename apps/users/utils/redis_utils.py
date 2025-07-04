@@ -1,36 +1,44 @@
-import os
-
-import redis
-
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_DB = int(os.getenv("REDIS_DB", 0))
-
-r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+from django_redis import get_redis_connection  # type: ignore
 
 
-def save_phone_code(phone: str, code: str, ttl: int = 300):
-    r.setex(f"verify:phone:{phone}", ttl, code)
+# 이메일 인증 코드를 Redis에 저장. 시간은 5분.
+def store_email_code(email: str, code: str) -> None:
+    redis = get_redis_connection("default")
+    redis.set(f"verify:email:{email}", code, ex=300)
 
 
-def get_phone_code(phone: str) -> str | None:
-    code = r.get(f"verify:phone:{phone}")
-    return code.decode() if code else None
-
-
-def store_email_code(email: str, code: str, ttl: int = 300):
-    r.setex(f"verify:email:{email}", ttl, code)
-
-
+# redis 에서 이메일 인증 코드 조회.
 def get_stored_email_code(email: str) -> str | None:
-    code = r.get(f"verify:email:{email}")
-    return code.decode() if code else None
+    redis = get_redis_connection("default")
+    code = redis.get(f"verify:email:{email}")
+    return code.decode("utf-8") if code else None
 
 
-def mark_phone_verified(phone: str, ttl: int = 300):
-    r.setex(f"phone_verified:{phone}", ttl, "true")
+# 이메일 인증 성공 시 인증 완료 상태를 Redis에 저장, 유효시간은 1시간 으로 설정.
+def mark_email_as_verified(email: str) -> None:
+    redis = get_redis_connection("default")
+    redis.set(f"email:verified:{email}", "true", ex=3600)
 
 
+# 이메일 인증 여부 확인.
+def is_email_verified(email: str) -> bool:
+    redis = get_redis_connection("default")
+    return redis.get(f"email:verified:{email}") == b"true"
+
+
+# 인증 코드 삭제
+def delete_email_code(email: str) -> None:
+    redis = get_redis_connection("default")
+    redis.delete(f"email:{email}")
+
+
+# 휴대폰 인증 완료 표시 (기본 TTL 5분)
+def mark_phone_verified(phone: str, ttl: int = 300) -> None:
+    redis = get_redis_connection("default")
+    redis.set(f"phone_verified:{phone}", "true", ex=ttl)
+
+
+# 휴대폰 인증 여부 확인
 def is_phone_verified(phone: str) -> bool:
-    value = r.get(f"phone_verified:{phone}")
-    return value == b"true"
+    redis = get_redis_connection("default")
+    return redis.get(f"phone_verified:{phone}") == b"true"
