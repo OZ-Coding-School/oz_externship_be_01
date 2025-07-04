@@ -7,6 +7,10 @@ from apps.courses.views.dropdown_list_views import (
 from apps.courses.views.dropdown_list_views import (
     CourseDropdownListAPIView,
 )
+from apps.courses.views.course_views import (
+    CourseDetailView,
+    CourseListCreateView,
+)
 from apps.courses.views.generation_views import (
     CourseTrendView,
     GenerationCreateView,
@@ -21,15 +25,7 @@ from apps.courses.views.subject_views import (
     SubjectDetailAPIView,
     SubjectDropdownListAPIView,
     SubjectListCreateAPIView,
-from apps.courses.views.subject_views import SubjectDetailAPIView, SubjectListCreateAPIView
-from .views.course_views import (
-    CourseDetailView,
-    CourseListCreateView,
-    CourseEnrollmentStatsView,
-    CourseEnrollmentListView
 )
-
-from .views.course_views import CourseDetailView, CourseListCreateView
 
 urlpatterns = [
     path("courses/", CourseListCreateView.as_view(), name="v1_admin_course_list"),

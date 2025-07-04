@@ -1,10 +1,11 @@
 from rest_framework import serializers
+from core.utils.s3 import upload_file_to_s3  # S3 업로드 함수 사용
 
 from apps.courses.models import Course
 
 
 class CourseSerializer(serializers.ModelSerializer):
-    thumbnail_img_file = serializers.ImageField(write_only=True, required=False)
+    thumbnail_img_file = serializers.ImageField(write_only=True, required=True)  # 리뷰 반영: required=True
 
     class Meta:
         model = Course
@@ -14,28 +15,28 @@ class CourseSerializer(serializers.ModelSerializer):
             "tag",
             "description",
             "thumbnail_img_url",
-            "thumbnail_img_file",  # 추가됨
+            "thumbnail_img_file",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "thumbnail_img_url"]
 
     def create(self, validated_data):
-        thumbnail_file = validated_data.pop("thumbnail_img_file", None)
-
-        # 실제 파일 저장 처리 (예: 로컬 또는 S3)
-        # 여기선 단순히 로컬 경로 가정
-        if thumbnail_file:
-            filename = f"courses/{thumbnail_file.name}"
-            with open(f"media/{filename}", "wb") as f:
-                for chunk in thumbnail_file.chunks():
-                    f.write(chunk)
-            validated_data["thumbnail_img_url"] = f"/media/{filename}"
-
+        thumbnail_file = validated_data.pop("thumbnail_img_file")
+        key = f"courses/{thumbnail_file.name}"
+        url = upload_file_to_s3(file=thumbnail_file, key=key)
+        validated_data["thumbnail_img_url"] = url
         return super().create(validated_data)
 
+    def update(self, instance, validated_data):
+        thumbnail_file = validated_data.pop("thumbnail_img_file", None)
+        if thumbnail_file:
+            key = f"courses/{thumbnail_file.name}"
+            url = upload_file_to_s3(file=thumbnail_file, key=key)
+            validated_data["thumbnail_img_url"] = url
+        return super().update(instance, validated_data)
 
-# 과정 목록 조회용 시리얼라이저 (집계 필드 포함)
+
 class CourseListSerializer(serializers.ModelSerializer):
     generations_count = serializers.IntegerField(read_only=True)
     active_generations_count = serializers.IntegerField(read_only=True)
@@ -53,3 +54,4 @@ class CourseListSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
