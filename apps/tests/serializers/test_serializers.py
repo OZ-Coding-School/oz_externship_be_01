@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict
 
 from django.utils import timezone
@@ -60,10 +61,36 @@ class TestQuestionSimpleSerializer(serializers.ModelSerializer["TestQuestion"]):
         fields = ("id", "type", "question", "point")
 
 
-# 쪽지시험 상세조회 Nested Serializer
-class TestDetailSerializer(serializers.ModelSerializer[Test]):
+# 쪽지시험 문제 단일 직렬화용
+class TestQuestionDetailSerializer(serializers.ModelSerializer):
+    options = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestQuestion
+        fields = (
+            "id",
+            "type",
+            "question",
+            "point",
+            "prompt",
+            "options",
+            "answer",
+        )
+
+    def get_options(self, obj):
+        if obj.options_json:
+            try:
+
+                return json.loads(obj.options_json)
+            except Exception:
+                return []
+        return []
+
+
+# 쪽지시험 상세조회용 시리얼라이저
+class TestDetailSerializer(serializers.ModelSerializer):
     subject = TestSubjectSerializer()
-    questions = TestQuestionSimpleSerializer(many=True)
+    questions = TestQuestionDetailSerializer(many=True)  # nested serializer로 수정
     question_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -78,8 +105,13 @@ class TestDetailSerializer(serializers.ModelSerializer[Test]):
             "updated_at",
         )
 
-    def get_question_count(self, obj: Test) -> int:
+    def get_question_count(self, obj):
+        # context 사용하지 않고 obj의 전체 문제 수 반환
         return obj.questions.count()
+
+    def get_questions(self, obj):
+        # context 사용하지 않고 obj의 전체 문제 리스트 직렬화
+        return TestQuestionDetailSerializer(obj.questions.all(), many=True).data
 
 
 # 쪽지시험 목록조회 Nested 구조 사용안함 응답 단순화
