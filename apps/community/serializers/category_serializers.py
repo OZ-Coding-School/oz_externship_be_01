@@ -27,12 +27,7 @@ class CategoryCreateResponseSerializer(ModelSerializer[PostCategory]):
         fields = ["id", "name", "status", "created_at", "updated_at"]
 
 
-# 요청용 시리얼라이저
-class CategoryStatusUpdateRequestSerializer(serializers.Serializer):
-    status = serializers.BooleanField()
-
-
-# 응답용 시리얼라이저
+# 카테고리 ON/OFF 응답용 시리얼라이저
 class CategoryStatusUpdateResponseSerializer(serializers.Serializer):
     status = serializers.BooleanField()
     updated_at = serializers.DateTimeField()
