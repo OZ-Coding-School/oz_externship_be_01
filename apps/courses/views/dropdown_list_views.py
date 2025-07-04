@@ -16,9 +16,80 @@ from rest_framework.views import APIView
 
 # 필요한 모델 및 시리얼라이저 임포트
 from apps.courses.models import Course, Generation
-from apps.courses.serializers.frontneeds_generation_serializer import (
+from apps.courses.serializers.dropdown_list_serializers import (
+    CourseDropdownSerializer,
     GenerationDropdownSerializer,
 )
+
+
+# --- CourseDropdownListAPIView (프론트 요청) ---
+@extend_schema(
+    tags=["Admin - 과정 관리"],
+    summary="(Admin) 기수 존재하는 과정 목록 조회 API",
+    description="관리자 또는 스태프 권한의 유저는 어드민 페이지 내에서 기수가 존재하는 모든 과정의 이름과 ID를 드롭다운 목록으로 조회할 수 있습니다.",
+)
+class CourseDropdownListAPIView(APIView):
+    """
+    (Admin) 기수 존재하는 과정 목록 조회 API.
+    드롭다운 목록에 필요한 'id'와 'name' 필드만 반환합니다.
+    """
+
+    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+
+    @extend_schema(
+        summary="(Admin) 기수 존재하는 과정 목록 조회 (드롭다운)",
+        operation_id="v1_admin_courses_dropdown_list",
+        parameters=[],
+        responses={
+            200: OpenApiResponse(
+                response=CourseDropdownSerializer(many=True),
+                description="과정 목록 조회 성공",
+                examples=[
+                    OpenApiExample(
+                        "과정 목록 조회 성공 응답 예시",
+                        value=[
+                            {"id": 1, "name": "데이터베이스 심화 과정"},
+                            {"id": 2, "name": "웹 개발 입문"},
+                        ],
+                        response_only=True,
+                        status_codes=["200"],
+                    ),
+                ],
+            ),
+            401: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="인증 토큰 유효하지 않음",
+                examples=[
+                    OpenApiExample(
+                        "인증 실패 예시",
+                        value={"detail": "인증 토큰이 유효하지 않습니다."},
+                        response_only=True,
+                        status_codes=["401"],
+                    )
+                ],
+            ),
+            403: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="권한 없음",
+                examples=[
+                    OpenApiExample(
+                        "권한 없음 예시",
+                        value={"detail": "해당 작업에 대한 관리자 또는 스태프 권한이 없습니다."},
+                        response_only=True,
+                        status_codes=["403"],
+                    )
+                ],
+            ),
+        },
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        기수가 존재하는 과정 목록을 조회합니다 (드롭다운 용도).
+        """
+        queryset = Course.objects.filter(generations__isnull=False).distinct()
+
+        serializer = CourseDropdownSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # --- GenerationDropdownListAPIView (새로 추가) ---
