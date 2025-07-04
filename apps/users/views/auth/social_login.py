@@ -11,9 +11,15 @@ from rest_framework.views import APIView
 from apps.users.models import SocialUser, User
 from apps.users.serializers.auth.social_login import SocialLoginSerializer
 from apps.users.utils.jwt import generate_jwt_token_pair
+from apps.users.utils.kakao import (
+    format_full_birthday,
+    generate_unique_nickname,
+    get_kakao_access_token,
+    get_kakao_user_info,
+    normalize_phone_number,
+)
 from apps.users.utils.social_auth import (
     get_naver_access_token,
-    verify_kakao_token,
     verify_naver_token,
 )
 
@@ -26,32 +32,82 @@ class KakaoLoginAPIView(APIView):
         responses={200: Dict[str, str], 400: Dict[str, str]},
         tags=["auth"],
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request):
         serializer = SocialLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        access_token: str = serializer.validated_data["access_token"]
+        code = serializer.validated_data["code"]
 
-        kakao_user_info: Optional[Dict[str, Optional[str]]] = verify_kakao_token(access_token)
-        if kakao_user_info is None:
-            return Response({"detail": "Invalid Kakao token."}, status=status.HTTP_400_BAD_REQUEST)
+        # access_token 요청
+        access_token, error = get_kakao_access_token(code)
 
-        email: Optional[str] = kakao_user_info.get("email")
-        if email is None:
-            return Response({"detail": "Kakao account email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not access_token:
+            if "invalid_grant" in (error or ""):
+                return Response({"detail": "잘못된 인가 코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": f"카카오 서버 오류: {error or '알 수 없는 오류'}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "name": kakao_user_info.get("nickname") or "",
-                "nickname": kakao_user_info.get("nickname") or "",
-                "phone_number": "",
-                "birthday": None,
-            },
-        )
+        # 사용자 정보 요청
+        user_info = get_kakao_user_info(access_token)
+        if not user_info or not user_info.get("email") or not user_info.get("kakao_id"):
+            return Response(
+                {"detail": "카카오 사용자 정보 요청 실패 또는 필수 정보 누락"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        jwt_tokens: Dict[str, str] = generate_jwt_token_pair(user.id)
-        return Response(jwt_tokens, status=status.HTTP_200_OK)
+        # 사용자 정보 파싱
+        kakao_id = user_info.get("kakao_id")
+        email = user_info.get("email")
+        raw_nickname = user_info.get("nickname") or (f"kakao_{email.split('@')[0]}" if email else None)
+        nickname = generate_unique_nickname(raw_nickname)
+        name = user_info.get("name")
+        raw_phone_number = user_info.get("phone_number")
+        phone_number = normalize_phone_number(raw_phone_number)
+        birthday = format_full_birthday(user_info.get("birthyear"), user_info.get("birthday"))
+        profile_image_url = user_info.get("profile_image_url")
+        gender = user_info.get("gender")
+
+        # 필수값 누락 여부 검사
+        required_fields = {
+            "kakao_id": kakao_id,
+            "email": email,
+            "nickname": nickname,
+            "name": name,
+            "phone_number": phone_number,
+            "birthday": birthday,
+            "gender": gender,
+        }
+
+        # 누락 필드 추출
+        missing_fields = [field for field, value in required_fields.items() if not value]
+
+        if missing_fields:
+            return Response(
+                {"detail": "잠시 후 다시 시도해주세요."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # 기존 소셜 유저 확인 또는 신규 생성
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            user = User.objects.create(
+                email=email,
+                name=name,
+                nickname=nickname,
+                phone_number=phone_number,
+                birthday=birthday,
+                profile_image_url=profile_image_url,
+                gender=gender,
+            )
+
+        SocialUser.objects.get_or_create(user=user, provider="KAKAO", provider_id=kakao_id)
+
+        # JWT 발급
+        tokens = generate_jwt_token_pair(user.id)
+        return Response(tokens, status=status.HTTP_200_OK)
 
 
 class NaverLoginAPIView(APIView):
