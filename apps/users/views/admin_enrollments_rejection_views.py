@@ -48,7 +48,9 @@ class RejectEnrollmentRequestView(APIView):
                     continue
 
                 if enrollment.status == status_enum.APPROVED:
-                    permissions = PermissionsStudent.objects.filter(user=enrollment.user, generation=enrollment.generation)
+                    permissions = PermissionsStudent.objects.filter(
+                        user=enrollment.user, generation=enrollment.generation
+                    )
                     deleted_count = permissions.count()
                     deleted_permission_ids.extend([enrollment.user.id] * deleted_count)
                     permissions.delete()
