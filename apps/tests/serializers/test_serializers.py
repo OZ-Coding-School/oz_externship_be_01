@@ -60,6 +60,7 @@ class TestQuestionSimpleSerializer(serializers.ModelSerializer["TestQuestion"]):
         fields = ("id", "type", "question", "point")
 
 
+# 쪽지시험 문제 단일 직렬화용
 class TestQuestionDetailSerializer(serializers.ModelSerializer):
     options = serializers.SerializerMethodField()
 
@@ -75,21 +76,6 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
             "answer",
         )
 
-    def get_question_count(self, obj):
-        # context로 전달된 질문이 있다면 그 갯수 사용
-        questions = self.context.get("questions")
-        if questions is not None:
-            return len(questions)
-        return obj.questions.count()
-
-    def get_questions(self, obj):
-        # context로 전달된 질문을 직렬화
-        questions = self.context.get("questions")
-        if questions is not None:
-            return TestQuestionDetailSerializer(questions, many=True).data
-        # context에 없으면 전체 문제를 직렬화 (백업)
-        return TestQuestionDetailSerializer(obj.questions.all(), many=True).data
-
     def get_options(self, obj):
         if obj.options_json:
             try:
@@ -104,7 +90,7 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
 # 쪽지시험 상세조회용 시리얼라이저
 class TestDetailSerializer(serializers.ModelSerializer):
     subject = TestSubjectSerializer()
-    questions = TestQuestionDetailSerializer(many=True)
+    questions = serializers.SerializerMethodField()  # context 기반 직렬화로 수정
     question_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -120,7 +106,16 @@ class TestDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_question_count(self, obj):
+        questions = self.context.get("questions")
+        if questions is not None:
+            return len(questions)
         return obj.questions.count()
+
+    def get_questions(self, obj):
+        questions = self.context.get("questions")
+        if questions is not None:
+            return TestQuestionDetailSerializer(questions, many=True).data
+        return TestQuestionDetailSerializer(obj.questions.all(), many=True).data
 
 
 # 쪽지시험 목록조회 Nested 구조 사용안함 응답 단순화
