@@ -281,7 +281,7 @@ class AdminTestCreateAPIView(APIView):
 
         thumbnail_file = validated_data.pop("thumbnail_file")
 
-        # 2) DB에 Test 인스턴스만 생성 (즉시 저장 X)
+        # 2) DB에 Test 인스턴스만 생성 및 저장
         test = Test(
             title=validated_data["title"],
             subject=subject,
