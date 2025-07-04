@@ -1,87 +1,11 @@
 from rest_framework import serializers
-from apps.courses.models import Course, Generation
-from apps.users.models.user import User
-from apps.users.models.student_enrollment import StudentEnrollmentRequest
+
+from apps.courses.models import Course
 
 
-# 사용자 간단 정보
-class SimpleUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "name", "email"]
+class CourseSerializer(serializers.ModelSerializer):
+    thumbnail_img_file = serializers.ImageField(write_only=True, required=False)
 
-
-# 수강 등록 요청
-class EnrollmentRequestSerializer(serializers.ModelSerializer):
-    """수강 등록 요청 serializer"""
-
-    user = SimpleUserSerializer(read_only=True)
-    user_name = serializers.CharField(source="user.name", read_only=True)
-    user_email = serializers.CharField(source="user.email", read_only=True)
-    generation_number = serializers.IntegerField(source="generation.number", read_only=True)
-
-    class Meta:
-        model = StudentEnrollmentRequest
-        fields = ["id", "user", "user_name", "user_email", "generation_number", "status", "created_at", "accepted_at"]
-        read_only_fields = ["id", "created_at", "accepted_at"]
-
-
-# 과정별 수강 통계용
-class CourseEnrollmentStatsSerializer(serializers.Serializer):
-    """과정별 수강 등록 통계 serializer"""
-
-    course_id = serializers.IntegerField()
-    course_name = serializers.CharField()
-    total_enrollments = serializers.IntegerField()
-    pending_enrollments = serializers.IntegerField()
-    approved_enrollments = serializers.IntegerField()
-    rejected_enrollments = serializers.IntegerField()
-    generations = serializers.ListField(child=serializers.DictField(), help_text="과정별 기수별 등록 현황")
-
-
-# 과정별 수강 목록
-class CourseEnrollmentListSerializer(serializers.Serializer):
-    """과정별 수강 등록 목록 serializer"""
-
-    course_id = serializers.IntegerField()
-    course_name = serializers.CharField()
-    enrollments = EnrollmentRequestSerializer(many=True)
-
-
-# 기수 간단 조회용
-class GenerationSimpleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Generation
-        fields = ['id', 'number', 'status', 'start_at', 'end_at']
-
-
-# 관리자용 과정 목록 조회용
-class CourseAdminListSerializer(serializers.ModelSerializer):
-    generations = GenerationSimpleSerializer(source='generation_set', many=True, read_only=True)
-    active_generations = serializers.SerializerMethodField()
-    total_student_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Course
-        fields = [
-            "id", "name", "tag", "description", "thumbnail_img_url",
-            "created_at", "updated_at",
-            "generations", "active_generations", "total_student_count"
-        ]
-
-    def get_active_generations(self, obj):
-        active = obj.generation_set.filter(status="ONGOING")
-        return GenerationSimpleSerializer(active, many=True).data
-
-    def get_total_student_count(self, obj):
-        return StudentEnrollmentRequest.objects.filter(
-            generation__course=obj,
-            status__in=["APPROVED", "COMPLETED"]
-        ).count()
-
-
-# 관리자 외 사용자 목록 조회용 (간단 버전)
-class CourseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
@@ -90,45 +14,42 @@ class CourseListSerializer(serializers.ModelSerializer):
             "tag",
             "description",
             "thumbnail_img_url",
+            "thumbnail_img_file",  # 추가됨
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "thumbnail_img_url"]
+
+    def create(self, validated_data):
+        thumbnail_file = validated_data.pop("thumbnail_img_file", None)
+
+        # 실제 파일 저장 처리 (예: 로컬 또는 S3)
+        # 여기선 단순히 로컬 경로 가정
+        if thumbnail_file:
+            filename = f"courses/{thumbnail_file.name}"
+            with open(f"media/{filename}", "wb") as f:
+                for chunk in thumbnail_file.chunks():
+                    f.write(chunk)
+            validated_data["thumbnail_img_url"] = f"/media/{filename}"
+
+        return super().create(validated_data)
+
+
+# 과정 목록 조회용 시리얼라이저 (집계 필드 포함)
+class CourseListSerializer(serializers.ModelSerializer):
+    generations_count = serializers.IntegerField(read_only=True)
+    active_generations_count = serializers.IntegerField(read_only=True)
+    total_students_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Course
+        fields = [
+            "id",
+            "name",
+            "generations_count",
+            "active_generations_count",
+            "total_students_count",
             "created_at",
             "updated_at",
         ]
         read_only_fields = fields
-
-
-# 등록/수정/상세 조회용
-class CourseSerializer(serializers.ModelSerializer):
-    """과정 등록/수정/상세 조회용 serializer"""
-
-    student_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Course
-        fields = [
-            "id",
-            "name",
-            "tag",
-            "description",
-            "thumbnail_img_url",
-            "created_at",
-            "updated_at",
-            "student_count",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at", "student_count"]
-
-    def get_student_count(self, course):
-        return StudentEnrollmentRequest.objects.filter(generation__course=course, status="APPROVED").count()
-
-    # 중복 유효성 검사
-    def validate_name(self, value):
-        if self.instance is None or self.instance.name != value:
-            if Course.objects.filter(name=value).exists():
-                raise serializers.ValidationError("이미 존재하는 과정 이름입니다.")
-        return value
-
-    def validate_tag(self, value):
-        if self.instance is None or self.instance.tag != value:
-            if Course.objects.filter(tag=value).exists():
-                raise serializers.ValidationError("이미 존재하는 과정 태그입니다.")
-        return value
-
