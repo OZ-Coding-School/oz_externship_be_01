@@ -5,7 +5,7 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -66,6 +66,11 @@ class AdminUserListView(APIView):
             # 권한 필터
             role = request.query_params.get("role", "").upper()
             if role:
+                valid_roles = [choice[0] for choice in User.Role.choices]
+                if role not in valid_roles:
+                    return Response(
+                        {"detail": f"유효하지 않은 권한입니다. 사용 가능한 값: {', '.join(valid_roles)}"}, status=400
+                    )
                 queryset = queryset.filter(role=role)
 
             # 활성/비활성 필터
@@ -84,16 +89,19 @@ class AdminUserListView(APIView):
             page = paginator.paginate_queryset(queryset, request, view=self)
 
             if page is None:
-                raise ValidationError("페이지 범위를 벗어났습니다.")
+                raise NotFound("페이지 범위를 벗어났습니다.")
 
             serializer = self.serializer_class(page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
-        except ValidationError as ve:
-            return Response({"detail": str(ve)}, status=400)
+        except ValidationError:
+            return Response({"detail": "잘못된 요청입니다."}, status=400)
 
-        except Exception as e:
-            return Response({"detail": f"서버 내부 오류: {type(e).__name__}: {str(e)}"}, status=500)
+        except NotFound as nf:
+            return Response({"detail": str(nf)}, status=404)
+
+        except Exception:
+            return Response({"detail": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."}, status=500)
 
 
 # 어드민 회원 상세 조회
