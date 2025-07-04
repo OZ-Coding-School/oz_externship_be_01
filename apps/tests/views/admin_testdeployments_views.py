@@ -16,7 +16,7 @@ from apps.tests.serializers.test_deployment_serializers import (
     DeploymentStatusUpdateSerializer,
 )
 
-## 🔹 시험 데이터 (test.id 기준)
+# 🔹 시험 데이터 (test.id 기준)
 MOCK_TESTS: Dict[int, Dict[str, Any]] = {
     1: {"id": 1, "title": "HTML 기초", "subject": {"title": "웹프로그래밍"}},
     2: {"id": 2, "title": "CSS 심화", "subject": {"title": "웹디자인"}},
@@ -192,55 +192,12 @@ class DeploymentDetailView(APIView):
 # TestDeployment 배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = DeploymentCreateSerializer
 
-    def post(self, request: Request) -> Response:
-        serializer = self.serializer_class(data=request.data)
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = DeploymentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated: Dict[str, Any] = serializer.validated_data
-
-        test_id: int = validated["test_id"]
-        generation_id: int = validated["generation"]
-
-        test_info = MOCK_TESTS.get(test_id)
-        generation_info: Optional[Dict[str, Any]] = MOCK_GENERATIONS.get(generation_id)
-
-        if not test_info:
-            return Response(
-                {"detail": "해당 시험 ID에 해당하는 시험이 존재하지 않습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if not generation_info:
-            return Response(
-                {"detail": "존재하지 않는 기수입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        now_iso = datetime.now().isoformat()
-        new_id = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
-
-        new_deployment: Dict[str, Any] = {
-            "id": new_id,
-            "test": test_info,
-            "generation": generation_info,
-            "duration_time": validated.get("duration_time", 60),
-            "access_code": str(uuid4())[:6],
-            "status": "Activated",
-            "open_at": validated.get("open_at", now_iso),
-            "close_at": validated.get("close_at", now_iso),
-            "created_at": now_iso,
-            "updated_at": now_iso,
-        }
-
-        MOCK_DEPLOYMENTS[new_id] = new_deployment
-
-        response_data = {
-            "deployment_id": new_deployment["id"],
-            "access_code": new_deployment["access_code"],
-            "status": new_deployment["status"],
-        }
-
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        deployment = serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(

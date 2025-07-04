@@ -1,6 +1,17 @@
+# access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성ㄷ
+import random
+
+# access_code를 만들 때 사용할 수 있는 기본 문자 집합을 제공
+import string
+
+# open_at, close_at 필드 처리를 위해 필요
+from datetime import datetime
 from typing import Any, Dict
 
 from rest_framework import serializers
+
+# 명시적으로 임포트하여 사용합니다.
+from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
 from apps.tests.models import Test, TestDeployment, TestQuestion
@@ -148,7 +159,7 @@ class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
 # 🔹 TestDeployment 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
-    generation = serializers.IntegerField(help_text="기수 ID")
+    generation = serializers.IntegerField(write_only=True, help_text="기수 ID")
 
     class Meta:
         model = TestDeployment
@@ -158,11 +169,70 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             "duration_time",
             "open_at",
             "close_at",
+            # "questions",
+            "access_code",
+            "status",
         ]
+        read_only_fields = ["access_code", "status"]
 
-    def create(self, validated_data: Dict[str, Any]) -> TestDeployment:
-        # DB 조회나 MOCK 처리 없이, 단순히 create 호출
-        return super().create(validated_data)
+    def create(self, validated_data):
+
+        test_id = validated_data.pop("test_id")
+        generation = validated_data.pop("generation")
+
+        # 시험 ID로 Test 모델 객체를 조회하고 없으면 유효하지 않은 시험 ID라고 에러메시지 발생
+        try:
+            test = Test.objects.get(id=test_id)
+        except Test.DoesNotExist:
+            raise ValidationError({"test_id": "유효하지 않은 시험 ID 입니다."})
+
+        # 기수 ID Generation 모델 객체를 조회하고, 없으면 유효하지 않은 기수 ID 입니다 에러메시지 발생
+        try:
+            # 변수명 충돌을 피하기 위해 'generation.obj로 변경
+            generation_obj = Generation.objects.get(id=generation)
+        except Generation.DoesNotExist:
+            raise ValidationError({"generation": "유효하지 않은 기수 ID 입니다."})
+
+        question_snapshot = []
+        # 'questions'관계가 있고 데이터가 있는 경우에만 처리
+        if hasattr(test, "questions") and test.questions.exists():
+            question_snapshot = [
+                {
+                    "id": q.id,
+                    "question": q.question,
+                    "prompt": q.prompt,
+                    "type": q.type,
+                    "options": getattr(q, "options_json", None),
+                    "answers": q.answers,
+                    "points": q.points,
+                    "explanation": q.explanation,
+                }
+                for q in test.questions.all()
+            ]
+        # 생성된 문제 스냅샷을 validated_date 에 추가
+        # validated_data["questions"] = question_snapshot
+        # 고유한 참가 코드(access_code)를 생성하여 validated_data에 추가
+        access_code = self._generate_unique_code()
+        validated_data["access_code"] = access_code
+
+        # 배포의 초기 상태를 'Activated'로 설정하여 validated_data에 추가
+        validated_data["status"] = "Activated"
+
+        # 모든 준비된 데이터를 사용하여 TestDeployment 모델 인스턴스를 생성하고 반환
+        return TestDeployment.objects.create(
+            test=test,  # Test 객체 연결
+            generation=generation_obj,  # Generation 객체 연결
+            **validated_data,  # 나머지 필드 (duration_time, open_at, close_at, questions, access_code, status)
+        )
+
+    # 고유한 참가코드 생성 메서드
+    def _generate_unique_code(self, length=6):
+        # 주어진 길이의 고유한 영숫자 코드를 생성, 데이터베이스에서 중복을 확인
+        chars = string.ascii_letters + string.digits
+        while True:
+            code = "".join(random.choices(chars, k=length))
+            if not TestDeployment.objects.filter(access_code=code).exists():
+                return code
 
 
 # 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
@@ -219,12 +289,6 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
     def get_question_count(self, obj: Any) -> int:
         snapshot = obj.get("questions_snapshot_json", {})
         return len(snapshot)
-
-
-# # 🔹 참가코드 구현 (유효성 검사라서 모델을 계승하지 않음) (잘목 만듬)
-# class AdminCodeValidationSerializer(serializers.Serializer[Any]):
-#     deployment_id = serializers.IntegerField(help_text="배포 ID")
-#     access_code = serializers.CharField(max_length=64, help_text="참가 코드")
 
 
 # 참가 코드 검증 (user)
