@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -7,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from apps.users.models import User
 from apps.users.models.withdrawals import Withdrawal
 from apps.users.serializers.withdrawal_serializers import (
@@ -126,4 +128,3 @@ class UserRestoreView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
