@@ -1,6 +1,7 @@
 import datetime
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast  # 'cast' 임포트 확인
 
+from django.http import QueryDict  # QueryDict 임포트 유지
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -21,6 +22,7 @@ from rest_framework.views import APIView
 from apps.courses.models import Course, Subject
 from apps.courses.serializers.subject_serializers import (
     SubjectDetailSerializer,
+    SubjectDropdownSerializer,
     SubjectListSerializer,
     SubjectSerializer,
     SubjectUpdateSerializer,
@@ -40,7 +42,7 @@ class SubjectListCreateAPIView(APIView):
 
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
-    parser_classes = [MultiPartParser, FormParser]  # <--- 이 줄을 추가합니다. 파일 업로드를 위해 필요합니다.
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         summary="(Admin) 등록된 수강 과목 목록 조회",
@@ -171,11 +173,12 @@ class SubjectListCreateAPIView(APIView):
         """
         queryset = Subject.objects.all().select_related("course")
 
-        course_id_param: Optional[str] = request.query_params.get("course_id")
-        status_param: Optional[str] = request.query_params.get("status")
-        search_query: Optional[str] = request.query_params.get("search")
+        query_params: QueryDict = request.query_params
+        course_id_param: Optional[str] = query_params.get(cast(str, "course_id"))
+        status_param: Optional[str] = query_params.get(cast(str, "status"))
+        search_query: Optional[str] = query_params.get(cast(str, "search"))
 
-        if course_id_param is not None:
+        if course_id_param:
             try:
                 course_id_int: int = int(course_id_param)
                 queryset = queryset.filter(course__id=course_id_int)
@@ -186,14 +189,13 @@ class SubjectListCreateAPIView(APIView):
             expected_status: bool = status_param.lower() in ["true", "1"]
             queryset = queryset.filter(status=expected_status)
 
-        if search_query is not None:
+        if search_query:
             queryset = queryset.filter(title__icontains=search_query)
 
-        # --- 페이지네이션 로직 ---
-        paginator: PageNumberPagination = self.pagination_class()
+        paginator = self.pagination_class()
 
-        limit_param: Optional[str] = request.query_params.get(cast(str, paginator.page_size_query_param))
-        if limit_param is not None:
+        limit_param = query_params.get(cast(str, paginator.page_size_query_param))
+        if limit_param:
             try:
                 limit_value = int(limit_param)
                 if limit_value <= 0:
@@ -327,6 +329,7 @@ class SubjectListCreateAPIView(APIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
+# --- 과목 상세 조회, 수정, 삭제 API View ---
 @extend_schema(
     tags=["Admin - 과목 관리"],
     summary="(Admin) 등록된 수강 과목 상세 조회, 수정, 삭제 API.",
@@ -338,8 +341,9 @@ class SubjectDetailAPIView(APIView):
     """
 
     permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]  # <--- 이 줄을 추가합니다. 파일 업로드를 위해 필요합니다.
+    parser_classes = [MultiPartParser, FormParser]
 
+    # 객체를 가져오는 헬퍼 메서드
     def get_object(self, subject_id: int) -> Subject:
         try:
             return Subject.objects.select_related("course").get(id=subject_id)
@@ -596,3 +600,133 @@ class SubjectDetailAPIView(APIView):
         instance = self.get_object(subject_id)
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --- SubjectDropdownListAPIView (프론트 요청) ---
+@extend_schema(
+    tags=["Admin - 과목 관리"],
+    summary="(Admin) 특정 과정의 과목 목록 조회 API (상태 필터링)",
+    description="관리자 또는 스태프 권한의 유저는 어드민 페이지 내에서 특정 과정에 속한 과목 목록을 드롭다운 선택을 위해 조회할 수 있습니다. 이때 과목의 상태(활성화 여부)로 필터링할 수 있습니다.",
+)
+class SubjectDropdownListAPIView(APIView):
+    """
+    (Admin) 특정 과정의 과목 목록 조회 API (상태 필터링).
+    드롭다운 목록에 필요한 'id'와 'title' 필드만 반환합니다.
+    """
+
+    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+
+    @extend_schema(
+        summary="(Admin) 특정 과정의 과목 목록 조회 (드롭다운)",
+        operation_id="subject_dropdown_list",
+        parameters=[
+            OpenApiParameter(
+                name="course_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description="과목 목록을 조회할 과정의 고유 ID",
+                required=True,
+                examples=[OpenApiExample("Course ID 예시", value=1)],
+            ),
+            OpenApiParameter(
+                name="status",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description="과목 활성화 여부로 필터링 (true/false). 이 파라미터가 제공되지 않으면 모든 상태의 과목을 반환합니다.",
+                required=False,
+                examples=[
+                    OpenApiExample("활성화 상태 필터링 예시 (true)", value="true"),
+                    OpenApiExample("비활성화 상태 필터링 예시 (false)", value="false"),
+                ],
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=SubjectDropdownSerializer(many=True),
+                description="과목 목록 조회 성공",
+                examples=[
+                    OpenApiExample(
+                        "과목 목록 조회 성공 응답 예시",
+                        value=[
+                            {"id": 101, "title": "데이터베이스 기초"},
+                            {"id": 102, "title": "SQL 심화"},
+                        ],
+                        response_only=True,
+                        status_codes=["200"],
+                    ),
+                ],
+            ),
+            400: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="잘못된 요청 (유효성 검사 실패)",
+                examples=[
+                    OpenApiExample(
+                        "잘못된 쿼리 파라미터 예시",
+                        value={"detail": "잘못된 쿼리 파라미터 값입니다. 'status'는 'true' 또는 'false'여야 합니다."},
+                        response_only=True,
+                        status_codes=["400"],
+                    )
+                ],
+            ),
+            401: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="인증 토큰 유효하지 않음",
+                examples=[
+                    OpenApiExample(
+                        "인증 실패 예시",
+                        value={"detail": "인증 토큰이 유효하지 않습니다."},
+                        response_only=True,
+                        status_codes=["401"],
+                    )
+                ],
+            ),
+            403: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="권한 없음",
+                examples=[
+                    OpenApiExample(
+                        "권한 없음 예시",
+                        value={"detail": "해당 작업에 대한 관리자 또는 스태프 권한이 없습니다."},
+                        response_only=True,
+                        status_codes=["403"],
+                    )
+                ],
+            ),
+            404: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="과정을 찾을 수 없음",
+                examples=[
+                    OpenApiExample(
+                        "과정 없음 예시",
+                        value={"detail": "해당 course_id를 가진 과정을 찾을 수 없습니다."},
+                        response_only=True,
+                        status_codes=["404"],
+                    )
+                ],
+            ),
+        },
+    )
+    def get(self, request: Request, course_id: int, *args: Any, **kwargs: Any) -> Response:
+        """
+        특정 과정에 속한 과목 목록을 조회합니다 (드롭다운 용도).
+        """
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            raise NotFound(detail=f"해당 course_id({course_id})를 가진 과정을 찾을 수 없습니다.")
+
+        queryset = Subject.objects.filter(course=course)
+
+        status_param: Optional[str] = request.query_params.get(cast(str, "status"))
+
+        if status_param is not None:
+            if status_param.lower() in ["true", "false"]:
+                expected_status: bool = status_param.lower() == "true"
+                queryset = queryset.filter(status=expected_status)
+            else:
+                raise ValidationError(
+                    {"detail": "잘못된 쿼리 파라미터 값입니다. 'status'는 'true' 또는 'false'여야 합니다."}
+                )
+
+        serializer = SubjectDropdownSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
