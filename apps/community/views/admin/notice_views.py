@@ -5,7 +5,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import PostAttachment, PostImage
+from apps.community.models import Post, PostAttachment, PostImage
 from apps.community.serializers.notice_serializers import (
     NoticeCreateSerializer,
     NoticeResponseSerializer,
@@ -33,17 +33,18 @@ class NoticeCreateAPIView(APIView):
 
             # 첨부파일 S3 업로드
             for file in request.FILES.getlist("attachments"):
-                s3_key = f"attachments/{file.name}"
+                s3_key = f"oz_externship_be/community/attachments/{file.name}"
                 url = uploader.upload_file(file, s3_key)
                 if url:
                     PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
 
             # 이미지 S3 업로드
             for image in request.FILES.getlist("images"):
-                s3_key = f"images/{image.name}"
+                s3_key = f"oz_externship_be/community/images/{image.name}"
                 url = uploader.upload_file(image, s3_key)
                 if url:
                     PostImage.objects.create(post=post, image_url=url, image_name=image.name)
 
+            post = Post.objects.prefetch_related("attachments", "images").get(id=post.id)
             return Response(NoticeResponseSerializer(post).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

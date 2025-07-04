@@ -151,17 +151,18 @@ class AdminPostUpdateView(APIView):
 
             # 파일 업로드 처리
             for file in request.FILES.getlist("attachments"):
-                s3_key = f"attachments/{file.name}"
+                s3_key = f"oz_externship_be/community/attachments/{file.name}"
                 url = uploader.upload_file(file, s3_key)
                 if url:
                     PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
 
             for image in request.FILES.getlist("images"):
-                s3_key = f"images/{image.name}"
+                s3_key = f"oz_externship_be/community/images/{image.name}"
                 url = uploader.upload_file(image, s3_key)
                 if url:
                     PostImage.objects.create(post=post, image_url=url, image_name=image.name)
 
+            post = Post.objects.prefetch_related("attachments", "images").get(id=post.id)
             return Response(PostDetailSerializer(post).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

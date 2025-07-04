@@ -40,18 +40,13 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
         )
 
     def create(self, validated_data):
-        attachments_data = validated_data.pop("attachments", [])
-        images_data = validated_data.pop("images", [])
+        validated_data.pop("attachments", [])
+        validated_data.pop("images", [])
 
         validated_data["category"], _ = PostCategory.objects.get_or_create(name="공지사항")
         validated_data["author"] = self.context["request"].user
 
-        post = Post.objects.create(**validated_data)
-
-        PostAttachment.objects.bulk_create([PostAttachment(post=post, **attachment) for attachment in attachments_data])
-        PostImage.objects.bulk_create([PostImage(post=post, **image) for image in images_data])
-
-        return post
+        return Post.objects.create(**validated_data)
 
 
 # 공지 사항 응답

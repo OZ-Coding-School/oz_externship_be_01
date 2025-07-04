@@ -68,16 +68,16 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     category = serializers.PrimaryKeyRelatedField(queryset=PostCategory.objects.all(), required=False)
     is_visible = serializers.BooleanField(required=False)
     attachments = serializers.ListField(
-        child=serializers.FileField(),
-        required=False,
-        write_only=True,
+        child=serializers.FileField(), required=False, write_only=True, allow_empty=True
     )
-    images = serializers.ListField(
-        child=serializers.ImageField(),
-        required=False,
-        write_only=True,
-    )
+    images = serializers.ListField(child=serializers.ImageField(), required=False, write_only=True, allow_empty=True)
 
     class Meta:
         model = Post
         fields = ("title", "content", "category", "is_visible", "attachments", "images")
+
+    def update(self, instance, validated_data):
+        validated_data.pop("attachments", None)
+        validated_data.pop("images", None)
+
+        return super().update(instance, validated_data)
