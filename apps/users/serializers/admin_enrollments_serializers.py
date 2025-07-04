@@ -7,9 +7,7 @@ from apps.users.models import StudentEnrollmentRequest
 
 # 요청용 시리얼라이저
 class EnrollmentRequestIdsSerializer(serializers.Serializer[Any]):
-    ids = serializers.ListField(  # ✅ ListField는 제네릭 X
-        child=serializers.IntegerField(), help_text="승인할 수강생 등록 신청의 ID 리스트"
-    )
+    ids = serializers.ListField(child=serializers.IntegerField(), help_text="승인할 수강생 등록 신청의 ID 리스트")
 
 
 # 승인 응답 시리얼라이저
