@@ -1,11 +1,15 @@
-from drf_spectacular.utils import extend_schema, OpenApi, get_object_or_404
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAdminOrStaff
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.community.models import Comment
+from apps.tests.permissions import IsAdminOrStaff
 
+
+# 댓글 삭제 API뷰
 class AdminCommentDeleteAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
