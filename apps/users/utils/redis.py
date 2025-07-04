@@ -24,3 +24,9 @@ def mark_email_as_verified(email: str) -> None:
 def is_email_verified(email: str) -> bool:
     redis = get_redis_connection("default")
     return redis.get(f"email:verified:{email}") == b"true"
+
+
+# 인증 코드 삭제
+def delete_email_code(email: str) -> None:
+    redis = get_redis_connection("default")
+    redis.delete(f"email:{email}")
