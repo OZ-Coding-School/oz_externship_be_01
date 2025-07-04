@@ -69,7 +69,7 @@ class AdminTestDeleteAPIView(APIView):
 
 # (admin)쪽지시험 수정
 @extend_schema(
-    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
+    tags=["[Admin/Mock] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 수정 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],
@@ -137,15 +137,15 @@ class AdminTestDetailAPIView(APIView):
         except Test.DoesNotExist:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 문제 최대 20개로 제한해 시리얼라이저에 전달 / context로 questions 전달
-        questions = list(test.questions.all()[:20])
-        serializer = self.serializer_class(test, context={"questions": questions})
+        # context 전달 하지 않고 바로 접근
+        serializer = self.serializer_class(test)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # (admin)쪽지시험 목록조회
 @extend_schema(
-    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
+    tags=["[Admin/Mock] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 목록조회 API",
     description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
     auth=[],

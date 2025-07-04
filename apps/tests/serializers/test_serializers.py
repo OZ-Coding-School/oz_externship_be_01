@@ -1,4 +1,5 @@
 from typing import Any, Dict
+import json
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -79,7 +80,6 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
     def get_options(self, obj):
         if obj.options_json:
             try:
-                import json
 
                 return json.loads(obj.options_json)
             except Exception:
@@ -90,7 +90,7 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
 # 쪽지시험 상세조회용 시리얼라이저
 class TestDetailSerializer(serializers.ModelSerializer):
     subject = TestSubjectSerializer()
-    questions = serializers.SerializerMethodField()  # context 기반 직렬화로 수정
+    questions = TestQuestionDetailSerializer(many=True)  # nested serializer로 수정
     question_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -106,15 +106,11 @@ class TestDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_question_count(self, obj):
-        questions = self.context.get("questions")
-        if questions is not None:
-            return len(questions)
+        # context 사용하지 않고 obj의 전체 문제 수 반환
         return obj.questions.count()
 
     def get_questions(self, obj):
-        questions = self.context.get("questions")
-        if questions is not None:
-            return TestQuestionDetailSerializer(questions, many=True).data
+        # context 사용하지 않고 obj의 전체 문제 리스트 직렬화
         return TestQuestionDetailSerializer(obj.questions.all(), many=True).data
 
 
