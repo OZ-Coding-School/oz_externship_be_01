@@ -1,4 +1,5 @@
 # access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성ㄷ
+import json
 import random
 
 # access_code를 만들 때 사용할 수 있는 기본 문자 집합을 제공
@@ -159,26 +160,25 @@ class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
 # 🔹 TestDeployment 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
-    generation = serializers.IntegerField(write_only=True, help_text="기수 ID")
+    generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
 
     class Meta:
         model = TestDeployment
         fields = [
             "test_id",
-            "generation",
+            "generation_id",
             "duration_time",
             "open_at",
             "close_at",
-            # "questions",
+            "questions_snapshot_json",
             "access_code",
             "status",
         ]
-        read_only_fields = ["access_code", "status"]
+        read_only_fields = ["access_code", "status", "questions_snapshot_json"]
 
     def create(self, validated_data):
-
         test_id = validated_data.pop("test_id")
-        generation = validated_data.pop("generation")
+        generation_id = validated_data.pop("generation_id")
 
         # 시험 ID로 Test 모델 객체를 조회하고 없으면 유효하지 않은 시험 ID라고 에러메시지 발생
         try:
@@ -189,35 +189,32 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
         # 기수 ID Generation 모델 객체를 조회하고, 없으면 유효하지 않은 기수 ID 입니다 에러메시지 발생
         try:
             # 변수명 충돌을 피하기 위해 'generation.obj로 변경
-            generation_obj = Generation.objects.get(id=generation)
+            generation_obj = Generation.objects.get(id=generation_id)
         except Generation.DoesNotExist:
             raise ValidationError({"generation": "유효하지 않은 기수 ID 입니다."})
 
-        question_snapshot = []
         # 'questions'관계가 있고 데이터가 있는 경우에만 처리
         if hasattr(test, "questions") and test.questions.exists():
-            question_snapshot = [
-                {
-                    "id": q.id,
-                    "question": q.question,
-                    "prompt": q.prompt,
-                    "type": q.type,
-                    "options": getattr(q, "options_json", None),
-                    "answers": q.answers,
-                    "points": q.points,
-                    "explanation": q.explanation,
-                }
-                for q in test.questions.all()
-            ]
-        # 생성된 문제 스냅샷을 validated_date 에 추가
-        # validated_data["questions"] = question_snapshot
+            validated_data["questions_snapshot_json"] = json.dumps(
+                [
+                    {
+                        "id": q.id,
+                        "question": q.question,
+                        "prompt": q.prompt,
+                        "type": q.type,
+                        "options": getattr(q, "options_json", None),
+                        "answer": q.answer,
+                        "point": q.point,
+                        "explanation": q.explanation,
+                    }
+                    for q in test.questions.all()
+                ]
+            )
         # 고유한 참가 코드(access_code)를 생성하여 validated_data에 추가
-        access_code = self._generate_unique_code()
-        validated_data["access_code"] = access_code
+        validated_data["access_code"] = self._generate_unique_code()
 
         # 배포의 초기 상태를 'Activated'로 설정하여 validated_data에 추가
         validated_data["status"] = "Activated"
-
         # 모든 준비된 데이터를 사용하여 TestDeployment 모델 인스턴스를 생성하고 반환
         return TestDeployment.objects.create(
             test=test,  # Test 객체 연결
