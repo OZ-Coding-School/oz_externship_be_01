@@ -1,6 +1,3 @@
-from types import SimpleNamespace
-from typing import cast
-
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -23,16 +20,15 @@ class NoticeCreateAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
+        operation_id="admin_notice_create",
         request=NoticeCreateSerializer,
-        responses={201: NoticeResponseSerializer},
-        summary="공지사항 등록",
-        description="공지사항을 등록합니다. 저장되진 않으며 Swagger 문서 확인용입니다.",
-        tags=["Admin - 커뮤니티 공지사항"],
+        responses=NoticeResponseSerializer,
+        tags=["Admin Notice"],
     )
     def post(self, request: Request) -> Response:
         serializer = NoticeCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            post = serializer.save()
+            post = serializer.save(author=request.user)
             uploader = S3Uploader()
 
             # 첨부파일 S3 업로드

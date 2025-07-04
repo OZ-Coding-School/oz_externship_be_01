@@ -2,9 +2,7 @@ from rest_framework import serializers
 
 from apps.community.models import Post, PostAttachment, PostCategory, PostImage
 from apps.community.serializers.attachment_serializers import (
-    PostAttachmentRequestSerializer,
     PostAttachmentResponseSerializer,
-    PostImageRequestSerializer,
     PostImageResponseSerializer,
 )
 from apps.community.serializers.category_serializers import (
@@ -19,8 +17,16 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
     title = serializers.CharField(required=True)
     content = serializers.CharField(required=True)
     is_notice = serializers.BooleanField(required=True)
-    attachments = PostAttachmentRequestSerializer(many=True, required=False, write_only=True)
-    images = PostImageRequestSerializer(many=True, required=False, write_only=True)
+    attachments = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+        write_only=True,
+    )
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = Post
@@ -42,12 +48,8 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
 
         post = Post.objects.create(**validated_data)
 
-        PostAttachment.objects.bulk_create([
-            PostAttachment(post=post, **attachment) for attachment in attachments_data
-        ])
-        PostImage.objects.bulk_create([
-            PostImage(post=post, **image) for image in images_data
-        ])
+        PostAttachment.objects.bulk_create([PostAttachment(post=post, **attachment) for attachment in attachments_data])
+        PostImage.objects.bulk_create([PostImage(post=post, **image) for image in images_data])
 
         return post
 

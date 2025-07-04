@@ -3,6 +3,8 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
@@ -26,6 +28,17 @@ from core.utils.s3_file_upload import S3Uploader
 class AdminPostListView(APIView):
     permission_classes = [IsAdminOrStaff]
 
+    @extend_schema(
+        operation_id="admin_post_list",
+        request=None,
+        responses=PostListSerializer,
+        parameters=[
+            OpenApiParameter(name="page", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name="category", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name="is_visible", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY),
+        ],
+        tags=["Admin Post"],
+    )
     def get(self, request: Request) -> Response:
         queryset = Post.objects.select_related("category", "author").all()
 
@@ -96,8 +109,13 @@ class AdminPostListView(APIView):
 class AdminPostDetailView(APIView):
     permission_classes = [IsAdminOrStaff]
 
+    @extend_schema(
+        operation_id="admin_post_detail",
+        request=None,
+        responses=PostDetailSerializer,
+        tags=["Admin Post"],
+    )
     def get(self, request: Request, post_id: int) -> Response:
-        from django.shortcuts import get_object_or_404
 
         post = get_object_or_404(
             Post.objects.select_related("category", "author").prefetch_related(
@@ -117,6 +135,12 @@ class AdminPostUpdateView(APIView):
     permission_classes = [IsAdminOrStaff]
     parser_classes = [MultiPartParser, FormParser]
 
+    @extend_schema(
+        operation_id="admin_post_update",
+        request=PostUpdateSerializer,
+        responses=PostDetailSerializer,
+        tags=["Admin Post"],
+    )
     def patch(self, request: Request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
         serializer = PostUpdateSerializer(post, data=request.data, partial=True)
@@ -146,6 +170,12 @@ class AdminPostUpdateView(APIView):
 class AdminPostDeleteView(APIView):
     permission_classes = [IsAdminOrStaff]
 
+    @extend_schema(
+        operation_id="admin_post_delete",
+        request=None,
+        responses={"204": None},
+        tags=["Admin Post"],
+    )
     def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
         post.delete()
@@ -156,6 +186,16 @@ class AdminPostDeleteView(APIView):
 class AdminPostVisibilityToggleView(APIView):
     permission_classes = [IsAdminOrStaff]
 
+    @extend_schema(
+        operation_id="admin_post_visibility_toggle",
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description="게시글 노출 상태가 정상적으로 변경되었습니다.", response=PostDetailSerializer
+            )
+        },
+        tags=["Admin Post"],
+    )
     def patch(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
 

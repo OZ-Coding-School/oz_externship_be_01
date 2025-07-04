@@ -2,9 +2,7 @@ from rest_framework import serializers
 
 from apps.community.models import Post, PostCategory
 from apps.community.serializers.attachment_serializers import (
-    PostAttachmentRequestSerializer,
     PostAttachmentResponseSerializer,
-    PostImageRequestSerializer,
     PostImageResponseSerializer,
 )
 from apps.community.serializers.comment_serializers import CommentResponseSerializer
@@ -69,8 +67,16 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     content = serializers.CharField(required=False)
     category = serializers.PrimaryKeyRelatedField(queryset=PostCategory.objects.all(), required=False)
     is_visible = serializers.BooleanField(required=False)
-    attachments = PostAttachmentRequestSerializer(many=True, required=False)
-    images = PostImageRequestSerializer(many=True, required=False)
+    attachments = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+        write_only=True,
+    )
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = Post
