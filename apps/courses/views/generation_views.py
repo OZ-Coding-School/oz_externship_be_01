@@ -33,8 +33,9 @@ class GenerationCreateView(APIView):
     @extend_schema(
         summary="신규 기수 등록",
         description="관리자 또는 스태프 권한이 있으면 새로운 기수를 등록할 수 있습니다.",
+        request=GenerationCreateSerializer,
         responses={
-            status.HTTP_201_CREATED: GenerationListSerializer,
+            status.HTTP_201_CREATED: GenerationCreateSerializer,
             status.HTTP_400_BAD_REQUEST: {
                 "description": "유효성 검증 실패 (Request Body 오류, 날짜 오류, 인원 오류 등)"
             },
@@ -143,7 +144,7 @@ class GenerationDeleteView(APIView):
 
 
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["[Admin] 과정-기수 대시보드"],
 )
 class CourseTrendView(APIView):
     permission_classes = [AllowAny]
@@ -209,7 +210,7 @@ class CourseTrendView(APIView):
 
 
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["[Admin] 과정-기수 대시보드"],
 )
 class MonthlyCourseView(APIView):
     permission_classes = [AllowAny]
@@ -269,15 +270,16 @@ class MonthlyCourseView(APIView):
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(
-    tags=["Admin - 기수관리"],
-)
+@extend_schema(tags=["[Admin] 과정-기수 대시보드"])
 class OngoingCourseView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         # 활성화된 Generation을 select_related로 Course와 함께 가져옴 ( N + 1 문제 해결 )
-        active_generations = Generation.objects.select_related("course").filter(~Q(status="closed"))
+        active_generations = Generation.objects.select_related("course").filter(
+            ~Q(status=Generation.GenStatus.Finished)
+            & ~Q(status=Generation.GenStatus.Ready)
+        )
 
         if not active_generations.exists():
             return Response(

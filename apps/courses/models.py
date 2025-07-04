@@ -26,12 +26,17 @@ class Course(models.Model):
 
 
 class Generation(models.Model):
+    class GenStatus(models.TextChoices):
+        Ready = "Ready", "시작 전"
+        Ongoing = "Ongoing", "진행 중"
+        Finished = "Finished", "종료"
+
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="generations")
     number = models.PositiveSmallIntegerField()
     max_student = models.PositiveSmallIntegerField()
     start_date = models.DateField()
     end_date = models.DateField()
-    status = models.CharField(max_length=10)  # e.g., 'open', 'closed'
+    status = models.CharField(max_length=10, choices=GenStatus.choices, default=GenStatus.Ready)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

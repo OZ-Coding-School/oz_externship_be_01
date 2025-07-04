@@ -15,6 +15,10 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
         write_only=True,  # 입력 전용 필드
         help_text="등록할 과정의 고유 ID",
     )
+    status = serializers.ChoiceField(
+        choices=Generation.GenStatus.choices,
+        help_text="기수 상태 (READY, ONGOING, FINISHED 중 선택)",
+    )
 
     class Meta:
         model = Generation
@@ -31,10 +35,6 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
         ]
 
         read_only_fields = ("id", "created_at", "updated_at")
-
-        extra_kwargs = {
-            "status": {"read_only": True},
-        }
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         start = attrs.get("start_date")
@@ -62,26 +62,9 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
 
         course_instance = validated_data.pop("course")  # source='course'로 들어온 ID 값
 
-        # 기수 상태 자동 계산
-        start_date = validated_data.get("start_date")
-        end_date = validated_data.get("end_date")
-        calculated_status = self._calculate_cohort_status(start_date, end_date)
-
-        # validated_data에서 'status' 필드를 명시적으로 제거 (혹시 모를 중복 전달 방지)
-        validated_data.pop("status", None)
-
         # Generation 객체 생성 (course와 status 필드 추가)
-        generation = Generation.objects.create(course=course_instance, status=calculated_status, **validated_data)
+        generation = Generation.objects.create(course=course_instance, **validated_data)
         return generation
-
-    def _calculate_cohort_status(self, start_date, end_date) -> str:
-        today = date.today()
-        if today > start_date:
-            return "Ready"
-        elif start_date <= today <= end_date:
-            return "Ongoing"
-        else:
-            return "Finished"
 
 
 # 기수 목록
