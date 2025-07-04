@@ -36,22 +36,22 @@ class RejectEnrollmentRequestView(APIView):
         skipped_ids = []
         downgraded_user_ids = []
         deleted_permission_ids = []
+        status_enum = StudentEnrollmentRequest.EnrollmentStatus
 
         with transaction.atomic():
             enrollments = StudentEnrollmentRequest.objects.select_related("user", "generation").filter(id__in=ids)
 
             for enrollment in enrollments:
-                status_enum = StudentEnrollmentRequest.EnrollmentStatus
 
                 if enrollment.status == status_enum.REJECTED:
                     skipped_ids.append(enrollment.id)
                     continue
 
                 if enrollment.status == status_enum.APPROVED:
-                    deleted = PermissionsStudent.objects.filter(user=enrollment.user, generation=enrollment.generation)
-                    deleted_count = deleted.count()
+                    permissions = PermissionsStudent.objects.filter(user=enrollment.user, generation=enrollment.generation)
+                    deleted_count = permissions.count()
                     deleted_permission_ids.extend([enrollment.user.id] * deleted_count)
-                    deleted.delete()
+                    permissions.delete()
 
                     if enrollment.user.role != User.Role.GENERAL:
                         enrollment.user.role = User.Role.GENERAL
@@ -59,8 +59,7 @@ class RejectEnrollmentRequestView(APIView):
                         downgraded_user_ids.append(enrollment.user.id)
 
                 enrollment.status = status_enum.REJECTED
-                enrollment.updated_at = now()
-                enrollment.save(update_fields=["status", "updated_at"])
+                enrollment.save(update_fields=["status"])
                 rejected_ids.append(enrollment.id)
 
         response_data = {
@@ -69,7 +68,6 @@ class RejectEnrollmentRequestView(APIView):
             "downgraded_user_ids": downgraded_user_ids,
             "deleted_permission_ids": deleted_permission_ids,
             "message": f"{len(rejected_ids)}건 반려 완료. {len(skipped_ids)}건 제외됨.",
-            "mock_processed_at": now(),
         }
 
         return Response(RejectionResponseSerializer(response_data).data, status=status.HTTP_200_OK)
