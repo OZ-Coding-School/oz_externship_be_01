@@ -26,6 +26,37 @@ class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory])
         fields = ["id", "name", "parent", "type", "created_at", "updated_at"]
 
 
+class ParentQnACategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name"]
+
+
+class MinorQnACategorySerializer(serializers.ModelSerializer):
+    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "parent_ctg", "category_type", "created_at", "updated_at"]
+
+
+class MiddleQnACategorySerializer(MinorQnACategorySerializer):
+    child_categories = MinorQnACategorySerializer(source="subcategories", many=True, read_only=True)
+    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "parent_ctg", "category_type", "created_at", "updated_at", "child_categories"]
+
+
+class MajorQnACategorySerializer(MinorQnACategorySerializer):
+    child_categories = MiddleQnACategorySerializer(source="subcategories", many=True, read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "category_type", "created_at", "updated_at", "child_categories"]
+
+
 # 질문 목록 조회
 class AdminQuestionListSerializer(serializers.ModelSerializer[Question]):
     images = AdminQuestionImageSerializer(many=True, read_only=True)
@@ -78,7 +109,7 @@ class AdminCategoryCreateSerializer(serializers.ModelSerializer):
     def validate_parent(self, value):
         # 부모 카테고리 검증 및 3단계 제한
         if value:
-            if value.type == "minor":
+            if value.category_type == "minor":
                 raise serializers.ValidationError("카테고리는 최대 3단계까지만 생성할 수 있습니다.")
         return value
 
