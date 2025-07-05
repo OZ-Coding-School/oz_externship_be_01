@@ -1,9 +1,8 @@
-from typing import Any, Dict, List
+from typing import Any, List
 
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -53,15 +52,18 @@ class AdminApproveEnrollmentsView(APIView):
             ],
         )
 
-        updated_ids: List[int] = []
-
         if not target_enrollments.exists():
             return Response(
                 {"detail": "승인 가능한 수강신청이 존재하지 않습니다."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        updated_ids: List[int] = []
+
         for enrollment in target_enrollments:
+            if enrollment.status == StudentEnrollmentRequest.EnrollmentStatus.APPROVED:
+                continue  # 이미 승인된 신청은 무시
+
             enrollment.status = StudentEnrollmentRequest.EnrollmentStatus.APPROVED
             enrollment.accepted_at = now
             enrollment.updated_at = now
