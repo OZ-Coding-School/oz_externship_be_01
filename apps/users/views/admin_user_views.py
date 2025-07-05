@@ -136,10 +136,10 @@ class AdminUserDetailView(APIView):
             )
 
         except User.DoesNotExist:
-            return Response({"detail": "존재하지 않는 유저입니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "존재하지 않는 유저입니다."}, status=404)
 
         serializer = self.serializer_class(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=200)
 
 
 # 어드민 회원 정보 수정
