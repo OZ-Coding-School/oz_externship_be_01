@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff
-from apps.users.models import StudentEnrollmentRequest, User
+from apps.users.models import PermissionsStudent, StudentEnrollmentRequest, User
 from apps.users.serializers.admin_enrollments_serializers import (
     ApprovalResponseSerializer,
     EnrollmentRequestIdsSerializer,
@@ -74,6 +74,9 @@ class AdminApproveEnrollmentsView(APIView):
             if user.role == User.Role.GENERAL:
                 user.role = User.Role.STUDENT
                 user.save(update_fields=["role"])
+
+            if not PermissionsStudent.objects.filter(user=user, generation=enrollment.generation).exists():
+                PermissionsStudent.objects.create(user=user, generation=enrollment.generation)
 
         message = f"{len(updated_ids)}건의 수강신청을 승인했습니다."
         response_data = {
