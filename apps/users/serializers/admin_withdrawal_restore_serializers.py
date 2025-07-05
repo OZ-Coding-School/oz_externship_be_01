@@ -20,7 +20,5 @@ class AdminWithdrawalRestoreSerializer(serializers.Serializer):
             Withdrawal.objects.filter(user_id=user_id).update(user=None)
             user.is_active = True
             user.save()
-            return {"message": "사용자 계정이 성공적으로 복구되었습니다."}
-
         except Exception as e:
             raise serializers.ValidationError(f"복구 실패: {str(e)}")
