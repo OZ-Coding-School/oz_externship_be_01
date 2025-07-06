@@ -19,11 +19,16 @@ class AdminAnswerSerializer(serializers.ModelSerializer[Answer]):
 
 # 카테고리 목록 조회
 class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory]):
-    type = serializers.CharField(read_only=True)
+    category_id = serializers.IntegerField(source="id", read_only=True)
+    parent_category_id = serializers.IntegerField(source="parent.id", read_only=True)
+    category_name = serializers.CharField(source="name", read_only=True)
+    category_type = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = QuestionCategory
-        fields = ["id", "name", "parent", "type", "created_at", "updated_at"]
+        fields = ["category_id", "parent_category_id", "category_name", "category_type", "created_at", "updated_at"]
 
 
 class ParentQnACategorySerializer(serializers.ModelSerializer):

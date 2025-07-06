@@ -114,15 +114,11 @@ class AdminCategoryListView(APIView):
         parent_id = request.query_params.get("parent_id", "").strip()
 
         # 기본 쿼리셋
-        base_queryset = QuestionCategory.objects.all()
+        base_queryset = QuestionCategory.objects.all().order_by("created_at")
 
-        # 검색 조건 적용
+        # 검색 조건 적용 (검색어가 있는 경우 일치하는 질의응답 카테고리를 분류에 상관없이 모두 검색 결과에 포함)
         if search:
-            base_queryset = base_queryset.filter(
-                Q(name__icontains=search)
-                | Q(subcategories__name__icontains=search)
-                | Q(subcategories__subcategories__name__icontains=search)
-            ).distinct()
+            base_queryset = base_queryset.filter(name__icontains=search)
 
         # 카테고리 타입 필터
         if category_type:
@@ -137,22 +133,19 @@ class AdminCategoryListView(APIView):
         if parent_id:
             try:
                 parent_id = int(parent_id)
+                # 부모 카테고리가 존재하는지 확인
+                if not QuestionCategory.objects.filter(id=parent_id).exists():
+                    return Response({"error": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
                 base_queryset = base_queryset.filter(parent_id=parent_id)
             except ValueError:
                 return Response({"error": "parent_id must be a valid integer"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 계층 구조로 반환
-        if not category_type or category_type == "major":
-            # 대분류만 필터하고 하위 카테고리까지 포함
-            hierarchical_queryset = (
-                base_queryset.filter(parent__isnull=True)
-                .prefetch_related("subcategories", "subcategories__subcategories")
-                .distinct()
-            )
-            serializer = MajorQnACategorySerializer(hierarchical_queryset, many=True)
-        else:
-            # 중분류나 소분류의 경우 평면 구조로 반환
-            serializer = AdminCategoryListSerializer(base_queryset, many=True)
+        # 조회된 목록에서 확인 가능한 항목들 반환
+        serializer = AdminCategoryListSerializer(base_queryset, many=True)
+
+        # 검색 결과가 없는 경우 에러 반환
+        if not serializer.data:
+            return Response({"error": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
