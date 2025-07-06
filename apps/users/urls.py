@@ -9,6 +9,9 @@ from apps.users.views.admin_dashboard_views import (
     AdminWithdrawTrendView,
 )
 from apps.users.views.admin_enrollments_approve_views import AdminApproveEnrollmentsView
+from apps.users.views.admin_enrollments_list_views import (
+    AdminEnrollmentListView,
+)
 from apps.users.views.admin_enrollments_rejection_views import (
     RejectEnrollmentRequestView,
 )
@@ -64,6 +67,7 @@ urlpatterns = [
     path("admin/users/<int:user_id>/update/", AdminUserUpdateView.as_view(), name="admin-user-update"),
     path("admin/users/<int:user_id>/delete/", AdminUserDeleteView.as_view(), name="admin-user-delete"),
     path("admin/users/<int:user_id>/role/", AdminUserRoleUpdateView.as_view(), name="admin-user-role-update"),
+    path("admin/users/student-enrollments/", AdminEnrollmentListView.as_view(), name="admin-student-enrollments-list"),
     # 수강생 전환 추세
     path("admin/users/dashboard/enrollment/", AdminEnrollmentTrendView.as_view(), name="admin-enrollment-trend"),
     # 회원가입 추세
