@@ -17,7 +17,6 @@ from apps.qna.serializers.admin_serializers import (
     AdminCategoryListSerializer,
     AdminQuestionImageSerializer,
     AdminQuestionListSerializer,
-    MajorQnACategorySerializer,
 )
 
 dummy.load_dummy_data()
@@ -101,47 +100,33 @@ class AdminCategoryListView(APIView):
                 type=OpenApiTypes.STR,
                 enum=["major", "middle", "minor"],
             ),
-            OpenApiParameter(
-                name="parent_id", description="부모 카테고리 ID로 필터링", required=False, type=OpenApiTypes.INT
-            ),
         ],
-        responses={200: MajorQnACategorySerializer(many=True)},
+        responses={200: AdminCategoryListSerializer(many=True)},
     )
     def get(self, request, *args, **kwargs):
         # 쿼리 파라미터 추출
         search = request.query_params.get("search", "").strip()
         category_type = request.query_params.get("category_type", "").strip()
-        parent_id = request.query_params.get("parent_id", "").strip()
 
         # 기본 쿼리셋
-        base_queryset = QuestionCategory.objects.all().order_by("created_at")
+        queryset = QuestionCategory.objects.all().prefetch_related("subcategories", "subcategories__subcategories")
 
-        # 검색 조건 적용 (검색어가 있는 경우 일치하는 질의응답 카테고리를 분류에 상관없이 모두 검색 결과에 포함)
         if search:
-            base_queryset = base_queryset.filter(name__icontains=search)
+            queryset = queryset.filter(name__icontains=search)
 
         # 카테고리 타입 필터
         if category_type:
             if category_type == "major":
-                base_queryset = base_queryset.filter(parent__isnull=True)
+                queryset = queryset.filter(Q(parent__isnull=True) & Q(subcategories__isnull=False)).distinct()
             elif category_type == "middle":
-                base_queryset = base_queryset.filter(parent__isnull=False, parent__parent__isnull=True)
+                queryset = queryset.filter(Q(parent__isnull=False) & Q(subcategories__isnull=False)).distinct()
+
             elif category_type == "minor":
-                base_queryset = base_queryset.filter(parent__parent__isnull=False)
+                queryset = queryset.filter(Q(parent__isnull=False) & Q(subcategories__isnull=True)).distinct()
+            else:
+                return Response({"detail": "category_type query parameter invalid."})
 
-        # 부모 카테고리 ID 필터
-        if parent_id:
-            try:
-                parent_id = int(parent_id)
-                # 부모 카테고리가 존재하는지 확인
-                if not QuestionCategory.objects.filter(id=parent_id).exists():
-                    return Response({"error": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-                base_queryset = base_queryset.filter(parent_id=parent_id)
-            except ValueError:
-                return Response({"error": "parent_id must be a valid integer"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 조회된 목록에서 확인 가능한 항목들 반환
-        serializer = AdminCategoryListSerializer(base_queryset, many=True)
+        serializer = AdminCategoryListSerializer(queryset, many=True)
 
         # 검색 결과가 없는 경우 에러 반환
         if not serializer.data:

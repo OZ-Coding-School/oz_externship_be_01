@@ -31,37 +31,6 @@ class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory])
         fields = ["category_id", "parent_category_id", "category_name", "category_type", "created_at", "updated_at"]
 
 
-class ParentQnACategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuestionCategory
-        fields = ["id", "name"]
-
-
-class MinorQnACategorySerializer(serializers.ModelSerializer):
-    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
-
-    class Meta:
-        model = QuestionCategory
-        fields = ["id", "name", "parent_ctg", "category_type", "created_at", "updated_at"]
-
-
-class MiddleQnACategorySerializer(MinorQnACategorySerializer):
-    child_categories = MinorQnACategorySerializer(source="subcategories", many=True, read_only=True)
-    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
-
-    class Meta:
-        model = QuestionCategory
-        fields = ["id", "name", "parent_ctg", "category_type", "created_at", "updated_at", "child_categories"]
-
-
-class MajorQnACategorySerializer(MinorQnACategorySerializer):
-    child_categories = MiddleQnACategorySerializer(source="subcategories", many=True, read_only=True)
-
-    class Meta:
-        model = QuestionCategory
-        fields = ["id", "name", "category_type", "created_at", "updated_at", "child_categories"]
-
-
 # 질문 목록 조회
 class AdminQuestionListSerializer(serializers.ModelSerializer[Question]):
     images = AdminQuestionImageSerializer(many=True, read_only=True)
