@@ -3,7 +3,8 @@ from typing import Any, Callable, Dict, List, OrderedDict, TypedDict, Union
 
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import TruncMonth, TruncYear
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -32,6 +33,14 @@ class AdminEnrollmentTrendView(APIView):
         responses={200: ConversionTrendResponseSerializer},
         summary="수강생 전환 추세 조회",
         description="월별 또는 년별 단위로 수강생 전환 수를 그래프 데이터 형태로 반환합니다.",
+        parameters=[
+            OpenApiParameter(
+                name="unit",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="단위: 'monthly' 또는 'yearly'",
+            )
+        ],
         tags=["Admin - 유저 대시보드"],
     )
     def get(self, request: Request) -> Response:
@@ -46,14 +55,12 @@ class AdminEnrollmentTrendView(APIView):
                 accepted_at__isnull=False,
                 user=OuterRef("user"),
             )
-            .order_by("accepted_at")
-            .values("accepted_at")[:1]
+            .order_by("accepted_at", "id")
+            .values("id")[:1]
         )
 
-        # 해당 유저의 첫 accepted_at과 같은 신청만 필터링
-        base_qs = StudentEnrollmentRequest.objects.filter(
-            status=StudentEnrollmentRequest.EnrollmentStatus.APPROVED, accepted_at=Subquery(first_approved_qs)
-        )
+        # 이 id와 같은 승인 이력만 필터링
+        base_qs = StudentEnrollmentRequest.objects.filter(id__in=Subquery(first_approved_qs))
 
         labels: List[str] = []
         data: List[int] = []
