@@ -126,14 +126,11 @@ class AdminUserDetailView(APIView):
     )
     def get(self, request: Request, user_id: int) -> Response:
         try:
-            user = (
-                User.objects.prefetch_related(
-                    "ta_permissions__generation__course",
-                    "staff_permissions__course",
-                    "student_permissions__generation__course",
-                )
-                .get(id=user_id)
-            )
+            user = User.objects.prefetch_related(
+                "ta_permissions__generation__course",
+                "staff_permissions__course",
+                "student_permissions__generation__course",
+            ).get(id=user_id)
 
         except User.DoesNotExist:
             return Response({"detail": "존재하지 않는 유저입니다."}, status=404)
