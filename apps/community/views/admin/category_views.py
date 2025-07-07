@@ -41,7 +41,7 @@ class AdminCommunityCategoryDetailAPIView(APIView):
     @extend_schema(
         tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
         operation_id="admin_category_delete",
-        summary="관리자 카테고리 삭제(기능구현완료)",
+        summary="관리자 카테고리 삭제 (기능구현완료)",
         description="존재하는 카테고리를 삭제합니다.",
     )
     def delete(self, request: Request, category_id: int) -> Response:
