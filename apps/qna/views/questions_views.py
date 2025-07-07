@@ -108,15 +108,6 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        # TODO: 이미지가 없을 경우 오류가 나서 빈 값을 제거하는 로직 추가, 추후 개선 필요
-        data = request.data.copy()
-        if "image_files" in data:
-            images = data.getlist("image_files") if hasattr(data, "getlist") else data["image_files"]
-            if isinstance(images, list):
-                if hasattr(data, "setlist"):
-                    data.setlist("image_files", [img for img in images if img])
-                else:
-                    data["image_files"] = [img for img in images if img]
         serializer = QuestionCreateSerializer(data=data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         question = serializer.save(author=request.user)
@@ -135,14 +126,7 @@ class QuestionUpdateView(APIView):
         tags=["questions"],
     )
     def patch(self, request: Request, question_id: int) -> Response:
-        user = request.user
         question = get_object_or_404(Question, pk=question_id)
-
-        # 본인 질문만 수정 가능 + 수강생 권한만 허용
-        if question.author != user or not (hasattr(user, "role") and user.role == User.Role.STUDENT):
-            return Response(
-                {"detail": "수강생 권한을 가진 작성자만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN
-            )
 
         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
