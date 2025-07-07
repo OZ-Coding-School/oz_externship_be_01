@@ -149,9 +149,6 @@ class QuestionUpdateView(APIView):
         serializer.save()
 
         response_data = QuestionDetailSerializer(question).data
-        response_data["images"] = QuestionImageSerializer(
-            QuestionImage.objects.filter(question=question), many=True
-        ).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
