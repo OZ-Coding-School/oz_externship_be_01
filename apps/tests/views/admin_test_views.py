@@ -18,7 +18,6 @@ from rest_framework.views import APIView
 from apps.courses.models import Subject
 
 # 내부 앱 - models
-from apps.tests.models import Test
 from apps.tests.models import Test, TestQuestion
 from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
