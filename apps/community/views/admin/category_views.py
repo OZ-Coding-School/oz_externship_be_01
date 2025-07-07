@@ -26,8 +26,8 @@ class AdminCommunityCategoryDetailAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="커뮤니티 게시판 카테고리 상세 조회",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="커뮤니티 게시판 카테고리 상세 조회 (기능구현완료)",
         description="카테고리 ID로 커뮤니티 게시판 카테고리 상세정보를 조회합니다.",
         responses={200: CategoryDetailResponseSerializer},
     )
@@ -39,9 +39,9 @@ class AdminCommunityCategoryDetailAPIView(APIView):
 
     # 카테고리 삭제 API뷰
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
         operation_id="admin_category_delete",
-        summary="관리자 카테고리 삭제",
+        summary="관리자 카테고리 삭제 (기능구현완료)",
         description="존재하는 카테고리를 삭제합니다.",
     )
     def delete(self, request: Request, category_id: int) -> Response:
@@ -55,8 +55,8 @@ class AdminCommunityCategoryCreateAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="커뮤니티 게시판 카테고리 생성",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="커뮤니티 게시판 카테고리 생성 (기능구현완료)",
         description="새로운 커뮤니티 카테고리를 생성합니다.",
         request=CategoryCreateRequestSerializer,
         responses={201: CategoryCreateResponseSerializer},
@@ -75,8 +75,8 @@ class CategoryStatusOnAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="카테고리 상태 ON",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="카테고리 상태 ON (기능구현완료)",
         responses={200: CategoryStatusUpdateResponseSerializer},
     )
     def post(self, request: Request, category_id: int) -> Response:
@@ -99,8 +99,8 @@ class CategoryStatusOffAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="카테고리 상태 OFF",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="카테고리 상태 OFF (기능구현완료)",
         responses={200: CategoryStatusUpdateResponseSerializer},
     )
     def post(self, request: Request, category_id: int) -> Response:
@@ -123,8 +123,8 @@ class AdminCategoryListAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="카테고리 목록 조회",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="카테고리 목록 조회 (기능구현완료)",
         description="카테고리 목록을 조회합니다.",
         responses={200: CategoryListResponseSerializer},
     )
@@ -141,8 +141,8 @@ class AdminCategoryRenameAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
-        summary="카테고리명 수정",
+        tags=["[Admin] Community - Categories ( 카테고리 생성/삭제/조회/수정/상태on,off )"],
+        summary="카테고리명 수정 (기능구현완료)",
         request=CategoryRenameRequestSerializer,
         responses={200: CategoryRenameResponseSerializer},
     )
