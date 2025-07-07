@@ -21,7 +21,7 @@ class TestQuestionCreateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
+        tags=["[Admin/Mock] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 어드민이 특정 쪽지시험에 문제를 출제합니다.",
         request=TestQuestionCreateSerializer,
         responses={
@@ -48,7 +48,7 @@ class TestQuestionListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
+        tags=["[Admin/Mock] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
         description="Mock - 수강생이 속한 기수에 배포된 쪽지시험 목록을 조회합니다.",
         responses={
             200: OpenApiResponse(response=TestListItemSerializer(many=True), description="시험 목록 조회 성공"),
@@ -86,12 +86,11 @@ class TestQuestionListView(APIView):
 
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
-    # permission_classes = [AllowAny]
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(
         tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
-        description="Mock - 어드민이 기존 쪽지시험 문제를 수정합니다.",
+        description="어드민이 기존 쪽지시험 문제를 수정합니다.",
         request=TestQuestionUpdateSerializer,
         responses={
             200: OpenApiResponse(response=TestQuestionUpdateSerializer, description="문제 수정 성공"),
@@ -99,13 +98,20 @@ class TestQuestionUpdateDeleteView(APIView):
         },
     )
     def patch(self, request: Request, question_id: int) -> Response:
-        serializer = TestQuestionUpdateSerializer(data=request.data, partial=True)
+        question = get_object_or_404(TestQuestion, id=question_id)
+
+        serializer = TestQuestionUpdateSerializer(instance=question, data=request.data, partial=True)
         if serializer.is_valid():
+            updated_question = serializer.save()
             return Response(
-                {"id": question_id, **serializer.validated_data, "updated_at": "2025-06-25T00:00:00Z"},
+                {
+                    "id": updated_question.id,
+                    **serializer.data,
+                    "updated_at": updated_question.updated_at.isoformat(),
+                },
                 status=status.HTTP_200_OK,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "요청 오류입니다.", **serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     # 문제 삭제
     @extend_schema(
