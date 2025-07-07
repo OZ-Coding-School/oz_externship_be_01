@@ -1,21 +1,5 @@
 from django.db import models
 
-# 문제 유형 enum
-QUESTION_TYPE_CHOICES = [
-    ("multiple_choice_single", "객관식 단일 선택"),
-    ("multiple_choice_multi", "객관식 다중 선택"),
-    ("ox", "O,X 퀴즈"),
-    ("ordering", "순서 정렬"),
-    ("fill_in_blank", "빈칸 채우기"),
-    ("short_answer", "주관식 단답형"),
-]
-
-# 배포 상태 enum
-TEST_STATUS_CHOICES = [
-    ("Activated", "활성화"),
-    ("Deactivated", "비활성화"),
-]
-
 
 class Test(models.Model):
     # ERD 기준: subject_id
@@ -33,15 +17,25 @@ class Test(models.Model):
 
 
 class TestQuestion(models.Model):
+    # 기존 전역 상수 QUESTION_TYPE_CHOICES 제거하고 모델 내부 TextChoices로 변경
+    class QuestionType(models.TextChoices):
+        MULTIPLE_CHOICE_SINGLE = "multiple_choice_single", "객관식 단일 선택"
+        MULTIPLE_CHOICE_MULTI = "multiple_choice_multi", "객관식 다중 선택"
+        OX = "ox", "O,X 퀴즈"
+        ORDERING = "ordering", "순서 정렬"
+        FILL_IN_BLANK = "fill_in_blank", "빈칸 채우기"
+        SHORT_ANSWER = "short_answer", "주관식 단답형"
+
     # ERD 기준: test_id
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
     question = models.CharField(max_length=255)  # 문제 제목/내용
     prompt = models.TextField(null=True, blank=True)  # 문제 지문
     blank_count = models.PositiveSmallIntegerField(null=True, blank=True)  # 빈칸 문제일 경우 빈칸 수
     options_json = models.TextField(null=True, blank=True)  # 객관식/순서정렬 문제 보기를 JSON으로 저장
+    # 기존 choices=QUESTION_TYPE_CHOICES → choices=QuestionType.choices로 변경
     type = models.CharField(
-        max_length=50, choices=QUESTION_TYPE_CHOICES
-    )  # 정답 (단일/다중/순서/빈칸/주관식 모두 대응 가능)
+        max_length=50, choices=QuestionType.choices
+    )  # 문제 유형 (객관식 단일/다중/순서/빈칸/주관식 등 대응)
     answer = models.JSONField()  # 배점
     point = models.PositiveSmallIntegerField()  # 해설
     explanation = models.TextField()  # 해설
@@ -53,6 +47,11 @@ class TestQuestion(models.Model):
 
 
 class TestDeployment(models.Model):
+    # 기존 전역 상수 TEST_STATUS_CHOICES 제거하고 모델 내부 TextChoices로 변경
+    class TestStatus(models.TextChoices):
+        ACTIVATED = "Activated", "활성화"
+        DEACTIVATED = "Deactivated", "비활성화"
+
     # ERD 기준: generation_id
     generation = models.ForeignKey("courses.Generation", on_delete=models.CASCADE, related_name="test_deployments")
     # ERD 기준: test_id
@@ -67,7 +66,9 @@ class TestDeployment(models.Model):
     open_at = models.DateTimeField()
     close_at = models.DateTimeField()
     questions_snapshot_json = models.JSONField()
-    status = models.CharField(max_length=50, choices=TEST_STATUS_CHOICES, default="Activated")
+    # 기존 choices=TEST_STATUS_CHOICES → choices=TestStatus.choices로 변경
+    status = models.CharField(max_length=50, choices=TestStatus.choices, default=TestStatus.ACTIVATED)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
