@@ -50,3 +50,24 @@ class S3Uploader:
             return True
         except Exception as e:
             return False
+
+    # 기존 파일 위치에 새 파일을 덮어쓰고 동일 URL 반환. 실패 시 None 반환
+    def update_file(self, file_obj: UploadedFile, s3_url: str) -> Optional[str]:
+
+        try:
+            # S3 URL에서 Key 추출
+            s3_key = s3_url.split(f"{self.bucket}.s3.{settings.AWS_REGION}.amazonaws.com/")[-1]
+            if not s3_key:
+                return None
+
+            # 기존 Key에 파일 덮어쓰기
+            self.client.upload_fileobj(
+                file_obj,
+                self.bucket,
+                s3_key,
+                ExtraArgs={"ContentType": file_obj.content_type},
+            )
+            return s3_url  # Key는 같으니 기존 URL 반환
+        except Exception as e:
+            print(f"[ERROR] S3 update_file failed: {e}")
+            return None

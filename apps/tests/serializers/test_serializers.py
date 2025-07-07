@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Any, Dict
 
 from django.utils import timezone
@@ -6,6 +7,7 @@ from rest_framework import serializers
 
 from apps.courses.models import Subject
 from apps.tests.models import Test, TestQuestion
+from core.utils.s3_file_upload import S3Uploader
 
 
 # 쪽지시험 수정
@@ -19,12 +21,17 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
         fields = ("id", "title", "subject_id", "thumbnail_file", "thumbnail_img_url", "updated_at")
         read_only_fields = ("id", "updated_at")
 
-    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+    def validate(self, data):
         if not data:
             raise serializers.ValidationError("수정할 데이터가 없습니다.")
         return data
 
-    def update(self, instance: Test, validated_data: dict[str, Any]) -> Test:
+    def validate_subject_id(self, value):
+        if not Subject.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Invalid subject ID.")
+        return value
+
+    def update(self, instance: Test, validated_data):
         # 제목 수정
         if "title" in validated_data:
             instance.title = validated_data["title"]
@@ -33,15 +40,17 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
         if "subject_id" in validated_data:
             instance.subject_id = validated_data["subject_id"]
 
-        # 로고 이미지 수정
+        # 썸네일 파일이 넘어온 경우, S3에 덮어쓰기 후 URL 업데이트
         if "thumbnail_file" in validated_data:
             thumbnail_file = validated_data.pop("thumbnail_file")
-            # 실제 서비스에서는 이미지 업로드 후 URL 생성 필요
-
-            instance.thumbnail_img_url = f"https://my-cdn.com/{thumbnail_file.name}"
+            uploader = S3Uploader()
+            updated_url = uploader.update_file(thumbnail_file, instance.thumbnail_img_url)
+            if not updated_url:
+                raise serializers.APIException("S3 이미지 업로드 실패")
+            instance.thumbnail_img_url = updated_url
 
         instance.updated_at = timezone.now()
-        # instance.save() 추후  DB 반영
+        instance.save()
         return instance
 
 
@@ -157,10 +166,40 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
         )
         read_only_fields = ("id", "created_at", "updated_at")
 
-    def create(self, validated_data: Dict[str, Any]) -> Test:
-        subject_id: int = validated_data.pop("subject_id")
-        validated_data["subject_id"] = subject_id
-        return Test.objects.create(**validated_data)
+    def validate_subject_id(self, value):
+        from apps.courses.models import Subject
+
+        if not Subject.objects.filter(id=value).exists():
+            raise serializers.ValidationError("유효하지 않은 subject_id 입니다.")
+        return value
+
+    def save(self, **kwargs):
+        validated_data = {**self.validated_data, **kwargs}
+
+        subject_id = validated_data.pop("subject_id")
+        thumbnail_file = validated_data.pop("thumbnail_file")
+
+        subject = Subject.objects.get(id=subject_id)
+
+        # Test 생성
+        test = Test.objects.create(
+            title=validated_data["title"],
+            subject=subject,
+            thumbnail_img_url="",  # 업로드 전 임시 저장
+        )
+
+        # S3 업로드 key에 test.id 포함 + 난수 추가
+        random_str = uuid.uuid4().hex[:6]
+        s3_key = f"oz_externship_be/tests/thumbnail_images/{test.id}_{random_str}.png"
+
+        uploader = S3Uploader()
+        thumbnail_img_url = uploader.upload_file(thumbnail_file, s3_key)
+        if thumbnail_img_url is None:
+            raise serializers.APIException("S3 업로드 실패")
+
+        test.thumbnail_img_url = thumbnail_img_url
+        test.save()
+        return test
 
 
 # 공통 AdminTestSerializer
