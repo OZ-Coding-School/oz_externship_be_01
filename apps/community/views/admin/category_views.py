@@ -26,7 +26,7 @@ class AdminCommunityCategoryDetailAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="커뮤니티 게시판 카테고리 상세 조회",
         description="카테고리 ID로 커뮤니티 게시판 카테고리 상세정보를 조회합니다.",
         responses={200: CategoryDetailResponseSerializer},
@@ -39,7 +39,7 @@ class AdminCommunityCategoryDetailAPIView(APIView):
 
     # 카테고리 삭제 API뷰
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         operation_id="admin_category_delete",
         summary="관리자 카테고리 삭제",
         description="존재하는 카테고리를 삭제합니다.",
@@ -55,7 +55,7 @@ class AdminCommunityCategoryCreateAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="커뮤니티 게시판 카테고리 생성",
         description="새로운 커뮤니티 카테고리를 생성합니다.",
         request=CategoryCreateRequestSerializer,
@@ -75,7 +75,7 @@ class CategoryStatusOnAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="카테고리 상태 ON",
         responses={200: CategoryStatusUpdateResponseSerializer},
     )
@@ -99,7 +99,7 @@ class CategoryStatusOffAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="카테고리 상태 OFF",
         responses={200: CategoryStatusUpdateResponseSerializer},
     )
@@ -123,7 +123,7 @@ class AdminCategoryListAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="카테고리 목록 조회",
         description="카테고리 목록을 조회합니다.",
         responses={200: CategoryListResponseSerializer},
@@ -141,7 +141,7 @@ class AdminCategoryRenameAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-category(기능구현완료)]"],
+        tags=["[Admin-category (기능구현완료)]"],
         summary="카테고리명 수정",
         request=CategoryRenameRequestSerializer,
         responses={200: CategoryRenameResponseSerializer},

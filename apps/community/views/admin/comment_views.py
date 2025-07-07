@@ -14,7 +14,7 @@ class AdminCommentDeleteAPIView(APIView):
     permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
-        tags=["[Admin-comment]"],
+        tags=["[Admin-comment (기능구현완료)]"],
         summary="댓글 삭제",
         description="댓글 ID를 기준으로 실제 댓글을 삭제합니다.",
         responses={
