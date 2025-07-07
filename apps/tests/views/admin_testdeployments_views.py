@@ -1,5 +1,4 @@
 from datetime import datetime
-from http.client import responses
 from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
 
@@ -113,7 +112,7 @@ MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
     request=DeploymentStatusUpdateSerializer,
     responses={200: dict, 404: dict},
     summary="배포 상태 변경",
@@ -148,7 +147,7 @@ class TestDeploymentStatusView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포)"],
     responses={200: DeploymentListSerializer(many=True)},
     summary="시험 배포 목록 조회",
     description="등록된 모든 시험 배포 정보(ID 101,102)를 조회합니다. 페이징 없이 전체 데이터를 반환합니다.",
@@ -166,7 +165,7 @@ class DeploymentListView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포)"],
     responses={200: DeploymentListSerializer},
     summary="시험 배포 상세 조회",
     description="지정한 배포 ID(101,102)에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
@@ -187,7 +186,7 @@ class DeploymentDetailView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
     request=DeploymentCreateSerializer,
     responses={201: dict},
     summary="시험 배포 생성",
@@ -215,7 +214,7 @@ class TestDeploymentCreateView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 삭제)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
     summary="시험 배포 삭제",
     description="지정한 배포 I(101,102)D에 해당하는 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )
@@ -232,7 +231,6 @@ class TestDeploymentDeleteView(APIView):
             deployment = get_object_or_404(TestDeployment, id=deployment_id)
             # 데이터 무결성을 위한 트랜젝션 처리
             with transaction.atomic():
-                deployment_title = deployment.test.title if deployment.test else "N/A Test"
                 deployment.delete()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -242,6 +240,3 @@ class TestDeploymentDeleteView(APIView):
                 {"detail": "배포 내역 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
