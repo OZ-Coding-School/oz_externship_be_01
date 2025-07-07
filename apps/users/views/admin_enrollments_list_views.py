@@ -70,12 +70,6 @@ class AdminEnrollmentListView(APIView):
 
         queryset = StudentEnrollmentRequest.objects.select_related("user", "generation", "generation__course")
 
-        # 권한별 필터링 관리자들은 모든 내역 조회가능
-        if user.role in [User.Role.ADMIN, User.Role.TA, User.Role.OM, User.Role.LC]:
-            pass
-        else:
-            return Response({"detail": "접근 권한이 없습니다."}, status=403)
-
         # 검색필터
         if search:
             queryset = queryset.filter(
@@ -86,12 +80,20 @@ class AdminEnrollmentListView(APIView):
             )
 
         # 상태
-        if status_filter in ["PENDING", "APPROVED", "REJECTED"]:
+        status_filter = request.query_params.get("status")
+        valid_statuses = StudentEnrollmentRequest.EnrollmentStatus.values
+
+        if status_filter:
+            if status_filter not in valid_statuses:
+                return Response({"detail": f"잘못된 상태 값입니다. 허용된 값: {valid_statuses}"}, status=400)
             queryset = queryset.filter(status=status_filter)
 
         # 정렬
+        ordering = request.query_params.get("ordering", "id")
         valid_orderings = {"id", "-id", "created_at", "-created_at"}
-        queryset = queryset.order_by(ordering if ordering in valid_orderings else "id")
+        if ordering not in valid_orderings:
+            return Response({"detail": f"잘못된 정렬 기준입니다. 허용된 값: {sorted(valid_orderings)}"}, status=400)
+        queryset = queryset.order_by(ordering)
 
         # 페이지네이션
         paginator = self.pagination_class()

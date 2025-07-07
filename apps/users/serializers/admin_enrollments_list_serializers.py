@@ -14,21 +14,6 @@ class ApprovalResponseSerializer(serializers.Serializer):
     message = serializers.CharField(help_text="처리 결과 요약 메시지")
 
 
-# 일반 enrollment
-class EnrollmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentEnrollmentRequest
-        fields = [
-            "id",
-            "user_id",
-            "generation_id",
-            "status",
-            "accepted_at",
-            "created_at",
-            "updated_at",
-        ]
-
-
 # Admin 전용 수강신청 목록
 class AdminEnrollmentSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.name", read_only=True)
