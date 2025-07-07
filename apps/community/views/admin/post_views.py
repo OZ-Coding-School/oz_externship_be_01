@@ -1,20 +1,15 @@
-from urllib.parse import urlencode
-
-from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Post, PostAttachment, PostImage
-from apps.community.serializers.post_pagination_serializers import (
-    AdminPostPaginationSerializer,
-)
+from apps.community.models import Post, PostAttachment, PostImage, PostCategory
 from apps.community.serializers.post_serializers import (
     PostDetailSerializer,
     PostListSerializer,
@@ -34,10 +29,18 @@ class AdminPostListView(APIView):
         responses=PostListSerializer,
         parameters=[
             OpenApiParameter(name="page", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
-            OpenApiParameter(name="category", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name="size", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name="category_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
             OpenApiParameter(name="is_visible", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name="search_type", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
+                             description="검색 대상: 작성자 | 제목( 기본값 ) | 내용 | 제목 + 내용 "),
+            OpenApiParameter(name="keyword", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
+                             description="검색 키워드"),
+            OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
+                             description="정렬: 최신순( 기본값 ) | 오래된 순  | 조회수 많은 순 | 좋아요가 많은 순 "),
         ],
         tags=["Admin Post"],
+        summary="관리자 게시글 목록 조회",
     )
     def get(self, request: Request) -> Response:
         queryset = Post.objects.select_related("category", "author").all()
@@ -47,11 +50,14 @@ class AdminPostListView(APIView):
         category_id = request.query_params.get("category_id")
         if is_visible is not None:
             queryset = queryset.filter(is_visible=is_visible.lower() == "true")
-        if category_id and int(category_id) != 1:  # 1이면 전체보기
-            queryset = queryset.filter(category_id=int(category_id))
+        if category_id:
+            try:
+                queryset = queryset.filter(category_id=int(category_id))
+            except (ValueError, PostCategory.DoesNotExist):
+                pass
 
         # 검색 필터링
-        search_type = request.query_params.get("search_type")
+        search_type = request.query_params.get("search_type") or "title"
         keyword = request.query_params.get("keyword")
         if keyword:
             if search_type == "title":
@@ -62,6 +68,14 @@ class AdminPostListView(APIView):
                 queryset = queryset.filter(author__nickname__icontains=keyword)
             elif search_type == "title_content":
                 queryset = queryset.filter(Q(title__icontains=keyword) | Q(content__icontains=keyword))
+            else:
+                queryset = queryset.filter(title__icontains=keyword)
+
+            if not queryset.exists():
+                return Response(
+                    {"detail": {"code": "NOT_FOUND", "message": "검색 결과가 없습니다."}},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         # 정렬 처리
         ordering_param = request.query_params.get("ordering", "recent")
@@ -80,29 +94,11 @@ class AdminPostListView(APIView):
             queryset = queryset.order_by("-is_notice", "-created_at")
 
         # 페이지네이션
-        page_number = int(request.query_params.get("page", 1))
-        page_size = int(request.query_params.get("size", 10))
-        paginator = Paginator(queryset, page_size)
-        page = paginator.get_page(page_number)
+        paginator = PageNumberPagination()
+        paginator.page_size_query_param = "size"
+        result_page = paginator.paginate_queryset(queryset, request)
 
-        base_url = request.build_absolute_uri(request.path)
-        query_params = request.query_params.copy()
-
-        def build_url(new_page: int) -> str:
-            query_params["page"] = str(new_page)
-            return f"{base_url}?{urlencode(query_params)}"
-
-        next_url = build_url(page.next_page_number()) if page.has_next() else None
-        prev_url = build_url(page.previous_page_number()) if page.has_previous() else None
-
-        data = {
-            "count": paginator.count,
-            "next": next_url,
-            "previous": prev_url,
-            "results": PostListSerializer(list(page.object_list), many=True).data,
-        }
-
-        return Response(AdminPostPaginationSerializer(data).data)
+        return paginator.get_paginated_response(PostListSerializer(result_page, many=True).data)
 
 
 # 어드민 게시글 상세 조회
