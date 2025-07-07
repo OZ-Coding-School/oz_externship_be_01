@@ -4,8 +4,8 @@ from rest_framework import serializers
 from rest_framework.serializers import CharField, EmailField, Serializer
 
 from apps.users.utils.redis_utils import (
-    get_signup_email_code,
     get_restore_email_code,
+    get_signup_email_code,
 )
 
 
@@ -17,7 +17,7 @@ class EmailSendCodeSerializer(Serializer[Any]):
 class EmailVerifyCodeSerializer(Serializer[Any]):
     email: EmailField = EmailField()
     verification_code: CharField = CharField()
-    purpose: CharField = serializers.ChoiceField(choices=["signup", "restore"])
+    purpose = serializers.ChoiceField(choices=["signup", "restore"])
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         email = data["email"]

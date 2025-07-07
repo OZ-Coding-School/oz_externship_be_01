@@ -22,7 +22,6 @@ class UserRestoreSerializer(serializers.Serializer[Any]):
     email = serializers.EmailField()
 
 
-
 class UserRestoreResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     email = serializers.EmailField()
