@@ -1,7 +1,5 @@
-import time
 from typing import cast
 
-from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions, status
@@ -10,6 +8,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.qna.error_messages import AnswerErrorMessages, AnswerSuccessMessages
 from apps.qna.models import Answer, AnswerComment, AnswerImage, Question
 from apps.qna.permissions import IsStudentOrStaffOrAdminPermission, IsStudentPermission
 from apps.qna.serializers.answers_serializers import (
@@ -19,7 +18,6 @@ from apps.qna.serializers.answers_serializers import (
     AnswerUpdateSerializer,
 )
 from apps.users.models import User
-from core.utils.s3_file_upload import S3Uploader
 
 
 class AnswerCreateView(APIView):
@@ -37,7 +35,9 @@ class AnswerCreateView(APIView):
         # IsAuthenticated permission으로 인해 request.user는 항상 User 타입
         user = cast(User, request.user)
         # 질문 정보 가져오기
-        question = get_object_or_404(Question, pk=question_id)
+        question = Question.objects.filter(pk=question_id).first()
+        if not question:
+            return Response(AnswerErrorMessages.QUESTION_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         # 요청 정보 가져오고 valid 확인
         serializer = self.serializer_class(data=request.data)
@@ -66,12 +66,16 @@ class AnswerUpdateView(APIView):
         user = cast(User, request.user)
 
         # 수정할 답변 가져오기
-        question = get_object_or_404(Question, pk=question_id)
-        answer = get_object_or_404(Answer, pk=answer_id, question=question)
+        question = Question.objects.filter(pk=question_id).first()
+        if not question:
+            return Response(AnswerErrorMessages.QUESTION_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        answer = Answer.objects.filter(pk=answer_id, question=question).first()
+        if not answer:
+            return Response(AnswerErrorMessages.ANSWER_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         # 권한 확인: 본인이 작성한 답변만 수정 가능
         if answer.author != user:
-            return Response({"detail": "본인이 작성한 답변만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(AnswerErrorMessages.ANSWER_AUTHOR_ONLY, status=status.HTTP_403_FORBIDDEN)
 
         # 요청 정보 가져오고 valid 확인
         serializer = self.serializer_class(answer, data=request.data)
@@ -100,23 +104,32 @@ class AdoptAnswerView(APIView):
     def post(self, request: Request, question_id: int, answer_id: int) -> Response:
         user = cast(User, request.user)
 
-        question = get_object_or_404(Question, pk=question_id)
-        answer = get_object_or_404(Answer, pk=answer_id, question=question)
+        # 채택할 답변 가져오기
+        question = Question.objects.filter(pk=question_id).first()
+        if not question:
+            return Response(AnswerErrorMessages.QUESTION_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        answer = Answer.objects.filter(pk=answer_id, question=question).first()
+        if not answer:
+            return Response(AnswerErrorMessages.ANSWER_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         # 권한 확인 : 질문 작성자가 아닌 경우
         if question.author != user:
-            return Response({"detail": "본인의 질문에만 답변을 채택할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(AnswerErrorMessages.QUESTION_AUTHOR_ADOPT_ONLY, status=status.HTTP_403_FORBIDDEN)
 
-        # 이미 채택된 답변인경우
+        # 이미 채택된 답변이 존재하는 경우
         if question.answers.filter(is_adopted=True).exists():
-            return Response({"detail": "이미 채택된 답변이 존재합니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(AnswerErrorMessages.ADOPTED_ANSWER_ALREADY_EXISTS, status=status.HTTP_400_BAD_REQUEST)
+
+        # 이 답변이 이미 채택된 답변인경우
+        if answer.is_adopted:
+            return Response(AnswerErrorMessages.ANSWER_ALREADY_ADOPTED, status=status.HTTP_400_BAD_REQUEST)
 
         # 답변 채택
         answer.is_adopted = True
         answer.save()
 
         # 응답 데이터 구성
-        return Response({"detail": "답변 채택 완료"}, status=status.HTTP_200_OK)
+        return Response(AnswerSuccessMessages.ANSWER_ADOPTED, status=status.HTTP_200_OK)
 
 
 class AnswerCommentCreateView(APIView):
@@ -131,7 +144,10 @@ class AnswerCommentCreateView(APIView):
     def post(self, request: Request, answer_id: int) -> Response:
         user = cast(User, request.user)
 
-        answer = get_object_or_404(Answer, pk=answer_id)
+        # 댓글 달 답변 가져오기
+        answer = Answer.objects.filter(pk=answer_id).first()
+        if not answer:
+            return Response(AnswerErrorMessages.ANSWER_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -144,4 +160,4 @@ class AnswerCommentCreateView(APIView):
         )
 
         # 응답 데이터 구성
-        return Response({"detail": "댓글 등록 완료", "comment_id": comment.id}, status=status.HTTP_201_CREATED)
+        return Response(AnswerSuccessMessages.COMMENT_CREATED, status=status.HTTP_201_CREATED)
