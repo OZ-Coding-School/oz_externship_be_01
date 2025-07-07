@@ -1,4 +1,3 @@
-from django.contrib.admin.templatetags.admin_list import pagination
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
@@ -9,9 +8,9 @@ from rest_framework.views import APIView
 
 from apps.courses.models import Course, Generation, Subject, User
 from apps.tests.core.utils.filters import filter_test_submissions
-from apps.tests.core.utils.pagination import PaginationList
 from apps.tests.core.utils.sorting import annotate_total_score, sort_by_total_score
 from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_submission_serializers import (
     AdminTestDetailSerializer,
@@ -64,8 +63,7 @@ from apps.users.models.permissions import PermissionsStudent
     ],
 )
 class AdminTestSubmissionsView(APIView):
-    permission_classes = [AllowAny]
-    # permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = AdminTestListSerializer
 
     def get(self, request: Request) -> Response:
@@ -90,7 +88,7 @@ class AdminTestSubmissionsView(APIView):
         ordering = filters.get("ordering", "latest")
         sorted_submissions = sort_by_total_score(submissions_with_scores, ordering)
 
-        paginator = PageNumberPagination()
+        paginator = AdminTestListPagination()
         page = paginator.paginate_queryset(sorted_submissions, request)  # type: ignore
 
         serializer = self.serializer_class(page, many=True)
@@ -101,7 +99,7 @@ class AdminTestSubmissionsView(APIView):
 
 
 # 쪽지 시험 응시 내역 상세 조회
-@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin/Mock] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminTestDetailSerializer
