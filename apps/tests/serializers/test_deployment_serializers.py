@@ -1,9 +1,11 @@
-# access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성ㄷ
+# access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성
 import json
-import random
 
 # access_code를 만들 때 사용할 수 있는 기본 문자 집합을 제공
 import string
+
+# uuid 모듈 임포트
+import uuid
 
 # open_at, close_at 필드 처리를 위해 필요
 from datetime import datetime
@@ -23,6 +25,7 @@ from apps.tests.serializers.test_serializers import (
     AdminTestSerializer,
     CommonTestSerializer,
 )
+from apps.tests.utils import encode_base62, generate_questions_snapshot_json
 
 
 # 공통 User&Admin
@@ -171,7 +174,6 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             "open_at",
             "close_at",
             "questions_snapshot_json",
-            "access_code",
             "status",
         ]
         read_only_fields = ["access_code", "status", "questions_snapshot_json"]
@@ -191,45 +193,29 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             # 변수명 충돌을 피하기 위해 'generation.obj로 변경
             generation_obj = Generation.objects.get(id=generation_id)
         except Generation.DoesNotExist:
-            raise ValidationError({"generation": "유효하지 않은 기수 ID 입니다."})
+            raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
 
-        # 'questions'관계가 있고 데이터가 있는 경우에만 처리
-        if hasattr(test, "questions") and test.questions.exists():
-            validated_data["questions_snapshot_json"] = json.dumps(
-                [
-                    {
-                        "id": q.id,
-                        "question": q.question,
-                        "prompt": q.prompt,
-                        "type": q.type,
-                        "options": getattr(q, "options_json", None),
-                        "answer": q.answer,
-                        "point": q.point,
-                        "explanation": q.explanation,
-                    }
-                    for q in test.questions.all()
-                ]
-            )
-        # 고유한 참가 코드(access_code)를 생성하여 validated_data에 추가
-        validated_data["access_code"] = self._generate_unique_code()
+        questions_json = generate_questions_snapshot_json(test)
+        if questions_json:
+            validated_data["questions_snapshot_json"] = questions_json
+        else:
+            validated_data["questions_snapshot_json"] = "[]"
 
-        # 배포의 초기 상태를 'Activated'로 설정하여 validated_data에 추가
+        generated_code = None
+        while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
+            uuid_int_value = uuid.uuid4().int
+            # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
+            generated_code = encode_base62(uuid_int_value, length=22)[:6]  # 대략 22자리가 나오므로 6자리로 자름
+
+        validated_data["access_code"] = generated_code
+
         validated_data["status"] = "Activated"
-        # 모든 준비된 데이터를 사용하여 TestDeployment 모델 인스턴스를 생성하고 반환
-        return TestDeployment.objects.create(
-            test=test,  # Test 객체 연결
-            generation=generation_obj,  # Generation 객체 연결
-            **validated_data,  # 나머지 필드 (duration_time, open_at, close_at, questions, access_code, status)
-        )
 
-    # 고유한 참가코드 생성 메서드
-    def _generate_unique_code(self, length=6):
-        # 주어진 길이의 고유한 영숫자 코드를 생성, 데이터베이스에서 중복을 확인
-        chars = string.ascii_letters + string.digits
-        while True:
-            code = "".join(random.choices(chars, k=length))
-            if not TestDeployment.objects.filter(access_code=code).exists():
-                return code
+        return TestDeployment.objects.create(
+            test=test,
+            generation=generation_obj,
+            **validated_data,
+        )
 
 
 # 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
