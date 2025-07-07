@@ -38,7 +38,7 @@ class TestStartView(APIView):
         now = timezone.now()
 
         # 배포 상태 확인
-        if test_deployment.status != "Activated":
+        if test_deployment.status != TestDeployment.TestStatus.ACTIVATED:
             return Response({"detail": "해당 시험은 현재 응시할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 시험 시작 시간 확인
