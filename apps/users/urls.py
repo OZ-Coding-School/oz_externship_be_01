@@ -20,6 +20,9 @@ from apps.users.views.admin_user_views import (
     AdminUserUpdateView,
 )
 from apps.users.views.admin_user_withdrawal_views import AdminDetailWithdrawalView
+from apps.users.views.admin_withdrawal_restore_views import (
+    AdminWithdrawalRestoreAPIView,
+)
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.signup import SignUpAPIView
@@ -92,5 +95,10 @@ urlpatterns = [
         "admin/users/student-enrollments/reject/",
         RejectEnrollmentRequestView.as_view(),
         name="admin-student-enrollments-reject",
+    ),
+    path(
+        "admin/withdrawal/<int:user_id>/restore/",
+        AdminWithdrawalRestoreAPIView.as_view(),
+        name="admin-withdraw-restore",
     ),
 ]
