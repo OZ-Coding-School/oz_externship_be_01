@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models import User
 from apps.users.serializers.admin_user_serializers import (
+    AdminUserDetailSerializer,
     AdminUserListSerializer,
     AdminUserRoleUpdateSerializer,
     AdminUserSerializer,
@@ -95,10 +96,10 @@ class AdminUserListView(APIView):
             return paginator.get_paginated_response(serializer.data)
 
         except ValidationError:
-            return Response({"detail": "잘못된 요청입니다."}, status=400)
+            return Response({"detail": "잘못된 요청입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         except NotFound as nf:
-            return Response({"detail": str(nf)}, status=404)
+            return Response({"detail": str(nf)}, status=status.HTTP_404_NOT_FOUND)
 
         except Exception:
             return Response({"detail": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."}, status=500)
@@ -106,36 +107,38 @@ class AdminUserListView(APIView):
 
 # 어드민 회원 상세 조회
 class AdminUserDetailView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = AdminUserSerializer
+    permission_classes = [IsAdminOrStaff]
+    serializer_class = AdminUserDetailSerializer
 
     @extend_schema(
         summary="어드민 회원 상세 조회",
-        description="어드민이 전체 유저 상세 정보를 조회합니다.",
+        description="""
+            스태프 및 어드민은 회원 목록에서 특정 회원의 상세 정보를 조회할 수 있습니다.
+            반환 항목은 해당 회원의 역할에 따라 달라집니다.
+            """,
         responses={
-            200: AdminUserSerializer,
+            200: AdminUserDetailSerializer,
             400: OpenApiResponse(description="잘못된 요청입니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
         tags=["Admin - 회원 관리"],
     )
     def get(self, request: Request, user_id: int) -> Response:
-        mock_user = User(
-            id=user_id,
-            email="admin@example.com",
-            name="홍길동",
-            nickname="hongkildong",
-            birthday=date(1998, 8, 16),
-            gender="MALE",
-            phone_number="010-0000-0000",
-            self_introduction="안녕하세요",
-            profile_image_url="",
-            role="ADMIN",
-            is_active=True,
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-        serializer = AdminUserSerializer(instance=mock_user)
+        try:
+            user = (
+                User.objects.select_related("withdrawal")
+                .prefetch_related(
+                    "ta_permissions__generation__course",
+                    "staff_permissions__course",
+                    "student_permissions__generation__course",
+                )
+                .get(id=user_id)
+            )
+
+        except User.DoesNotExist:
+            return Response({"detail": "존재하지 않는 유저입니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.serializer_class(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

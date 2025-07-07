@@ -28,7 +28,62 @@ class AdminUserListSerializer(serializers.ModelSerializer[User]):
         ]
 
 
-# 상세, 수정 등 기본 시리얼라이저
+# 디테일 시리얼라이저
+class AdminUserDetailSerializer(serializers.ModelSerializer):
+    # 공통 필드
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "name",
+            "gender",
+            "nickname",
+            "birthday",
+            "phone_number",
+            "email",
+            "role",
+            "is_active",
+            "created_at",
+            "profile_image_url",
+        ]
+
+    # 권한 별로 보여주는 필드 다르게 설정
+    def to_representation(self, instance: User) -> dict:
+        base = super().to_representation(instance)
+
+        if instance.role == "TA":
+            ta_permission = instance.ta_permissions.first()
+            base["assigned_generation"] = (
+                {
+                    "course": ta_permission.generation.course.name,
+                    "generation": ta_permission.generation.number,
+                }
+                if ta_permission
+                else None
+            )
+
+        elif instance.role in {"OM", "LC"}:
+            base["assigned_courses"] = [
+                {
+                    "course": perm.course.name,
+                    "course_id": perm.course.id,
+                }
+                for perm in instance.staff_permissions.all()
+            ]
+
+        elif instance.role == "STUDENT":
+            base["enrolled_generations"] = [
+                {
+                    "course": perm.generation.course.name,
+                    "generation": perm.generation.number,
+                }
+                for perm in instance.student_permissions.all()
+            ]
+
+        return base
+
+
+# 수정 등 기본 시리얼라이저
 class AdminUserSerializer(serializers.ModelSerializer[User]):
     profile_image_file = serializers.ImageField(write_only=True)
     profile_image_url = serializers.URLField(read_only=True)
