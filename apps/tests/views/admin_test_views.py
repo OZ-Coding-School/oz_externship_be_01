@@ -99,35 +99,13 @@ class AdminTestUpdateAPIView(APIView):
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(instance=test, data=request.data, partial=True)
+        #  # subject_id 유효성 검증까지 처리
         serializer.is_valid(raise_exception=True)
-
-        # subject_id 유효성 검증
-        subject_id = serializer.validated_data.get("subject_id")
-        if subject_id is not None:
-            if not Subject.objects.filter(id=subject_id).exists():
-                return Response({"detail": "Invalid subject ID."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 썸네일 이미지 덮어쓰기 처리 (S3 기존 Key에 새 파일 업로드)
-        thumbnail_file = serializer.validated_data.pop("thumbnail_file", None)
-        if thumbnail_file:
-            updated_url = self.update_thumbnail(thumbnail_file, test)
-            if not updated_url:
-                return Response(
-                    {"error": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-            #  응답 일관성을 위해 포함
-            serializer.validated_data["thumbnail_img_url"] = updated_url
 
         # 수정 및 updated_at 갱신
         updated_test = serializer.save()
         response_serializer = self.serializer_class(updated_test)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-    def update_thumbnail(self, thumbnail_file, test: Test) -> str | None:
-        # 기존 S3 Key에 새 파일을 덮어쓰고 동일 URL 반환. 실패 시 None 반환
-        uploader = S3Uploader()
-        return uploader.update_file(thumbnail_file, test.thumbnail_img_url)
 
 
 # (admin)쪽지시험 상세조회
@@ -265,51 +243,10 @@ class AdminTestCreateAPIView(APIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def post(self, request: Request) -> Response:
-
         serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        test = serializer.save()
 
-        validated_data = serializer.validated_data
-
-        # 1) 과목 유효성 검증
-        try:
-            subject = Subject.objects.get(id=validated_data["subject_id"])
-        except Subject.DoesNotExist:
-            return Response({"subject_id": ["해당 과목이 존재하지 않습니다."]}, status=status.HTTP_400_BAD_REQUEST)
-
-        thumbnail_file = validated_data.pop("thumbnail_file")
-
-        # 2) DB에 Test 인스턴스만 생성 및 저장
-        test = Test(
-            title=validated_data["title"],
-            subject=subject,
-            thumbnail_img_url="",  # 업로드 전이라 임시로 빈 값 저장 /
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-
-        test.save()  #  test.id로 Key를 생성하기 때문에 중복 저장이 무조건 발생
-        # 3) S3 업로드 key에 test.id 포함 + 난수 추가
-
-        random_str = uuid.uuid4().hex[:6]
-        s3_key = f"oz_externship_be/tests/thumbnail_images/{test.id}_{random_str}.png"
-
-        # 4) core 유틸을 사용해 업로드
-        uploader = S3Uploader()
-        thumbnail_img_url = uploader.upload_file(thumbnail_file, s3_key)
-        if thumbnail_img_url is None:
-            test.delete()  # 실패 시 DB 데이터 롤백 / 쓰레기 데이터 방지
-            return Response(
-                {"error": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        # 5) 업로드 완료 후 Test에 실제 thumbnail_img_url 업데이트
-        test.thumbnail_img_url = thumbnail_img_url
-        test.save()
-
-        # 6) 생성된 객체 직렬화하여 응답
         response_serializer = self.serializer_class(instance=test)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
