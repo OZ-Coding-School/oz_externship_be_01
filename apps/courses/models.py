@@ -44,10 +44,6 @@ class Generation(models.Model):
         unique_together = ("course", "number")
         db_table = "generations"
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self.registered_students = None
-
     def __str__(self) -> str:
         return f"{self.course.name} - {self.number}기"
 
