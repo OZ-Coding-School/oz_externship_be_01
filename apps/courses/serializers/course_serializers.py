@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from core.utils.s3 import upload_file_to_s3  # S3 업로드 함수 사용
 
 from apps.courses.models import Course
+from core.utils.s3_file_upload import S3Uploader
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -54,4 +54,3 @@ class CourseListSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
-

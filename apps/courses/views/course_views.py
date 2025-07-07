@@ -2,6 +2,7 @@ from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.permissions import BasePermission  # 직접 정의할 권한 클래스용
 from rest_framework.response import Response
 
 from apps.courses.models import Course, Generation
@@ -9,14 +10,28 @@ from apps.courses.serializers.course_serializers import (
     CourseListSerializer,
     CourseSerializer,
 )
+from apps.users.models import User  # 유저 역할 확인용
 from apps.users.models.permissions import PermissionsStudent
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
-from tests.views.permissions import IsAdminOrStaff  # 권한 클래스 교체
+
+
+# 임시 직접 정의한 권한 클래스 (mypy 오류)
+class IsAdminOrStaff(BasePermission):
+    message = "관리자 또는 스태프 권한이 필요합니다."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        excluded_roles = {User.Role.GENERAL, User.Role.STUDENT}
+        allowed_roles = [role for role, _ in User.Role.choices if role not in excluded_roles]
+        return user.role in allowed_roles
 
 
 class CourseListCreateView(ListCreateAPIView):
     queryset = Course.objects.all()
-    permission_classes = [IsAdminOrStaff]  # 리뷰 반영
+    permission_classes = [IsAdminOrStaff]  # 권한 적용
     serializer_class = CourseListSerializer
 
     def get_serializer_class(self):
@@ -47,8 +62,8 @@ class CourseListCreateView(ListCreateAPIView):
 class CourseDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [IsAdminOrStaff]  # 리뷰 반영
-    lookup_url_kwarg = "course_id"  # 리뷰 반영: path 파라미터 인식
+    permission_classes = [IsAdminOrStaff]
+    lookup_url_kwarg = "course_id"  # path 파라미터 인식용
 
     def patch(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -66,12 +81,10 @@ class CourseDetailView(RetrieveUpdateDestroyAPIView):
                 raise ValidationError({"detail": f"{generation.number}기에 수강생이 등록되어 있어 삭제할 수 없습니다."})
 
             if StudentEnrollmentRequest.objects.filter(
-                generation=generation,
-                status=StudentEnrollmentRequest.EnrollmentStatus.APPROVED
+                generation=generation, status=StudentEnrollmentRequest.EnrollmentStatus.APPROVED
             ).exists():
                 raise ValidationError({"detail": f"{generation.number}기에 승인된 수강생이 있어 삭제할 수 없습니다."})
 
         generations.delete()
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
