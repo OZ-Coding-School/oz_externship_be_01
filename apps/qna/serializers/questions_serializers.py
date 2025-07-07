@@ -192,3 +192,38 @@ class QuestionDetailSerializer(serializers.ModelSerializer[Question]):
     class Meta:
         model = Question
         fields = ["id", "title", "content", "images", "author", "category", "view_count", "created_at", "answers"]
+
+
+# 질문 카테고리 목록 조회
+class ParentQnACategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name"]
+
+
+# 질의응답 카테고리 직렬화
+class MinorQnACategorySerializer(serializers.ModelSerializer):
+    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "parent_ctg", "category_type"]
+
+
+# 질의응답 카테고리 중분류 직렬화
+class MiddleQnACategorySerializer(MinorQnACategorySerializer):
+    child_categories = MinorQnACategorySerializer(source="subcategories", many=True, read_only=True)
+    parent_ctg = ParentQnACategorySerializer(source="parent", read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "parent_ctg", "category_type", "child_categories"]
+
+
+# 질의응답 카테고리 대분류 직렬화
+class MajorQnACategorySerializer(MinorQnACategorySerializer):
+    child_categories = MiddleQnACategorySerializer(source="subcategories", many=True, read_only=True)
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name", "category_type", "child_categories"]
