@@ -1,10 +1,11 @@
 from django.urls import path
 
 from apps.qna.views.questions_views import (
+    CategoryListView,
     QuestionCreateView,
     QuestionDetailView,
     QuestionListView,
-    QuestionUpdateView, CategoryListView,
+    QuestionUpdateView,
 )
 
 urlpatterns = [
