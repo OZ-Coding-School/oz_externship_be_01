@@ -81,9 +81,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 # 질문 수정
 class QuestionUpdateSerializer(serializers.ModelSerializer):
     images = QuestionImageSerializer(many=True, read_only=True)
-    image_files = serializers.ListField(
-        child=serializers.FileField(), write_only=True, required=False
-    )
+    image_files = serializers.ListField(child=serializers.FileField(), write_only=True, required=False)
     category_id = serializers.IntegerField(required=False, write_only=True)
 
     class Meta:
