@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,10 +11,12 @@ from rest_framework.views import APIView
 from apps.users.models import User
 from apps.users.models.withdrawals import Withdrawal
 from apps.users.serializers.withdrawal_serializers import (
+    UserDeleteResponseSerializer,
     UserDeleteSerializer,
+    UserRestoreResponseSerializer,
     UserRestoreSerializer,
 )
-from apps.users.utils.redis_utils import is_email_verified
+from apps.users.utils.redis_utils import is_restore_email_verified
 
 
 # 회원탈퇴
@@ -27,7 +28,7 @@ class UserDeleteView(APIView):
         request=UserDeleteSerializer,
         description="회원 탈퇴 API - 회원탈퇴",
         tags=["user-withdrawal"],
-        responses={200: OpenApiTypes.OBJECT},
+        responses={200: UserDeleteResponseSerializer},
     )
     def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
@@ -59,9 +60,9 @@ class UserDeleteView(APIView):
                 {
                     "message": "회원 탈퇴 완료",
                     "email": user.email,
-                    "탈퇴사유": reason,
-                    "상세사유": detail,
-                    "삭제예정일": due_date,
+                    "reason": reason,
+                    "reason_detail": detail,
+                    "due_date": due_date,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -76,9 +77,9 @@ class UserRestoreView(APIView):
 
     @extend_schema(
         request=UserRestoreSerializer,
-        description="탈퇴 계정 복구 API - 이메일 인증 후 복구 가능",
+        description="탈퇴 계정 복구 API - 이메일 인증 후 복구 가능 auth에서 이메일 인증 하고 오세요",
         tags=["user-restore"],
-        responses={200: OpenApiTypes.OBJECT},
+        responses={200: UserRestoreResponseSerializer},
     )
     def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
@@ -86,7 +87,7 @@ class UserRestoreView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data["email"]
 
-            if not is_email_verified(email):
+            if not is_restore_email_verified(email):
                 return Response(
                     {"error": "이메일 인증이 완료되지 않았습니다."},
                     status=status.HTTP_401_UNAUTHORIZED,
@@ -116,7 +117,8 @@ class UserRestoreView(APIView):
 
             user.is_active = True
             user.save(update_fields=["is_active"])
-            withdrawal.delete()  # 복구 시 탈퇴 기록 삭제
+            withdrawal.user = None
+            withdrawal.save(update_fields=["user"])
 
             return Response(
                 {

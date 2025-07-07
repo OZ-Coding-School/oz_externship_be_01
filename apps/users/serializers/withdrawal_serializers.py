@@ -10,6 +10,20 @@ class UserDeleteSerializer(serializers.Serializer[Any]):
     detail = serializers.CharField()
 
 
+class UserDeleteResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    email = serializers.EmailField()
+    reason = serializers.CharField()
+    reason_detail = serializers.CharField()
+    due_date = serializers.DateField()
+
+
 class UserRestoreSerializer(serializers.Serializer[Any]):
     email = serializers.EmailField()
-    verification_code = serializers.CharField()
+
+
+
+class UserRestoreResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    email = serializers.EmailField()
+    nickname = serializers.CharField()
