@@ -1,7 +1,9 @@
 from typing import Any
 
 from django.db import transaction
-from drf_spectacular.utils import extend_schema
+from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -25,7 +27,7 @@ class AdminCategoryCreateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["(Admin) QnA"],
+        tags=["QnA (Admin)"],
         description="새로운 카테고리 등록",
         summary="카테고리 등록",
         request=AdminCategoryCreateSerializer,
@@ -45,9 +47,9 @@ class AdminCategoryDeleteView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["(Admin) QnA"],
+        tags=["QnA (Admin)"],
         description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.(미완성)",
-        summary="카테고리 삭제",
+        summary="미완성",
         request=AdminCategoryListSerializer,
         responses=AdminCategoryListSerializer,
     )
@@ -81,59 +83,63 @@ class AdminCategoryDeleteView(APIView):
             return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
 
 
-# class AdminCategoryCreateView(APIView):
-#     permission_classes = [AllowAny]
-#
-#     @extend_schema(
-#         tags=["(Admin) QnA"],
-#         description="등록할 카테고리 ID",
-#         summary="카테고리 등록",
-#         request=AdminCategoryListSerializer,
-#     )
-#     def post(self, request: Request) -> Response:
-#         serializer = AdminCategoryListSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-# 카테고리 목록 조회
+# 카테고리 목록 조회(GET)
 class AdminCategoryListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["(Admin) QnA"],
-        description="조회할 카테고리 ID",
+        tags=["QnA (Admin)"],
         summary="카테고리 목록 조회",
+        description="카테고리 목록 조회 (검색 및 필터링 지원)",
+        parameters=[
+            OpenApiParameter(name="search", description="카테고리 이름 검색", required=False, type=OpenApiTypes.STR),
+            OpenApiParameter(
+                name="category_type",
+                description="카테고리 타입 필터 (major, middle, minor)",
+                required=False,
+                type=OpenApiTypes.STR,
+                enum=["major", "middle", "minor"],
+            ),
+        ],
+        responses={200: AdminCategoryListSerializer(many=True)},
     )
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = AdminCategoryListSerializer(dummy.DUMMY_CATEGORY, many=True)
-        resp_data = serializer.data
-        return Response(resp_data, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        # 쿼리 파라미터 추출
+        search = request.query_params.get("search", "").strip()
+        category_type = request.query_params.get("category_type", "").strip()
 
+        # 기본 쿼리셋
+        queryset = QuestionCategory.objects.all().prefetch_related("subcategories", "subcategories__subcategories")
 
-# 카테고리 삭제
-# class AdminCategoryDeleteView(APIView):
-#     permission_classes = [AllowAny]
-#
-#     @extend_schema(
-#         tags=["(Admin) QnA"],
-#         description="삭제할 카테고리 ID",
-#         summary="카테고리 삭제",
-#     )
-#     def delete(self, request: Request, category_id: int) -> Response:
-#         if not any(q.id == category_id for q in dummy.DUMMY_CATEGORY):
-#             return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-#
-#         # 원래는 이런 방식이 아닌데 더미라서 orm을 사용할 수 없기에 이렇게 합니다.
-#         dummy.DUMMY_CATEGORY = [q for q in dummy.DUMMY_CATEGORY if q.id != category_id]
-#         return Response(status=status.HTTP_204_NO_CONTENT)
+        if search:
+            queryset = queryset.filter(name__icontains=search)
+
+        # 카테고리 타입 필터
+        if category_type:
+            if category_type == "major":
+                queryset = queryset.filter(Q(parent__isnull=True) & Q(subcategories__isnull=False)).distinct()
+            elif category_type == "middle":
+                queryset = queryset.filter(Q(parent__isnull=False) & Q(subcategories__isnull=False)).distinct()
+
+            elif category_type == "minor":
+                queryset = queryset.filter(Q(parent__isnull=False) & Q(subcategories__isnull=True)).distinct()
+            else:
+                return Response({"detail": "category_type query parameter invalid."})
+
+        serializer = AdminCategoryListSerializer(queryset, many=True)
+
+        # 검색 결과가 없는 경우 에러 반환
+        if not serializer.data:
+            return Response({"error": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # 질의응답 상세 조회
 class AdminQnaDetailView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=["(Admin) QnA"], description="조회할 질의응답 ID", summary="질의응답 상세 조회")
+    @extend_schema(tags=["QnA (Admin)"], description="조회할 질의응답 ID", summary="미완성")
     def get(self, request: Request, question_id: int, *args: Any, **kwargs: Any) -> Response:
         # 1. 질문 찾기
         question = next((q for q in dummy.DUMMY_QUESTIONS if q.id == question_id), None)
@@ -226,7 +232,7 @@ class AdminQnaDetailView(APIView):
 class AdminQuestionListView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=["(Admin) QnA"], description="조회할 질문 ID", summary="질문 목록 조회")
+    @extend_schema(tags=["QnA (Admin)"], description="조회할 질문 ID", summary="미완성")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = AdminQuestionListSerializer(dummy.DUMMY_QUESTIONS, many=True)
         resp_data = serializer.data
@@ -240,7 +246,7 @@ class AdminQuestionListView(APIView):
 class AdminQuestionDeleteView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=["(Admin) QnA"], description="삭제할 질문 ID", summary="질문 삭제")
+    @extend_schema(tags=["QnA (Admin)"], description="삭제할 질문 ID", summary="미완성")
     def delete(self, request: Request, question_id: int) -> Response:
         if not any(q.id == question_id for q in dummy.DUMMY_QUESTIONS):
             return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
@@ -253,7 +259,7 @@ class AdminQuestionDeleteView(APIView):
 class AdminAnswerDeleteView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=["(Admin) QnA"], description="삭제할 답변 ID", summary="답변 삭제")
+    @extend_schema(tags=["QnA (Admin)"], description="삭제할 답변 ID", summary="미완성")
     def delete(self, request: Request, answer_id: int) -> Response:
         if not any(q.id == answer_id for q in dummy.DUMMY_ANSWERS):
             return Response({"detail" "해당 답변이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)

@@ -19,11 +19,16 @@ class AdminAnswerSerializer(serializers.ModelSerializer[Answer]):
 
 # 카테고리 목록 조회
 class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory]):
-    type = serializers.CharField(read_only=True)
+    category_id = serializers.IntegerField(source="id", read_only=True)
+    parent_category_id = serializers.IntegerField(source="parent.id", read_only=True)
+    category_name = serializers.CharField(source="name", read_only=True)
+    category_type = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = QuestionCategory
-        fields = ["id", "name", "parent", "type", "created_at", "updated_at"]
+        fields = ["category_id", "parent_category_id", "category_name", "category_type", "created_at", "updated_at"]
 
 
 # 질문 목록 조회
@@ -78,7 +83,7 @@ class AdminCategoryCreateSerializer(serializers.ModelSerializer):
     def validate_parent(self, value):
         # 부모 카테고리 검증 및 3단계 제한
         if value:
-            if value.type == "minor":
+            if value.category_type == "minor":
                 raise serializers.ValidationError("카테고리는 최대 3단계까지만 생성할 수 있습니다.")
         return value
 
