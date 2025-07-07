@@ -46,7 +46,7 @@ class AdminTestUpdateSerializer(serializers.ModelSerializer):
             uploader = S3Uploader()
             updated_url = uploader.update_file(thumbnail_file, instance.thumbnail_img_url)
             if not updated_url:
-                raise serializers.ValidationError("S3 이미지 업로드 실패")
+                raise serializers.APIException("S3 이미지 업로드 실패")
             instance.thumbnail_img_url = updated_url
 
         instance.updated_at = timezone.now()
@@ -195,7 +195,7 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
         uploader = S3Uploader()
         thumbnail_img_url = uploader.upload_file(thumbnail_file, s3_key)
         if thumbnail_img_url is None:
-            raise serializers.ValidationError("S3 업로드 실패")
+            raise serializers.APIException("S3 업로드 실패")
 
         test.thumbnail_img_url = thumbnail_img_url
         test.save()

@@ -93,7 +93,7 @@ class AdminTestUpdateAPIView(APIView):
     def patch(self, request, test_id: int):
         # 단일 쿼리 최적화 및 수정 후 상세 응답 직렬화 시 문제 리스트까지 한꺼번에 가져오기
         try:
-            test = Test.objects.select_related("subject").prefetch_related("questions").get(id=test_id)
+            test = Test.objects.get(id=test_id)
         except Test.DoesNotExist:
             return Response({"detail": "Test not found."}, status=status.HTTP_404_NOT_FOUND)
 
