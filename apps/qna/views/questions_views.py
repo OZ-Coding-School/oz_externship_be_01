@@ -1,5 +1,7 @@
 from typing import Any
 
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -12,6 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ..permissions import IsStudentPermission
 from ...users.models import User
 from ..models import Question, QuestionCategory, QuestionImage
 from ..serializers.questions_serializers import (
@@ -132,7 +135,7 @@ class QuestionDetailView(APIView):
 
 # 3. 새 질문 생성 (POST)
 class QuestionCreateView(APIView):
-    permission_classes = [permissions.AllowAny]  # TODO: IsAuthenticated, IsStudentUser
+    permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
     parser_classes = [MultiPartParser]
 
     @extend_schema(
@@ -142,7 +145,7 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        # 이미지가 빈 값이면 제거
+        # TODO: 이미지가 없을 경우 오류가 나서 빈 값을 제거하는 로직 추가, 추후 개선 필요
         data = request.data.copy()
         if "image_files" in data:
             images = data.getlist("image_files") if hasattr(data, "getlist") else data["image_files"]
@@ -159,41 +162,23 @@ class QuestionCreateView(APIView):
 
 # 4. 질문 부분 수정 (PATCH)
 class QuestionUpdateView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
+    parser_classes = [MultiPartParser]
 
-    @extend_schema(
-        request=QuestionUpdateSerializer,
-        responses=QuestionDetailSerializer,
-        description="질문 부분 수정",
-        tags=["questions"],
-    )
     def patch(self, request: Request, question_id: int) -> Response:
-        # 1. 해당 mock 질문 찾기
-        question = next((q for q in DUMMY_QUESTIONS if q.id == question_id), None)
-        if not question:
-            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        question = get_object_or_404(Question, pk=question_id)
 
-        # 2. 데이터 검증
-        serializer = QuestionUpdateSerializer(data=request.data, partial=True, context={"request": request})
+        # 본인 질문만 수정 가능 + 수강생 권한만 허용
+        if question.author != user or user.role != User.Role.STUDENT:
+            return Response({"detail": "수강생 권한을 가진 작성자만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = QuestionUpdateSerializer(question, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        serializer.save()
 
-        # 3. mock 질문 내용 수정
-        if "title" in validated:
-            question.title = validated["title"]
-        if "content" in validated:
-            question.content = validated["content"]
-        if "category_id" in validated:
-            question.category = QuestionCategory(id=validated["category_id"], name="카테고리 예시")
-
-        # 4. mock 이미지 수정 (단순 교체)
-        if "image_files" in validated:
-            for i, img in enumerate(DUMMY_QUESTION_IMAGES):
-                if img.question.id == question_id and i < len(validated["image_files"]):
-                    img.img_url = f"/media/{validated['image_files'][i].name}"
-
-        # 5. 응답
         response_data = QuestionDetailSerializer(question).data
-        images = [img for img in DUMMY_QUESTION_IMAGES if img.question.id == question_id]
-        response_data["images"] = QuestionImageSerializer(images, many=True).data
+        response_data["images"] = QuestionImageSerializer(
+            QuestionImage.objects.filter(question=question), many=True
+        ).data
         return Response(response_data, status=status.HTTP_200_OK)
