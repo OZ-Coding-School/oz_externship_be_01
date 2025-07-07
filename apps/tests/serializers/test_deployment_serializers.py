@@ -17,6 +17,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
+from apps.tests.core.utils.base62 import encode_base62, generate_questions_snapshot_json
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -25,7 +26,6 @@ from apps.tests.serializers.test_serializers import (
     AdminTestSerializer,
     CommonTestSerializer,
 )
-from apps.tests.utils import encode_base62, generate_questions_snapshot_json
 
 
 # 공통 User&Admin
