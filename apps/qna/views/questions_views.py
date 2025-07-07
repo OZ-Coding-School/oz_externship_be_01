@@ -2,11 +2,13 @@ from datetime import datetime
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,6 +17,7 @@ from ...users.models import User
 from ..models import Question, QuestionCategory, QuestionImage
 from ..permissions import IsStudentPermission
 from ..serializers.questions_serializers import (
+    MajorQnACategorySerializer,
     QuestionCreateSerializer,
     QuestionDetailSerializer,
     QuestionImageSerializer,
@@ -125,6 +128,12 @@ class QuestionUpdateView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
     parser_classes = [MultiPartParser]
 
+    @extend_schema(
+        request=QuestionUpdateSerializer,
+        responses=QuestionDetailSerializer,
+        description="질문 부분 수정",
+        tags=["questions"],
+    )
     def patch(self, request: Request, question_id: int) -> Response:
         user = request.user
         question = get_object_or_404(Question, pk=question_id)
@@ -144,3 +153,24 @@ class QuestionUpdateView(APIView):
             QuestionImage.objects.filter(question=question), many=True
         ).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+# 5. 카테고리 목록 조회
+class CategoryListView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses=MajorQnACategorySerializer(many=True),
+        description="Q&A 카테고리 목록 조회",
+        tags=["questions"],
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        queryset = (
+            QuestionCategory.objects.all()
+            .prefetch_related("subcategories", "subcategories__subcategories")
+            .filter(Q(parent__isnull=True) & Q(subcategories__isnull=False))
+            .distinct()
+        )
+        serializer = MajorQnACategorySerializer(queryset, many=True)
+        resp_data = serializer.data
+        return Response(resp_data, status=status.HTTP_200_OK)
