@@ -14,9 +14,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..permissions import IsStudentPermission
 from ...users.models import User
 from ..models import Question, QuestionCategory, QuestionImage
+from ..permissions import IsStudentPermission
 from ..serializers.questions_serializers import (
     QuestionCreateSerializer,
     QuestionDetailSerializer,
@@ -170,8 +170,10 @@ class QuestionUpdateView(APIView):
         question = get_object_or_404(Question, pk=question_id)
 
         # 본인 질문만 수정 가능 + 수강생 권한만 허용
-        if question.author != user or user.role != User.Role.STUDENT:
-            return Response({"detail": "수강생 권한을 가진 작성자만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN)
+        if question.author != user or not (hasattr(user, "role") and user.role == User.Role.STUDENT):
+            return Response(
+                {"detail": "수강생 권한을 가진 작성자만 수정할 수 있습니다."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
