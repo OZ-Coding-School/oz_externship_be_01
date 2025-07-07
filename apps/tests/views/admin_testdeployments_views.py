@@ -3,6 +3,8 @@ from http.client import responses
 from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
 
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -10,6 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tests.models import TestDeployment
 from apps.tests.serializers.test_deployment_serializers import (
     DeploymentCreateSerializer,
     DeploymentDetailSerializer,
@@ -212,21 +215,33 @@ class TestDeploymentCreateView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 삭제)"],
     summary="시험 배포 삭제",
     description="지정한 배포 I(101,102)D에 해당하는 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )
 class TestDeploymentDeleteView(APIView):
-
-    # 배포 삭제 API
-    #  DELETE 요청 시 특정 배포를 삭제
-
-    permission_classes = [AllowAny]
+    """
+    배포 삭제 API
+    DELETE 요청 시 특정 배포를 삭제
+    """
+    permission_classes = [IsAdminUser]
     serializer_class = DeploymentCreateSerializer
 
-    def delete(self, request: Request, deployment_id: int) -> Response:
-        if deployment_id not in MOCK_DEPLOYMENTS:
-            return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request: Request, deployment_id: int, *args, **kwargs) -> Response:
+        try:
+            deployment = get_object_or_404(TestDeployment, id=deployment_id)
+            # 데이터 무결성을 위한 트랜젝션 처리
+            with transaction.atomic():
+                deployment_title = deployment.test.title if deployment.test else "N/A Test"
+                deployment.delete()
 
-        del MOCK_DEPLOYMENTS[deployment_id]
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            return Response(
+                {"detail": "배포 내역 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
