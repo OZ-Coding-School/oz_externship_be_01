@@ -127,8 +127,7 @@ class AdminUserDetailView(APIView):
     def get(self, request: Request, user_id: int) -> Response:
         try:
             user = (
-                User.objects.select_related("withdrawal")
-                .prefetch_related(
+                User.objects.prefetch_related(
                     "ta_permissions__generation__course",
                     "staff_permissions__course",
                     "student_permissions__generation__course",
