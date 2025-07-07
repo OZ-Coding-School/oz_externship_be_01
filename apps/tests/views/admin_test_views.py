@@ -1,9 +1,15 @@
 import uuid
 
 from django.conf import settings
+from django.db.models import Count, Q
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import parsers, status
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
+from rest_framework import parsers, serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -13,6 +19,7 @@ from apps.courses.models import Subject
 
 # 내부 앱 - models
 from apps.tests.models import Test, TestQuestion
+from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_serializers import (
     AdminTestUpdateSerializer,
@@ -144,43 +151,92 @@ class AdminTestDetailAPIView(APIView):
 
 
 # (admin)쪽지시험 목록조회
+
+
 @extend_schema(
-    tags=["[Admin/Mock] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
+    tags=["[Admin] Test - Test (쪽지시험 생성/조회/수정/삭제)"],
     summary="쪽지시험 목록조회 API",
-    description=" 이 API는 인증이 필요하지 않습니다. Mock API이므로 토큰 없이 테스트하세요.",
-    auth=[],
+    description=(
+        "관리자/스태프 권한으로 등록된 쪽지시험 목록을 조회합니다.\n\n"
+        "- generation_id(과정별 필터링), search(시험명/과목명 검색), ordering(정렬: recent/alphabetical) 지원\n"
+        "- 페이지네이션 적용"
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="course_id",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="특정 과정 ID로 필터링",
+        ),
+        OpenApiParameter(
+            name="search",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="시험명 또는 과목명으로 검색 (부분/완전일치 모두 지원)",
+        ),
+        OpenApiParameter(
+            name="ordering",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            enum=["recent", "alphabetical"],
+            description="정렬 옵션: recent(최신순, 기본), alphabetical(가나다순)",
+        ),
+        OpenApiParameter(
+            name="page",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="페이지 번호 (기본 1)",
+        ),
+        OpenApiParameter(
+            name="page_size",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="페이지당 항목 수 (기본 10, 최대 100)",
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(description="조회 성공"),
+        401: OpenApiResponse(description="인증 정보가 없거나 유효하지 않습니다."),
+        403: OpenApiResponse(description="권한이 없습니다."),
+    },
 )
 class AdminTestListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = TestListSerializer
 
     def get(self, request: Request) -> Response:
-        subject = Subject(id=1, title="컴퓨터공학")
-
-        test = Test(
-            id=4, title="자료구조 쪽지시험", subject=subject, created_at=timezone.now(), updated_at=timezone.now()
+        queryset = Test.objects.select_related("subject", "subject__course").annotate(
+            question_count=Count("questions", distinct=True),
+            submission_count=Count("deployments__submissions", distinct=True),
         )
 
-        # 수동 필드 주입
-        test.question_count = 5  # type: ignore[attr-defined]
-        test.submission_count = 20  # type: ignore[attr-defined]
+        # 기존 generation_id 필터 제거 후 course_id 필터로 교체
+        course_id = request.query_params.get("course_id")
+        if course_id:
+            queryset = queryset.filter(subject__course__id=course_id)
 
-        serializer = self.serializer_class(instance=[test], many=True)
-        response_data = serializer.data
+        # 검색: 시험명 또는 과목명 ( 부분 + 완전일치 검색 적용)
+        search = request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search)
+                | Q(subject__title__icontains=search)
+                | Q(title__iexact=search)
+                | Q(subject__title__iexact=search)
+            )
 
-        # detail_url 필드 수동 추가
-        for item in response_data:
-            item["detail_url"] = f"/api/v1/admin/tests/{item['id']}/"
+        # 정렬: 최신순(기본), 가나다순
+        ordering = request.query_params.get("ordering", "recent")
+        if ordering == "alphabetical":
+            queryset = queryset.order_by("title")
+        else:  # 기본 최신순
+            queryset = queryset.order_by("-created_at")
 
-        return Response(
-            {
-                "count": len(response_data),
-                "next": None,
-                "previous": None,
-                "results": response_data,
-            },
-            status=status.HTTP_200_OK,
-        )
+        # 페이지네이션
+        paginator = AdminTestListPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = self.serializer_class(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 # (admin)쪽지시험 생성

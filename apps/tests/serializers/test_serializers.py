@@ -114,11 +114,12 @@ class TestDetailSerializer(serializers.ModelSerializer):
         return TestQuestionDetailSerializer(obj.questions.all(), many=True).data
 
 
-# 쪽지시험 목록조회 Nested 구조 사용안함 응답 단순화
-class TestListSerializer(serializers.ModelSerializer[Test]):
+# 쪽지시험 목록조회
+class TestListSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.title")
     question_count = serializers.IntegerField()
     submission_count = serializers.IntegerField()
+    detail_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -130,7 +131,11 @@ class TestListSerializer(serializers.ModelSerializer[Test]):
             "submission_count",
             "created_at",
             "updated_at",
+            "detail_url",
         )
+
+    def get_detail_url(self, obj):
+        return f"/api/v1/admin/tests/{obj.id}/"
 
 
 # 쪽지시험 생성
