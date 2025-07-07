@@ -96,10 +96,10 @@ class AdminUserListView(APIView):
             return paginator.get_paginated_response(serializer.data)
 
         except ValidationError:
-            return Response({"detail": "잘못된 요청입니다."}, status=400)
+            return Response({"detail": "잘못된 요청입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         except NotFound as nf:
-            return Response({"detail": str(nf)}, status=404)
+            return Response({"detail": str(nf)}, status=status.HTTP_404_NOT_FOUND)
 
         except Exception:
             return Response({"detail": "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."}, status=500)
@@ -136,10 +136,10 @@ class AdminUserDetailView(APIView):
             )
 
         except User.DoesNotExist:
-            return Response({"detail": "존재하지 않는 유저입니다."}, status=404)
+            return Response({"detail": "존재하지 않는 유저입니다."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(user)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # 어드민 회원 정보 수정
