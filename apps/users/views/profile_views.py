@@ -36,8 +36,8 @@ class UserProfileView(APIView):
         user_data = {
             "profile_image_url": user.profile_image_url,
             "email": user.email,
-            "nickname": user.nickname,
             "name": user.name,
+            "nickname": user.nickname,
             "phone_number": user.phone_number,
             "birthday": user.birthday,
         }
@@ -49,7 +49,6 @@ class UserProfileView(APIView):
                 .order_by("-created_at")
                 .first()
             )
-
             if enrollment:
                 course_name = enrollment.generation.course.name
                 generation_number = f"{enrollment.generation.number}기"
@@ -79,25 +78,14 @@ class UserProfileUpdateView(APIView):
         responses={200: OpenApiTypes.OBJECT},
     )
     def put(self, request: Request) -> Response:
+
         serializer = UserProfileUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         validated = serializer.validated_data
 
         user = request.user
         assert isinstance(user, User)
-
-        if "nickname" in validated:
-            new_nickname = validated["nickname"]
-            if is_nickname_duplicated(new_nickname, user_id=user.id):
-                return Response({"message": "이미 사용 중인 닉네임입니다."}, status=400)
-            user.nickname = new_nickname
-
-        # 휴대폰번호 인증 구현 되면 수정 예정
-        if "phone_number" in validated:
-            user.phone_number = validated["phone_number"]
-
-        if "password" in validated:
-            user.set_password(validated["password"])
 
         # 기본 이미지 삭제->프로필 업로드
         if "profile_image_file" in request.FILES:
@@ -121,6 +109,19 @@ class UserProfileUpdateView(APIView):
             user.profile_image_url = uploaded_url
 
         user.save()
+
+        if "nickname" in validated:
+            new_nickname = validated["nickname"]
+            if is_nickname_duplicated(new_nickname, user_id=user.id):
+                return Response({"message": "이미 사용 중인 닉네임입니다."}, status=400)
+            user.nickname = new_nickname
+
+        # 휴대폰번호 인증 구현 되면 수정 예정
+        if "phone_number" in validated:
+            user.phone_number = validated["phone_number"]
+
+        if "password" in validated:
+            user.set_password(validated["password"])
 
         return Response(
             {
