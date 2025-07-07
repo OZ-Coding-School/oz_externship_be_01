@@ -1,12 +1,14 @@
 import time
-import uuid
+from pathlib import Path
 from typing import Any
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
+from apps.users.models import User
 from core.utils.s3_file_upload import S3Uploader
 
 
@@ -47,9 +49,6 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict[str, Any]) -> Question:
         # TODO : 개발 단계: AnonymousUser 처리 이후 삭제 필요
-        from django.contrib.auth.models import AnonymousUser
-
-        from apps.users.models import User
 
         image_files: list[UploadedFile] = validated_data.pop("image_files", [])
         category: QuestionCategory = validated_data.pop("category_id")
@@ -65,14 +64,9 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
             uploader = S3Uploader()
             for index, img in enumerate(image_files, 1):
-                # 직관적이고 유일한 파일명: question_질문ID_image_순번_타임스탬프.확장자
-                img_name = getattr(img, "name", None)
-                if isinstance(img_name, str) and "." in img_name:
-                    file_extension = img_name.split(".")[-1]
-                else:
-                    file_extension = "jpg"
+                ext = Path(getattr(img, "name", "image.jpg")).suffix or ".jpg"
                 timestamp = int(time.time() * 1000)
-                filename = f"question_{question.id}_image_{index}_{timestamp}.{file_extension}"
+                filename = f"question_{question.id}_image_{index}_{timestamp}{ext}"
                 s3_key = f"qna/questions/{filename}"
                 url = uploader.upload_file(img, s3_key)
                 if not url:
@@ -97,6 +91,36 @@ class QuestionUpdateSerializer(serializers.ModelSerializer[Question]):
             "content": {"required": False},
             "category_id": {"required": False},
         }
+
+    def update(self, instance, validated_data):
+        # 제목, 내용 변경
+        if "title" in validated_data:
+            instance.title = validated_data["title"]
+        if "content" in validated_data:
+            instance.content = validated_data["content"]
+
+        # 카테고리 변경
+        if "category_id" in validated_data:
+            category = QuestionCategory.objects.get(pk=validated_data["category_id"], category_type="minor")
+            instance.category = category
+
+        # 이미지 전체 교체 (S3 업로드)
+        if "image_files" in validated_data:
+            image_files = validated_data["image_files"]
+            with transaction.atomic():
+                QuestionImage.objects.filter(question=instance).delete()
+                uploader = S3Uploader()
+                for index, img in enumerate(image_files, 1):
+                    ext = Path(getattr(img, "name", "image.jpg")).suffix or ".jpg"
+                    timestamp = int(time.time() * 1000)
+                    filename = f"question_{instance.id}_image_{index}_{timestamp}{ext}"
+                    s3_key = f"qna/questions/{filename}"
+                    url = uploader.upload_file(img, s3_key)
+                    if not url:
+                        raise serializers.ValidationError("이미지 업로드에 실패했습니다.")
+                    QuestionImage.objects.create(question=instance, img_url=url)
+            instance.save()
+        return instance
 
 
 # 질문 목록 조회
