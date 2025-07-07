@@ -48,13 +48,6 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
                 {"max_student": "최대 등록 인원(max_student)은 1 이상 60 이하여야 합니다."}
             )
 
-        course_id_from_input = attrs.get("course")
-        if course_id_from_input:
-            try:
-                Course.objects.get(id=course_id_from_input)
-            except Course.DoesNotExist:
-                raise serializers.ValidationError({"course_id": "해당 course_id를 가진 과정이 존재하지 않습니다."})
-
         return attrs
 
     def create(self, validated_data: Dict[str, Any]) -> Generation:

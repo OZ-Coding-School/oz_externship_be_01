@@ -64,9 +64,9 @@ class GenerationCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            cohort = serializer.save()
+            generation = serializer.save()
 
-            return Response({"cohort": cohort}, status=status.HTTP_201_CREATED)
+            return Response(self.serializer_class(generation).data, status=status.HTTP_201_CREATED)
 
         except Course.DoesNotExist:
             return Response({"detail": "해당 course_id의 과정이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
@@ -76,7 +76,7 @@ class GenerationCreateView(APIView):
 
 # 기수 목록 API
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["Admin - 기수관리 Mock"],
 )
 class GenerationListView(APIView):
     permission_classes = [AllowAny]
@@ -90,7 +90,7 @@ class GenerationListView(APIView):
 
 # 기수 상세 정보 API
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["Admin - 기수관리 Mock"],
 )
 class GenerationDetailView(APIView):
     permission_classes = [AllowAny]
@@ -105,8 +105,9 @@ class GenerationDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# 기수 수정
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["Admin - 기수관리 Mock"],
 )
 class GenerationUpdateView(APIView):
     permission_classes = [AllowAny]
@@ -124,8 +125,9 @@ class GenerationUpdateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# 기수 삭제
 @extend_schema(
-    tags=["Admin - 기수관리"],
+    tags=["Admin - 기수관리 Mock"],
 )
 class GenerationDeleteView(APIView):
     permission_classes = [AllowAny]
