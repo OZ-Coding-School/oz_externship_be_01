@@ -108,7 +108,7 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = QuestionCreateSerializer(data=data, context={"request": request})
+        serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         question = serializer.save(author=request.user)
         return Response({"id": question.id}, status=status.HTTP_201_CREATED)
