@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict
 
+from django.utils import timezone
 from rest_framework import serializers
 
 # 명시적으로 임포트하여 사용합니다.
@@ -276,10 +277,3 @@ class UserCodeValidationSerializer(serializers.Serializer):
         if test_deployment.access_code != value:
             raise serializers.ValidationError("유효하지 않은 참가코드입니다.")
         return value
-
-
-class TestDeploymentStatusValidateSerializer(serializers.Serializer):
-    deployment_id = serializers.IntegerField()
-    status = serializers.ChoiceField(choices=["Activated", "Deactivated"])
-    open_at = serializers.DateTimeField()
-    close_at = serializers.DateTimeField()

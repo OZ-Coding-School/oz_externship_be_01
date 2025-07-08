@@ -19,13 +19,14 @@ from .views.admin_testdeployments_views import (
     DeploymentListView,
     TestDeploymentCreateView,
     TestDeploymentDeleteView,
+    TestDeploymentStatusView,
 )
 from .views.admin_testsubmission_views import (
     AdminTestSubmissionDeleteView,
     AdminTestSubmissionDetailView,
     AdminTestSubmissionsView,
 )
-from .views.user_deploymentstatus_views import TestDeploymentStatusView
+from .views.user_deploymentstatus_views import UserTestDeploymentStatusView
 from .views.user_testdeployments_views import UserCodeValidationView
 from .views.user_testsubmission_views import (
     TestStartView,
@@ -83,6 +84,14 @@ urlpatterns = [
         "admin/test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"
     ),
     path("admin/test-list/", TestQuestionListView.as_view(), name="test-question-list"),
+    path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
+    path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
+    path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
+    path(
+        "tests/<int:test_deployment_id>/validate-status/",
+        UserTestDeploymentStatusView.as_view(),
+        name="user-test-deployment-status",
+    ),
     path("validate-status/<int:test_deployment_id>/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
     # 참가 코드 검증 (user용)
     path("tests/<int:test_deployment_id>/validate/", UserCodeValidationView.as_view(), name="user-code-validate"),
@@ -116,6 +125,5 @@ urlpatterns = [
         TestDeploymentDeleteView.as_view(),
         name="test-deployment-delete",
     ),
-    path("validate-status/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
     path("mock-dashboard/", TestDashboardView.as_view(), name="mock-test-dashboard"),
 ]
