@@ -88,15 +88,12 @@ jobs:
               --env-file ${{ secrets.ENV_FILE_NAME }} \
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev \
               sh -c "celery -A config worker --beat --scheduler django --loglevel=info"
-            
-            
                         
             docker stop ${{ secrets.NGINX_CONTAINER_NAME }} || true
             docker rm ${{ secrets.NGINX_CONTAINER_NAME }} || true
             docker rmi ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:nginx-dev
             
             docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:nginx-dev
-            
 
             docker run -d \
               --network ws \
