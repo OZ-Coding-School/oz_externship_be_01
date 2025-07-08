@@ -1,12 +1,14 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.courses.models import Course, Generation, Subject, User
 from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_submission_serializers import (
     AdminTestDetailSerializer,
     AdminTestListSerializer,
@@ -160,8 +162,9 @@ class AdminTestSubmissionDetailView(APIView):
 # 쪽지 시험 응시 내역 삭제
 @extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     def delete(self, request: Request, submission_id: int) -> Response:
-
+        test_submission = get_object_or_404(TestSubmission, pk=submission_id)
+        test_submission.delete()
         return Response({"message": f"쪽지시험 응시내역 {submission_id} 삭제 완료"}, status=status.HTTP_200_OK)
