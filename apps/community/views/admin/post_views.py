@@ -16,7 +16,7 @@ from apps.community.serializers.post_serializers import (
     PostUpdateSerializer,
 )
 from apps.tests.permissions import IsAdminOrStaff
-
+from core.utils.s3_file_upload import S3Uploader
 
 
 # 어드민 게시글 목록 조회
@@ -160,10 +160,22 @@ class AdminPostDeleteView(APIView):
         operation_id="admin_post_delete",
         request=None,
         responses={"204": None},
-        tags=["Admin Post"],
+        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        summary="관리자 게시글 삭제(기능 구현)",
     )
     def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
+        uploader = S3Uploader()
+
+        for attachment in post.attachments.all():
+            uploader.delete_file(attachment.file_url)  # S3 삭제
+        post.attachments.all().delete()  # DB 삭제
+
+
+        for image in post.images.all():
+            uploader.delete_file(image.image_url)
+        post.images.all().delete()
+
         post.delete()
         return Response({"id": post_id, "message": "게시글이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
 
