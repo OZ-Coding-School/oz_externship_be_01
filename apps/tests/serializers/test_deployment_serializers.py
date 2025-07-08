@@ -24,8 +24,9 @@ from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
 )
 from apps.tests.serializers.test_serializers import (
-    AdminTestSerializer,
-    CommonTestSerializer,
+    AdminTestDetailSerializer,
+    AdminTestListSerializer,
+    UserTestSerializer,
 )
 
 
@@ -36,23 +37,24 @@ class CourseSerializer(serializers.ModelSerializer[Course]):
         fields = ("id", "name")
 
 
+# 삭제 공유
 # 공통 User&Admin
-class GenerationSerializer(serializers.ModelSerializer[Generation]):
-    course = CourseSerializer(read_only=True)
+# class GenerationSerializer(serializers.ModelSerializer[Generation]):
+#     course = CourseSerializer(read_only=True)
+#
+#     class Meta:
+#         model = Generation
+#         fields = ("id", "course", "number")
 
-    class Meta:
-        model = Generation
-        fields = ("id", "course", "number")
 
-
-# 관리자 쪽지 시험 응시 전체 목록 조회
+# 관리자 쪽지 시험 응시 전체 목록 조회, 상세 조회
 class AdminListCourseSerializer(serializers.ModelSerializer[Course]):
     class Meta:
         model = Course
         fields = ("name",)
 
 
-# 관리자 쪽지 시험 응시 전체 목록 조회
+# 관리자 쪽지 시험 응시 전체 목록 조회, 상세 조회
 class AdminListGenerationSerializer(serializers.ModelSerializer[Generation]):
     course = AdminListCourseSerializer(read_only=True)
 
@@ -61,15 +63,14 @@ class AdminListGenerationSerializer(serializers.ModelSerializer[Generation]):
         fields = ("course", "number")
 
 
-# 공통 AdminTestDeploymentSerializer
+# 관리자 쪽지 시험 응시 상세 조회
 class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = AdminTestSerializer(read_only=True)
-    generation = GenerationSerializer(read_only=True)
+    test = AdminTestDetailSerializer(read_only=True)
+    generation = AdminListGenerationSerializer(read_only=True)
 
     class Meta:
         model = TestDeployment
         fields = (
-            "id",
             "test",
             "generation",
             "duration_time",
@@ -81,7 +82,7 @@ class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment])
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
 class AdminTestListDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = CommonTestSerializer(read_only=True)
+    test = AdminTestListSerializer(read_only=True)
     generation = AdminListGenerationSerializer(read_only=True)
 
     class Meta:
@@ -108,7 +109,7 @@ class UserTestStartSerializer(serializers.Serializer):
 
 # 사용자 쪽지 시험 응시: 응답, 시험 정보 응답용
 class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
-    test = CommonTestSerializer(read_only=True)
+    test = UserTestSerializer(read_only=True)
     questions_snapshot_json = serializers.SerializerMethodField()
 
     class Meta:

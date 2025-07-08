@@ -202,25 +202,8 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
         return test
 
 
-# 공통 AdminTestSerializer
-class AdminTestSerializer(serializers.ModelSerializer[Test]):
-    subject = TestSubjectSerializer(read_only=True)
-
-    class Meta:
-        model = Test
-        fields = ("id", "subject", "title", "created_at", "updated_at")
-
-
-# 공통 UserTestSerializer
-class UserTestSerializer(serializers.ModelSerializer[Test]):
-    subject = TestSubjectSerializer(read_only=True)
-
-    class Meta:
-        model = Test
-        fields = ("id", "subject", "title", "thumbnail_img_url")
-
-
-# 관리자 쪽지 시험 응시 전체 목록 조회, 사용자 응시
+# 상인님 subject 임포트 중이었는데, id가 필요없어서 새로 생성
+# 관리자 쪽지 시험 응시 전체 목록 조회, 상세 조회, 사용자 응시
 class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
 
     class Meta:
@@ -228,8 +211,26 @@ class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
         fields = ("title",)
 
 
-# 관리자 쪽지 시험 응시 전체 목록 조회, 사용자 응시
-class CommonTestSerializer(serializers.ModelSerializer[Test]):
+# 관리자 쪽지 시험 응시 상세 조회
+class AdminTestDetailSerializer(serializers.ModelSerializer[Test]):
+    subject = CommonSubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("subject", "title", "created_at", "updated_at")
+
+
+# 사용자 쪽지 시험 응시
+class UserTestSerializer(serializers.ModelSerializer[Test]):
+    subject = CommonSubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("subject", "title", "thumbnail_img_url")
+
+
+# 관리자 쪽지 시험 응시 전체 목록 조회
+class AdminTestListSerializer(serializers.ModelSerializer[Test]):
     subject = CommonSubjectSerializer(read_only=True)
 
     class Meta:

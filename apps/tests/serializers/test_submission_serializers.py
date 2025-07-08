@@ -1,7 +1,13 @@
 from django.utils import timezone
-from rest_framework import request, serializers
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from apps.tests.models import TestDeployment, TestQuestion, TestSubmission
+from apps.tests.core.utils.grading import (
+    calculate_correct_count,
+    calculate_total_score,
+    validate_answers_json_format,
+)
+from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
     AdminTestListDeploymentSerializer,
@@ -10,20 +16,20 @@ from apps.tests.serializers.test_deployment_serializers import (
 from apps.users.models import PermissionsStudent, User
 
 
-# 공통 Admin
+# 관리자 쪽지 시험 응시 상세 조회
 class UserSerializer(serializers.ModelSerializer[User]):
     class Meta:
         model = User
-        fields = ("id", "name", "nickname")
+        fields = ("name", "nickname")
 
 
-# 공통 Admin & User
+# 관리자 쪽지 시험 응시 상세 조회
 class StudentSerializer(serializers.ModelSerializer[PermissionsStudent]):
     user = UserSerializer(read_only=True)
 
     class Meta:
         model = PermissionsStudent
-        fields = ("id", "user")
+        fields = ("user",)
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
@@ -52,44 +58,9 @@ class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmissi
         model = TestSubmission
         fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
 
-    @staticmethod
-    def is_correct(submitted_answer, correct_answer):
-        # 정답과 제출 답안이 같으면 True 반환
-        return submitted_answer == correct_answer
-
     def get_total_score(self, obj):
-        total = 0
-        answers = obj.answers_json
-
-        questions_ids = []
-
-        # 모든 문제 ID 추출
-        for qid in answers.keys():
-            try:
-                questions_ids.append(int(qid))
-            except ValueError:
-                continue
-
-        # 한 번에 문제들 조회
-        snapshot = obj.deployment.questions_snapshot_json
-        question_dice = {int(q["id"]): q for q in snapshot}
-
-        # 채점
-        for question_id_str, submitted_answer in answers.items():
-            try:
-                question_id = int(question_id_str)
-            except ValueError:
-                continue
-
-            question = question_dice.get(question_id)
-            if not question:
-                continue  # 문제 없으면 패스
-
-            # snapshot의 정답과 비교
-            if self.is_correct(submitted_answer, question["answer"]):
-                total += question["point"]
-
-        return total
+        validate_answers_json_format(obj.answers_json)
+        return calculate_total_score(obj.answers_json)
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
@@ -115,6 +86,11 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestDeploymentSerializer(read_only=True)
     student = StudentSerializer(read_only=True)
 
+    total_score = serializers.SerializerMethodField()
+    correct_count = serializers.SerializerMethodField()
+    total_questions = serializers.SerializerMethodField()
+    duration_minute = serializers.SerializerMethodField()
+
     class Meta:
         model = TestSubmission
         fields = (
@@ -124,7 +100,37 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
             "cheating_count",
             "started_at",
             "answers_json",
+            "total_score",
+            "correct_count",
+            "total_questions",
+            "duration_minute",
         )
+
+    # 총 점수
+    def get_total_score(self, obj):
+        validate_answers_json_format(obj.answers_json)
+        return calculate_total_score(obj.answers_json)
+
+    # 맞은 문제 수
+    def get_correct_count(self, obj):
+        validate_answers_json_format(obj.answers_json)
+        return calculate_correct_count(obj.answers_json)
+
+    # 총 문제 수
+    def get_total_questions(self, obj):
+        snapshot = obj.deployment.questions_snapshot_json
+        if not isinstance(snapshot, list):
+            raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
+        return len(snapshot)
+
+    # 응시 소요 시간(분)
+    def get_duration_minute(self, obj):
+        if not obj.started_at or not obj.created_at:
+            return None
+        delta = obj.created_at - obj.started_at
+        if delta.total_seconds() < 0:
+            raise ValidationError("시험 종료 시간이 시작 시간보다 빠릅니다.")
+        return int(delta.total_seconds() // 60)
 
 
 # 수강생 쪽지 시험 제출
