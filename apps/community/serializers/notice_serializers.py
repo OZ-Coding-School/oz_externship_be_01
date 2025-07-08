@@ -11,6 +11,7 @@ from apps.community.serializers.category_serializers import (
     CategoryDetailResponseSerializer,
 )
 from apps.community.serializers.comment_serializer import CommentResponseSerializer
+from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
 
@@ -20,12 +21,12 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
     title = serializers.CharField(required=True)
     content = serializers.CharField(required=True)
     is_notice = serializers.BooleanField(required=True)
-    attachments = serializers.ListField(
+    attachments = FileListField(
         child=serializers.FileField(),
         required=False,
         write_only=True,
     )
-    images = serializers.ListField(
+    images = FileListField(
         child=serializers.ImageField(),
         required=False,
         write_only=True,
