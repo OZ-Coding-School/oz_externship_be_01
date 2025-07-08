@@ -158,7 +158,7 @@ class TestDeploymentStatusView(APIView):
 # 쪽지시험 배포 목록 조회
 class DeploymentListView(APIView):
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     serializer_class = DeploymentListSerializer
     pagination_class = AdminTestListPagination
 
@@ -290,7 +290,7 @@ class TestDeploymentDeleteView(APIView):
     DELETE 요청 시 특정 배포를 삭제
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     serializer_class = DeploymentCreateSerializer
 
     def delete(self, request: Request, deployment_id: int, *args, **kwargs) -> Response:
