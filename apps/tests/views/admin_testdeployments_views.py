@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.models import TestDeployment
+from apps.tests.pagination import AdminTestListPagination
 from apps.tests.serializers.test_deployment_serializers import (
     DeploymentCreateSerializer,
     DeploymentDetailSerializer,
@@ -229,7 +230,7 @@ class DeploymentListView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포/생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer},
     summary="시험 배포 상세 조회",
     description=" 배포 ID에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
@@ -250,7 +251,7 @@ class DeploymentDetailView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentCreateSerializer,
     responses={201: dict},
     summary="시험 배포 생성",
@@ -279,7 +280,7 @@ class TestDeploymentCreateView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     summary="시험 배포 삭제",
     description="test_id(deployment_id)룰 임력하여 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )
@@ -289,7 +290,7 @@ class TestDeploymentDeleteView(APIView):
     DELETE 요청 시 특정 배포를 삭제
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
     serializer_class = DeploymentCreateSerializer
 
     def delete(self, request: Request, deployment_id: int, *args, **kwargs) -> Response:
