@@ -30,11 +30,11 @@ class TestStartView(APIView):
     request_serializer_class = UserTestStartSerializer
     response_serializer_class = UserTestDeploymentSerializer
 
-    def post(self, request: Request, test_id: int) -> Response:
+    def post(self, request: Request, test_deployment_id: int) -> Response:
         """
         쪽지 시험 응시 API
         """
-        test_deployment = get_object_or_404(TestDeployment, test_id=test_id)
+        test_deployment = get_object_or_404(TestDeployment, pk=test_deployment_id)
         now = timezone.now()
 
         # 배포 상태 확인
