@@ -1,13 +1,18 @@
 from datetime import date, timedelta
-from typing import Callable, Dict, List, TypedDict, Union
+from typing import Any, Callable, Dict, List, OrderedDict, TypedDict, Union
 
-from drf_spectacular.utils import extend_schema
+from django.db.models import Count, OuterRef, Subquery
+from django.db.models.functions import TruncMonth, TruncYear
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tests.permissions import IsAdminOrStaff
+from apps.users.models import StudentEnrollmentRequest
 from apps.users.serializers.admin_dashboard_serializers import (
     ChartTypeEnum,
     ConversionTrendResponseSerializer,
@@ -19,14 +24,23 @@ from apps.users.serializers.admin_dashboard_serializers import (
 )
 
 
+# 수강생 전환 추이 분석 차트
 class AdminEnrollmentTrendView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         request=TrendQuerySerializer,
         responses={200: ConversionTrendResponseSerializer},
         summary="수강생 전환 추세 조회",
         description="월별 또는 년별 단위로 수강생 전환 수를 그래프 데이터 형태로 반환합니다.",
+        parameters=[
+            OpenApiParameter(
+                name="unit",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="단위: 'monthly' 또는 'yearly'",
+            )
+        ],
         tags=["Admin - 유저 대시보드"],
     )
     def get(self, request: Request) -> Response:
@@ -34,25 +48,62 @@ class AdminEnrollmentTrendView(APIView):
         serializer.is_valid(raise_exception=True)
         unit = serializer.validated_data["unit"]
 
+        # 유저별 최초 승인일만 추출
+        first_approved_qs = (
+            StudentEnrollmentRequest.objects.filter(
+                status=StudentEnrollmentRequest.EnrollmentStatus.APPROVED,
+                accepted_at__isnull=False,
+                user=OuterRef("user"),
+            )
+            .order_by("accepted_at", "id")
+            .values("id")[:1]
+        )
+
+        # 이 id와 같은 승인 이력만 필터링
+        base_qs = StudentEnrollmentRequest.objects.filter(id__in=Subquery(first_approved_qs))
+
+        labels: List[str] = []
+        data: List[int] = []
+
         if unit == "monthly":
-            labels = [f"2024-{m:02}" for m in range(1, 13)]
-            data = [3, 5, 7, 2, 6, 4, 5, 6, 4, 3, 7, 8]
+            qs_monthly: List[Dict[str, Any]] = list(
+                base_qs.annotate(period=TruncMonth("accepted_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+
+            for item in qs_monthly:
+                label = item["period"].strftime("%Y-%m")
+                labels.append(label)
+                data.append(item["count"])
+
             range_ = "last_12_months"
-        else:
-            labels = ["2021", "2022", "2023", "2024"]
-            data = [31, 45, 39, 50]
+
+        else:  # yearly
+            qs_yearly: List[Dict[str, Any]] = list(
+                base_qs.annotate(period=TruncYear("accepted_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+
+            for item in qs_yearly:
+                label = item["period"].strftime("%Y")
+                labels.append(label)
+                data.append(item["count"])
+
             range_ = "last_4_years"
 
-        return Response(
-            {
-                "title": f"수강생 전환 추세 {labels[0]} ~ {labels[-1]}",
-                "graph_type": "student_conversion",
-                "chart_type": ChartTypeEnum.BAR.value,
-                "range": range_,
-                "data": dict(zip(labels, data)),
-            },
-            status=status.HTTP_200_OK,
-        )
+        response_data = {
+            "title": f"수강생 전환 추세 {labels[0]} ~ {labels[-1]}" if labels else "수강생 전환 추세",
+            "graph_type": "student_conversion",
+            "chart_type": ChartTypeEnum.BAR.value,
+            "range": range_,
+            "data": OrderedDict(zip(labels, data)),
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class AdminJoinTrendView(APIView):

@@ -14,6 +14,7 @@ from rest_framework.serializers import (
 class ChartTypeEnum(str, Enum):
     BAR = "bar"
     PIE = "pie"
+    LINE = "line"
 
 
 # 수강생 전환 추세 요청
@@ -36,7 +37,7 @@ class ConversionTrendResponseSerializer(Serializer[Any]):
         self.fields["graph_type"] = CharField(help_text="그래프 종류 (예: student_conversion)")
         self.fields["chart_type"] = ChoiceField(
             choices=[e.value for e in ChartTypeEnum],
-            help_text="차트 유형 (bar | line | pie | scatter)",
+            help_text="차트 유형 (bar | line)",
         )
         self.fields["range"] = CharField(help_text="조회 범위 설명 (예: last_12_months, last_4_years)")
         self.fields["labels"] = ListField(child=CharField(), help_text="X축 라벨 (월 또는 연도)")
@@ -63,7 +64,7 @@ class JoinTrendResponseSerializer(Serializer[Any]):
         self.fields["graph_type"] = CharField(help_text="그래프 종류 (예: join)")
         self.fields["chart_type"] = ChoiceField(
             choices=[e.value for e in ChartTypeEnum],
-            help_text="차트 유형 (bar | line | pie | scatter)",
+            help_text="차트 유형 (bar | line)",
         )
         self.fields["range"] = CharField(help_text="조회 범위 단위 (예: monthly | yearly)")
         self.fields["labels"] = ListField(child=CharField(), help_text="X축 라벨 (날짜, 월, 연도 등)")
