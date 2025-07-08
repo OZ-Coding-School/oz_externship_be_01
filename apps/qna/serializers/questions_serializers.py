@@ -109,47 +109,47 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
             if field in validated_data:
                 setattr(instance, field, validated_data[field])
         if "category_id" in validated_data:
-            instance.category = validated_data["category_id"]  # 객체로 넘어옴
+            instance.category = validated_data["category_id"]
 
-        # 이미지 전체 교체 (S3 업로드 & S3 파일 삭제)
         if "image_files" in validated_data:
             image_files = validated_data["image_files"]
-            uploaded_keys = []
-            try:
-                with transaction.atomic():
-                    # 1. 기존 이미지 S3 삭제 & DB 삭제
-                    existing_images = QuestionImage.objects.filter(question=instance)
-                    uploader = S3Uploader()
-                    for img_obj in existing_images:
-                        s3_key = img_obj.img_url.split(".com/", 1)[-1]
-                        try:
-                            uploader.delete_file(s3_key)
-                        except Exception:
-                            pass  # S3에서 삭제 실패시 로깅(선택)
-                    existing_images.delete()
+            old_images = instance.images.all()
+            old_s3_urls = [img.img_url for img in old_images]
+            s3_uploader = S3Uploader()
 
-                    # 2. 새 이미지 업로드 & DB 등록
-                    for index, img in enumerate(image_files, 1):
-                        ext = Path(getattr(img, "name", "image.jpg")).suffix or ".jpg"
-                        timestamp = int(time.time() * 1000)
-                        filename = f"question_{instance.id}_image_{index}_{timestamp}{ext}"
-                        s3_key = f"qna/questions/{filename}"
-                        url = uploader.upload_file(img, s3_key)
-                        if not url:
-                            # 업로드 실패시 이미 올린 파일 S3에서 삭제
-                            for key in uploaded_keys:
-                                try:
-                                    uploader.delete_file(key)
-                                except Exception:
-                                    pass
-                            raise APIException("이미지 업로드에 실패했습니다. 다시 시도해 주세요.")
-                        uploaded_keys.append(s3_key)
-                        QuestionImage.objects.create(question=instance, img_url=url)
-            finally:
-                instance.save()
-        else:
-            instance.save()
+            # 기존 이미지 DB만 삭제, S3는 보류
+            old_images.delete()
+            upload_success = True
+            new_s3_urls = []
 
+            for index, image_file in enumerate(image_files, 1):
+                file_extension = Path(getattr(image_file, "name", "image.jpg")).suffix or ".jpg"
+                timestamp = int(time.time() * 1000)
+                filename = f"question_{instance.id}_image_{index}_{timestamp}{file_extension}"
+                s3_key = f"qna/questions/{filename}"
+                s3_url = s3_uploader.upload_file(image_file, s3_key)
+                if s3_url:
+                    QuestionImage.objects.create(question=instance, img_url=s3_url)
+                    new_s3_urls.append(s3_url)
+                else:
+                    upload_success = False
+                    break
+
+            if upload_success:
+                # 새 이미지 업로드 성공 시에만 S3의 옛 이미지 삭제
+                for old_url in old_s3_urls:
+                    s3_uploader.delete_file(old_url)
+            else:
+                # 업로드 중단 시, 복구 로직 (예시)
+                for old_url in old_s3_urls:
+                    QuestionImage.objects.create(question=instance, img_url=old_url)
+                # 업로드 실패한 새 s3 URL 삭제
+                for new_url in new_s3_urls:
+                    s3_uploader.delete_file(new_url)
+                # 예외 발생 (필요에 따라 직접 에러 처리)
+                raise APIException("이미지 업로드에 실패했습니다. 기존 이미지는 보존됩니다.")
+
+        instance.save()
         return instance
 
 
