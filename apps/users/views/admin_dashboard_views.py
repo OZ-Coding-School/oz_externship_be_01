@@ -218,38 +218,40 @@ class AdminWithdrawTrendView(APIView):
         unit = serializer.validated_data["unit"]
 
         today = datetime.today()
-        base_qs = User.objects.filter(is_active=False)  # 탈퇴자 기준
+        base_qs = Withdrawal.objects.all()
 
         labels: List[str] = []
-        raw_counts: Dict[str, int] = {}
 
         if unit == "monthly":
-            start_date = today.replace(day=1) - timedelta(days=365)
-            qs_monthly: List[Dict[str, Any]] = list(
-                base_qs.filter(updated_at__gte=start_date)
+            start_month = today.replace(day=1) - relativedelta(years=1)
+            qs_monthly = list(
+                base_qs.filter(updated_at__date__gte=start_month.date())
                 .annotate(period=TruncMonth("updated_at"))
                 .values("period")
                 .annotate(count=Count("id"))
                 .order_by("period")
             )
-            for i in range(12):
-                dt = start_date + timedelta(days=30 * i)
-                labels.append(dt.strftime("%Y-%m"))
+            for i in range(13):
+                month = start_month + relativedelta(months=i)
+                labels.append(month.strftime("%Y-%m"))
             raw_counts = {item["period"].strftime("%Y-%m"): item["count"] for item in qs_monthly}
             range_ = "last_12_months"
 
-        else:  # yearly
-            start_year = today.year - 4
-            qs_yearly: List[Dict[str, Any]] = list(
-                base_qs.filter(updated_at__year__gte=start_year)
+        elif unit == "yearly":
+            start_year = today - relativedelta(years=4)
+            qs_yearly = list(
+                base_qs.filter(updated_at__date__gte=start_year.date())
                 .annotate(period=TruncYear("updated_at"))
                 .values("period")
                 .annotate(count=Count("id"))
                 .order_by("period")
             )
-            labels = [str(y) for y in range(start_year, today.year + 1)]
+            labels = [str(start_year.year + i) for i in range(5)]
             raw_counts = {item["period"].strftime("%Y"): item["count"] for item in qs_yearly}
             range_ = "last_4_years"
+
+        else:
+            raise ValidationError("unit은 'monthly' 또는 'yearly' 중 하나여야 합니다.")
 
         data = OrderedDict((label, raw_counts.get(label, 0)) for label in labels)
 
