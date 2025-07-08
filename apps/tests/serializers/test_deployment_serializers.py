@@ -173,7 +173,6 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             "duration_time",
             "open_at",
             "close_at",
-            "questions_snapshot_json",
             "status",
         ]
         read_only_fields = ["access_code", "status", "questions_snapshot_json"]
@@ -194,12 +193,6 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             generation_obj = Generation.objects.get(id=generation_id)
         except Generation.DoesNotExist:
             raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
-
-        questions_json = generate_questions_snapshot_json(test)
-        if questions_json:
-            validated_data["questions_snapshot_json"] = questions_json
-        else:
-            validated_data["questions_snapshot_json"] = "[]"
 
         generated_code = None
         while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
