@@ -2,7 +2,7 @@ import uuid
 
 from rest_framework import serializers
 
-from apps.community.models import Post, PostCategory, PostAttachment, PostImage
+from apps.community.models import Post, PostAttachment, PostCategory, PostImage
 from apps.community.serializers.attachment_serializers import (
     PostAttachmentResponseSerializer,
     PostImageResponseSerializer,
@@ -71,9 +71,7 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
     content = serializers.CharField(required=False)
     category = serializers.PrimaryKeyRelatedField(queryset=PostCategory.objects.all(), required=False)
     is_visible = serializers.BooleanField(required=False)
-    attachments = FileListField(
-        child=serializers.FileField(), required=False, write_only=True, allow_empty=True
-    )
+    attachments = FileListField(child=serializers.FileField(), required=False, write_only=True, allow_empty=True)
     images = FileListField(child=serializers.ImageField(), required=False, write_only=True, allow_empty=True)
 
     class Meta:

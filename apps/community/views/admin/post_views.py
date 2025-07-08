@@ -1,6 +1,5 @@
-from django.db.models import F
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -34,12 +33,21 @@ class AdminPostListView(APIView):
             OpenApiParameter(name="size", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
             OpenApiParameter(name="category_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY),
             OpenApiParameter(name="is_visible", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY),
-            OpenApiParameter(name="search_type", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
-                             description="검색 대상: 작성자 | 제목( 기본값 ) | 내용 | 제목 + 내용 "),
-            OpenApiParameter(name="keyword", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
-                             description="검색 키워드"),
-            OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
-                             description="정렬: 최신순( 기본값 ) | 오래된 순  | 조회수 많은 순 | 좋아요가 많은 순 "),
+            OpenApiParameter(
+                name="search_type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="검색 대상: 작성자 | 제목( 기본값 ) | 내용 | 제목 + 내용 ",
+            ),
+            OpenApiParameter(
+                name="keyword", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="검색 키워드"
+            ),
+            OpenApiParameter(
+                name="ordering",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="정렬: 최신순( 기본값 ) | 오래된 순  | 조회수 많은 순 | 좋아요가 많은 순 ",
+            ),
         ],
         tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
         summary="관리자 게시글 목록 조회 (기능 구현)",
@@ -172,7 +180,6 @@ class AdminPostDeleteView(APIView):
         for attachment in post.attachments.all():
             uploader.delete_file(attachment.file_url)
         post.attachments.all().delete()
-
 
         for image in post.images.all():
             uploader.delete_file(image.image_url)
