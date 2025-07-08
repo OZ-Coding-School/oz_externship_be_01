@@ -46,27 +46,30 @@ class TestQuestionUpdateSerializer(serializers.ModelSerializer):  # type: ignore
             "explanation",
         ]
 
-    # 요청 데이터 복합 검증
+    # 요청값 기준으로만 판단
     def validate(self, data):
-        question_type = data.get("type", self.instance.type if self.instance.type else None)
-        answer = data.get("answer", self.instance.answer if self.instance.answer else None)
-        point = data.get("point", self.instance.point if self.instance.point else None)
-        options = data.get("options_json", self.instance.options_json if self.instance else None)
-        prompt = data.get("prompt", self.instance.prompt if self.instance else None)
-        blank_count = data.get("blank_count", self.instance.blank_count if self.instance else None)
+        question_type = data.get("type", None)
+        answer = data.get("answer", None)
+        point = data.get("point", None)
+        options = data.get("options_json", None)
+        prompt = data.get("prompt", None)
+        blank_count = data.get("blank_count", None)
 
         if not question_type:
             raise serializers.ValidationError({"detail": "문제 유형(type)은 필수입니다."})
 
         if point is not None and not (1 <= point <= 10):
-
             raise serializers.ValidationError({"detail": "배점은 1~10점 사이여야 합니다."})
 
+        # 유형별 필드 검증 및 불필요한 필드 초기화
         if question_type == "multiple choice":
             if not options:
                 raise serializers.ValidationError({"detail": "다지선다형은 'option_json'이 필수입니다."})
             if not answer:
                 raise serializers.ValidationError({"detail": "정답이 필요합니다."})
+
+            data["prompt"] = None
+            data["options_json"] = None
 
         elif question_type == "blank_count":
             if not prompt:
@@ -76,9 +79,15 @@ class TestQuestionUpdateSerializer(serializers.ModelSerializer):  # type: ignore
             if not answer:
                 raise serializers.ValidationError({"detail": "정답이 필요합니다."})
 
+            data["options_json"] = None
+
         elif question_type == "subjective":
             if not answer:
                 raise serializers.ValidationError({"detail": "주관식 문제는 정답이 필요합니다."})
+
+            data["prompt"] = None
+            data["options_json"] = None
+            data["blank_count"] = None
 
         elif question_type == "order":
             if not options or len(options) < 2:
@@ -86,9 +95,19 @@ class TestQuestionUpdateSerializer(serializers.ModelSerializer):  # type: ignore
             if not answer:
                 raise serializers.ValidationError({"detail": "정답이 필요합니다.."})
 
+            data["prompt"] = None
+            data["blank_count"] = None
+
         elif question_type == "ox":
             if answer not in [["o"], ["x"]]:
                 raise serializers.ValidationError({"detail": "ox 문제는 정답이 ['o'] 또는 ['x']여야 합니다."})
+
+            data["prompt"] = None
+            data["blank_count"] = None
+            data["options_json"] = None
+
+        else:
+            raise serializers.ValidationError({"detail": f"지원하지 않는 문제 유형입니다: {question_type}"})
 
         return data
 
