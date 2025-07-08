@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.users.utils.redis_utils import mark_phone_verified
 from apps.users.utils.twilio_utils import (
     check_verification_code,
     normalize_phone_number,
@@ -21,5 +22,5 @@ class VerifyPhoneCodeSerializer(serializers.Serializer):
         result = check_verification_code(phone_number=phone, code=code)
         if not result:
             raise serializers.ValidationError("invalid verification code.")
-
+        mark_phone_verified(attrs.get("phone"))
         return attrs
