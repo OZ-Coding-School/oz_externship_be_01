@@ -1,12 +1,13 @@
 from typing import List
 
+from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.db.models.functions import Coalesce, TruncMonth
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,23 +20,60 @@ from apps.courses.serializers.generation_serializer import (
     GenerationListSerializer,
     MonthlyCourseSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
 
+@extend_schema(
+    tags=["Admin - 기수관리"],
+)
 # 기수 등록 API
 class GenerationCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = GenerationCreateSerializer
 
+    @extend_schema(
+        summary="신규 기수 등록",
+        description="관리자 또는 스태프 권한이 있으면 새로운 기수를 등록할 수 있습니다.",
+        request=GenerationCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: GenerationCreateSerializer,
+            status.HTTP_400_BAD_REQUEST: {
+                "description": "유효성 검증 실패 (Request Body 오류, 날짜 오류, 인원 오류 등)"
+            },
+            status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
+            status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
+            status.HTTP_404_NOT_FOUND: {"description": "과정을 찾을 수 없음 (제공된 course_id에 해당하는 과정 없음)"},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
+        },
+        examples=[
+            OpenApiExample(
+                "기수 등록 요청 성공 예시",
+                value={
+                    "course_id": 1,
+                    "number": 1,
+                    "max_student": 45,
+                    "start_date": "2025-07-01",
+                    "end_date": "2025-12-31",
+                },
+                request_only=True,
+                media_type="application/json",
+            ),
+        ],
+    )
     def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
+        serializer.is_valid(raise_exception=True)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        generation = serializer.save()
+
+        return Response(self.serializer_class(generation).data, status=status.HTTP_201_CREATED)
 
 
 # 기수 목록 API
+@extend_schema(
+    tags=["Admin - 기수관리 Mock"],
+)
 class GenerationListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
@@ -47,6 +85,9 @@ class GenerationListView(APIView):
 
 
 # 기수 상세 정보 API
+@extend_schema(
+    tags=["Admin - 기수관리 Mock"],
+)
 class GenerationDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationListSerializer
@@ -60,6 +101,10 @@ class GenerationDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# 기수 수정
+@extend_schema(
+    tags=["Admin - 기수관리 Mock"],
+)
 class GenerationUpdateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
@@ -76,6 +121,10 @@ class GenerationUpdateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# 기수 삭제
+@extend_schema(
+    tags=["Admin - 기수관리 Mock"],
+)
 class GenerationDeleteView(APIView):
     permission_classes = [AllowAny]
 
@@ -92,6 +141,9 @@ class GenerationDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(
+    tags=["[Admin] 과정-기수 대시보드"],
+)
 class CourseTrendView(APIView):
     permission_classes = [AllowAny]
     serializer_class = CourseTrendSerializer
@@ -155,6 +207,9 @@ class CourseTrendView(APIView):
             return Response({"detail": f"서버 오류: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@extend_schema(
+    tags=["[Admin] 과정-기수 대시보드"],
+)
 class MonthlyCourseView(APIView):
     permission_classes = [AllowAny]
     serializer_class = MonthlyCourseSerializer
@@ -213,12 +268,15 @@ class MonthlyCourseView(APIView):
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["[Admin] 과정-기수 대시보드"])
 class OngoingCourseView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
         # 활성화된 Generation을 select_related로 Course와 함께 가져옴 ( N + 1 문제 해결 )
-        active_generations = Generation.objects.select_related("course").filter(~Q(status="closed"))
+        active_generations = Generation.objects.select_related("course").filter(
+            ~Q(status=Generation.GenStatus.Finished) & ~Q(status=Generation.GenStatus.Ready)
+        )
 
         if not active_generations.exists():
             return Response(
