@@ -24,8 +24,18 @@ class AuthorSerializer(serializers.ModelSerializer[User]):
         fields = ["id", "nickname", "profile_image_url", "role"]
 
 
+class AnswerCommentListSerializer(serializers.ModelSerializer[AnswerComment]):
+    author = AuthorSerializer(read_only=True)
+
+    class Meta:
+        model = AnswerComment
+        fields = ["id", "answer_id", "author", "content", "created_at", "updated_at"]
+
+
 class AnswerListSerializer(serializers.ModelSerializer[Answer]):
     author = AuthorSerializer(read_only=True)
+    comments = AnswerCommentListSerializer(many=True, read_only=True)
+    img_url = AnswerImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Answer
@@ -37,6 +47,8 @@ class AnswerListSerializer(serializers.ModelSerializer[Answer]):
             "is_adopted",
             "created_at",
             "updated_at",
+            "img_url",
+            "comments",
         ]
 
 
