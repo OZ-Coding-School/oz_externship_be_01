@@ -1,10 +1,10 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from typing import Optional
 
 import sentry_sdk
 from dotenv import load_dotenv
-from typing import Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 

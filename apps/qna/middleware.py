@@ -1,7 +1,7 @@
 from urllib.parse import parse_qs
 
 import jwt
-from channels.middleware import BaseMiddleware # type: ignore
+from channels.middleware import BaseMiddleware  # type: ignore
 from django.conf import settings
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 

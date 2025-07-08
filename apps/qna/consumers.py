@@ -2,7 +2,7 @@ import json
 import os
 
 import httpx
-from channels.generic.websocket import AsyncWebsocketConsumer # type: ignore
+from channels.generic.websocket import AsyncWebsocketConsumer  # type: ignore
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"

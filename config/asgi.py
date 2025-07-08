@@ -8,7 +8,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 # django ASGI application 초기화
 django_asgi_app = get_asgi_application()
 
-from channels.routing import ProtocolTypeRouter, URLRouter # type: ignore
+from channels.routing import ProtocolTypeRouter, URLRouter  # type: ignore
 
 from apps.qna import routing
 from apps.qna.middleware import JWTAuthMiddleware
