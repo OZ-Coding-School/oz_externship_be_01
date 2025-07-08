@@ -1,12 +1,13 @@
 from typing import List
 
+from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.db.models.functions import Coalesce, TruncMonth
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +20,7 @@ from apps.courses.serializers.generation_serializer import (
     GenerationListSerializer,
     MonthlyCourseSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
 
@@ -27,7 +29,7 @@ from apps.users.models.student_enrollment import StudentEnrollmentRequest
 )
 # 기수 등록 API
 class GenerationCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = GenerationCreateSerializer
 
     @extend_schema(
@@ -63,15 +65,10 @@ class GenerationCreateView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            generation = serializer.save()
 
-            return Response(self.serializer_class(generation).data, status=status.HTTP_201_CREATED)
+        generation = serializer.save()
 
-        except Course.DoesNotExist:
-            return Response({"detail": "해당 course_id의 과정이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(self.serializer_class(generation).data, status=status.HTTP_201_CREATED)
 
 
 # 기수 목록 API

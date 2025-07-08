@@ -17,7 +17,7 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
     )
     status = serializers.ChoiceField(
         choices=Generation.GenStatus.choices,
-        help_text="기수 상태 (READY, ONGOING, FINISHED 중 선택)",
+        help_text="기수 상태 (Ready, Ongoing, Finished 중 선택)",
     )
 
     class Meta:
