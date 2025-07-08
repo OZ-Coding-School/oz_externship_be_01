@@ -30,7 +30,7 @@ from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeV
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.phone_auth import (
     SendPhoneCodeAPIView,
-    VerifyPhoneCodeAPIView
+    VerifyPhoneCodeAPIView,
 )
 from apps.users.views.auth.signup import SignUpAPIView
 from apps.users.views.auth.social_login import (
