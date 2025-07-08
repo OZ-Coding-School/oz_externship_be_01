@@ -4,12 +4,13 @@ from pathlib import Path
 
 import sentry_sdk
 from dotenv import load_dotenv
+from typing import Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 load_dotenv(dotenv_path=BASE_DIR / "envs/.local.env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY: Optional[str] = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("DJANGO_SECRET_KEY environment variable not set")
 
