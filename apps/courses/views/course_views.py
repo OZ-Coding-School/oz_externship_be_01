@@ -1,10 +1,10 @@
 from django.db.models import Count, Q
+from drf_spectacular.utils import extend_schema  # 누락 방지용
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema  # 누락 방지용
 
 from apps.courses.models import Course, Generation
 from apps.courses.serializers.course_serializers import (
@@ -97,4 +97,3 @@ class CourseDetailView(RetrieveUpdateDestroyAPIView):
         generations.delete()
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
