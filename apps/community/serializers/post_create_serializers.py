@@ -1,54 +1,68 @@
-from typing import Any, Dict
+import uuid
 
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
-from rest_framework import status
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import serializers
 
-from apps.community.views.user.post_create_views import PostCreateSerializer
+from apps.community.models import Post, PostAttachment, PostCategory, PostImage
+from core.utils.s3_file_upload import S3Uploader
 
 User = get_user_model()
 
 
-class PostCreateAPIView(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
+class PostCreateSerializer(serializers.ModelSerializer):
+    category_id = serializers.IntegerField()
+    author_id = serializers.IntegerField()
+    attachments = serializers.ListField(child=serializers.FileField(), max_length=5, write_only=True, required=False, default=list)
+    images = serializers.ListField(child=serializers.ImageField(), max_length=5, write_only=True, required=False, default=list)
 
-    @extend_schema(
-        request=PostCreateSerializer,
-        responses={
-            201: OpenApiResponse(description="게시글 등록되었습니다."),
-            400: OpenApiResponse(description="입력값 유효하지 않습니다."),
-        },
-        tags=["게시글"],
-        summary="게시글 등록",
-        description="게시글 제목, 내용, 카테고리, 이미지를ㅅ 생성한 예시입니다.",
-    )
-    def post(self, request: Request) -> Response:
-        serializer = PostCreateSerializer(data=request.data)
+    class Meta:
+        model = Post
+        fields = [
+            "category_id",
+            "author_id",
+            "title",
+            "content",
+            "is_visible",
+            "is_notice",
+            "attachments",
+            "images",
+        ]
 
-        if not serializer.is_valid():
-            return Response(
-                {
-                    "detail": "필수 필드가 누락되었습니다.",
-                    "errors": serializer.errors,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    def validate_category_id(self, value):
+        if not PostCategory.objects.filter(id=value).exists():
+            raise serializers.ValidationError("category_id: 존재하지 않는 카테고리입니다.")
+        return value
 
-        serializer.save()
+    def validate_author_id(self, value):
+        if not User.objects.filter(id=value).exists():
+            raise serializers.ValidationError("author_id: 존재하지 않는 사용자입니다.")
+        return value
 
-        # post = Post.objects.create(category=category, author=author, **validated_data)
-        #
-        # PostAttachment.objects.bulk_create([             # 1:n 관계
-        #     PostAttachment(post=post, file=attachment) for attachment in attachments_data
-        # ])
-        #
-        # PostImage.objects.bulk_create([
-        #     PostImage(post=post, image=image) for image in images_data
-        # ])
-        return Response({"detail": "게시글 등록됨"}, status=status.HTTP_201_CREATED)
+    def create(self, validated_data):
+        # request = self.context.get("request")
+        attachments_data = validated_data.pop("attachments", [])
+        images_data = validated_data.pop("images", [])
+
+        author = User.objects.get(id=validated_data.pop("author_id"))
+        category = PostCategory.objects.get(id=validated_data.pop("category_id"))
+        post = Post.objects.create(category=category, author=author, **validated_data)
+
+        uploader = S3Uploader()
+
+        # 첨부파일 업로드
+        for file in attachments_data:
+            unique_file_name = f"{uuid.uuid4().hex[:6]}_{file.name}"
+            s3_key = f"oz_externship_be/community/attachments/{unique_file_name}"
+            url = uploader.upload_file(file, s3_key)
+            if url:
+                PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
+
+        # 이미지 업로드
+        for image in images_data:
+            unique_image_name = f"{uuid.uuid4().hex[:6]}_{image.name}"
+            s3_key = f"oz_externship_be/community/attachments/{unique_image_name}"
+            url = uploader.upload_file(image, s3_key)
+            if url:
+                PostImage.objects.create(post=post, image_url=url, image_name=image.name)
+
+        return post

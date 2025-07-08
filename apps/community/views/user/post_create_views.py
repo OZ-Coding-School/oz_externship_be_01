@@ -1,59 +1,51 @@
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
+from django.db.models import Count, Q
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.community.models import Post, PostAttachment, PostCategory, PostImage
+from apps.community.models import Post
+from apps.community.serializers.post_create_serializers import PostCreateSerializer
+from apps.community.serializers.post_serializers import PostDetailSerializer
 
 User = get_user_model()
 
 
-class PostCreateSerializer(serializers.ModelSerializer):
-    category_id = serializers.IntegerField()
-    author_id = serializers.IntegerField()
-    attachments = serializers.ListField(child=serializers.FileField(), max_length=5, write_only=True, required=False)
-    images = serializers.ListField(child=serializers.ImageField(), max_length=5, write_only=True, required=False)
+class PostCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
 
-    class Meta:
-        model = Post
-        fields = [
-            "category_id",
-            "author_id",
-            "title",
-            "content",
-            "is_visible",
-            "is_notice",
-            "attachments",
-            "images",
-        ]
+    @extend_schema(
+        request=PostCreateSerializer,
+        responses={
+            201: OpenApiResponse(description="게시글 등록되었습니다."),
+            400: OpenApiResponse(description="입력값 유효하지 않습니다."),
+        },
+        tags=["community - 게시글"],
+        summary="게시글 등록",
+        description="게시글 제목, 내용, 카테고리, 이미지를ㅅ 생성한 예시입니다.",
+    )
 
-    def validate_category_id(self, value):
-        if not PostCategory.objects.filter(id=value).exists():
-            raise serializers.ValidationError("category_id: 존재하지 않는 카테고리입니다.")
-        return value
+    def post(self, request: Request) -> Response:
+        serializer = PostCreateSerializer(data=request.data, context={"request": request})
 
-    def validate_author_id(self, value):
-        if not User.objects.filter(id=value).exists():
-            raise serializers.ValidationError("author_id: 존재하지 않는 사용자입니다.")
-        return value
-
-    def create(self, validated_data):
-        attachments_data = validated_data.pop("attachments", [])
-        images_data = validated_data.pop("images", [])
-        try:
-            category = PostCategory.objects.get(id=validated_data.pop("category_id"))
-            author = User.objects.get(id=validated_data.pop("author_id"))
-        except User.DoesNotExist:
-            raise serializers.ValidationError("User not found.")
-        except PostCategory.DoesNotExist:
-            raise serializers.ValidationError("category not found.")
-
-        post = Post.objects.create(category=category, author=author, **validated_data)
-
-        for attachment in attachments_data:
-            PostAttachment.objects.create(
-                post=post, file_url=f"media/community/posts/{attachment.name}", file_name=attachment.name
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "detail": "필수 필드가 누락되었습니다.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        for image in images_data:
-            PostImage.objects.create(post=post, img_url=f"media/community/posts/{image.name}")
 
-        return post
+        post = serializer.save()
+
+        response_serializer = PostDetailSerializer(post)
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)

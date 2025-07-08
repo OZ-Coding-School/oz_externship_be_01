@@ -1,6 +1,5 @@
 from django.urls import path
 
-from apps.community.serializers.post_create_serializers import PostCreateAPIView
 from apps.community.serializers.post_list_serializers import PostListAPIView
 from apps.community.views.admin.category_views import (
     AdminCategoryListAPIView,
@@ -25,6 +24,7 @@ from apps.community.views.user.comment_views import (
     CommentListAPIView,
     CommentUpdateAPIView,
 )
+from apps.community.views.user.post_create_views import PostCreateAPIView
 
 urlpatterns = [
     # admin
