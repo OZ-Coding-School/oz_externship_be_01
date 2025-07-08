@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.community.models import Comment, CommentTags, Post
-from apps.community.serializers.comment_serializer import (
+from apps.community.serializers.comment_serializers import (
     CommentCreateSerializer,
     CommentResponseSerializer,
     CommentUpdateSerializer,
