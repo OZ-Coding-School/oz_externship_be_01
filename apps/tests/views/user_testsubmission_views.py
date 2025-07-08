@@ -1,6 +1,4 @@
-from django.conf import settings
-from django.utils import timezone
-from drf_spectacular.utils import OpenApiExample, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,8 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import Generation, Subject, User
-from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.permissions import IsStudent
 from apps.tests.serializers.test_deployment_serializers import (
     UserTestDeploymentSerializer,
@@ -96,7 +93,7 @@ class TestSubmissionResultView(APIView):
         )
 
         if test_submission.student.user != request.user:
-            return Response({"detail": "본인만 결과조회가 가능합니다."})
+            return Response({"detail": "본인만 결과조회가 가능합니다."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.serializer_class(instance=test_submission)
         return Response({"message": "쪽지시험 결과 조회 완료", "data": serializer.data}, status=status.HTTP_200_OK)
