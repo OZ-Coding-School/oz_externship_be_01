@@ -128,7 +128,7 @@ class QuestionUpdateView(APIView):
     def patch(self, request: Request, question_id: int) -> Response:
         question = get_object_or_404(Question, pk=question_id)
 
-        serializer = QuestionUpdateSerializer(question, data=request.data, partial=True, context={"request": request})
+        serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
