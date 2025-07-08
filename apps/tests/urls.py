@@ -125,5 +125,6 @@ urlpatterns = [
         TestDeploymentDeleteView.as_view(),
         name="test-deployment-delete",
     ),
-    path("mock-dashboard/", TestDashboardView.as_view(), name="mock-test-dashboard"),
+    path("validate-status/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
+    path("admin/tests/dashboard/", TestDashboardView.as_view(), name="admin-test-dashboard"),
 ]
