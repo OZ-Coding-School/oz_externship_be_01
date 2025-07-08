@@ -221,7 +221,7 @@ class AdminUserDeleteView(APIView):
 
 # 어드민 회원 권한 변경
 class AdminUserRoleUpdateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminRole]
     serializer_class = AdminUserRoleUpdateSerializer
 
     @extend_schema(
@@ -231,31 +231,24 @@ class AdminUserRoleUpdateView(APIView):
         responses={
             200: OpenApiResponse(description="유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
             400: OpenApiResponse(description="유효하지 않은 권한입니다."),
+            403: OpenApiResponse(description="자기 자신의 권한은 수정할 수 없습니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
         tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        serializer = self.serializer_class(data=request.data, partial=True)
+        user = get_object_or_404(User, id=user_id)
+
+        # 자기 자신의 권한은 바꿀 수 없도록 방지
+        if request.user.id == user.id:
+            return Response({"detail": "자기 자신의 권한은 수정할 수 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        validated_role = serializer.validated_data.get("role")
+        validated_role = serializer.validated_data["role"]
+        user.role = validated_role
+        user.save(update_fields=["role", "updated_at"])
 
-        mock_user = User(
-            id=user_id,
-            email="admin@example.com",
-            name="홍길동",
-            nickname="hongkildong",
-            birthday=date(1998, 8, 16),
-            gender="MALE",
-            phone_number="010-0000-0000",
-            self_introduction="안녕하세요",
-            profile_image_url="",
-            role=validated_role,
-            is_active=True,
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-
-        response_serializer = AdminUserSerializer(instance=mock_user)
+        response_serializer = AdminUserSerializer(user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
