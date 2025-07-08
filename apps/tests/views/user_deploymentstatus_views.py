@@ -7,9 +7,6 @@ from rest_framework.views import APIView
 
 from apps.tests.models import TestDeployment
 from apps.tests.permissions import IsStudent
-from apps.tests.serializers.test_deployment_serializers import (
-    TestDeploymentStatusResponseSerializer,
-)
 
 
 @extend_schema(
@@ -18,10 +15,10 @@ from apps.tests.serializers.test_deployment_serializers import (
     description=(
         "수강생 권한으로 특정 쪽지시험 배포의 활성화 상태와 오픈 시간을 검증합니다.\n\n"
         "- 배포 상태가 'Deactivated'이거나 오픈 시간이 도래하지 않았다면 응시할 수 없습니다.\n"
-        "- 응시 가능 여부를 응답하여 클라이언트가 입장 가능 여부를 안내할 수 있도록 합니다."
+        "- 모든 검증을 통과한 경우 응시 가능 메시지를 반환합니다."
     ),
     responses={
-        200: TestDeploymentStatusResponseSerializer,
+        200: OpenApiResponse(description="응시 가능"),
         400: OpenApiResponse(description="시험이 아직 오픈되지 않았거나 비활성화 상태입니다."),
         401: OpenApiResponse(description="인증 정보가 없거나 유효하지 않습니다."),
         403: OpenApiResponse(description="수강생 권한이 없습니다."),
@@ -29,14 +26,24 @@ from apps.tests.serializers.test_deployment_serializers import (
     },
 )
 class UserTestDeploymentStatusView(APIView):
-    serializer_class = TestDeploymentStatusResponseSerializer
     permission_classes = [IsStudent]
 
     def get(self, request, test_deployment_id):
-        test_deployment = get_object_or_404(TestDeployment, id=test_deployment_id)
+        deployment = get_object_or_404(TestDeployment, id=test_deployment_id)
+        now = timezone.now()
 
-        serializer = self.serializer_class(instance=test_deployment)
-        # validate()를 명시적으로 호출해 상태/시간 검증만 수행 (data는 빈 dict로 전달) is_valid() 사용 불가
-        serializer.validate({})
+        if deployment.status != TestDeployment.TestStatus.ACTIVATED:
+            return Response({"detail": "시험이 비활성화 상태입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if now < deployment.open_at:
+            return Response(
+                {"detail": "시험 오픈 시간이 아직 도래하지 않았습니다. 참가할 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if now > deployment.close_at:
+            return Response(
+                {"detail": "시험 응시 시간이 마감되었습니다. 참가할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({"message": "응시가 가능합니다."}, status=status.HTTP_200_OK)
