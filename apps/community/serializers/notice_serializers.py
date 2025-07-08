@@ -10,7 +10,7 @@ from apps.community.serializers.attachment_serializers import (
 from apps.community.serializers.category_serializers import (
     CategoryDetailResponseSerializer,
 )
-from apps.community.serializers.comment_serializer import CommentResponseSerializer
+from apps.community.serializers.comment_serializers import CommentResponseSerializer
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
