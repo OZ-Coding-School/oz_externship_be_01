@@ -1,10 +1,11 @@
 from datetime import date
 from typing import Any
 
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -15,7 +16,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff, IsAdminRole
-from apps.users.models import User
+from apps.users.models import (
+    PermissionsStaff,
+    PermissionsStudent,
+    PermissionsTrainingAssistant,
+    User,
+)
 from apps.users.serializers.admin_user_serializers import (
     AdminUserDetailSerializer,
     AdminUserListSerializer,
@@ -229,8 +235,8 @@ class AdminUserRoleUpdateView(APIView):
         description="어드민 전용 회원의 권한을 변경합니다.",
         request=AdminUserRoleUpdateSerializer,
         responses={
-            200: OpenApiResponse(description="유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
-            400: OpenApiResponse(description="유효하지 않은 권한입니다."),
+            200: OpenApiResponse(description="변경된 권한을 반환합니다.", response=serializers.CharField),
+            400: OpenApiResponse(description="유효하지 않은 입력입니다."),
             403: OpenApiResponse(description="자기 자신의 권한은 수정할 수 없습니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
@@ -239,16 +245,48 @@ class AdminUserRoleUpdateView(APIView):
     def patch(self, request: Request, user_id: int) -> Response:
         user = get_object_or_404(User, id=user_id)
 
-        # 자기 자신의 권한은 바꿀 수 없도록 방지
         if request.user.id == user.id:
             return Response({"detail": "자기 자신의 권한은 수정할 수 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        new_role = validated_data["role"]
 
-        validated_role = serializer.validated_data["role"]
-        user.role = validated_role
-        user.save(update_fields=["role", "updated_at"])
+        try:
+            with transaction.atomic():
+                if new_role in [User.Role.GENERAL, User.Role.ADMIN]:
+                    user.role = new_role
 
-        response_serializer = AdminUserSerializer(user)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+                elif new_role == User.Role.STUDENT:
+                    generation = validated_data.get("generation")
+                    if not generation:
+                        raise serializers.ValidationError("Student 권한에는 generation 필드가 필요합니다.")
+                    if PermissionsStudent.objects.filter(user=user, generation=generation).exists():
+                        raise serializers.ValidationError("이미 해당 기수에 대한 수강 권한이 존재합니다.")
+                    PermissionsStudent.objects.create(user=user, generation=generation)
+                    user.role = new_role
+
+                elif new_role == User.Role.TA:
+                    generation = validated_data.get("generation")
+                    if not generation:
+                        raise serializers.ValidationError("TA 권한에는 generation 필드가 필요합니다.")
+                    PermissionsTrainingAssistant.objects.get_or_create(user=user, generation=generation)
+                    user.role = new_role
+
+                elif new_role in [User.Role.OM, User.Role.LC]:
+                    course = validated_data.get("course")
+                    if not course:
+                        raise serializers.ValidationError(f"{new_role} 권한에는 course 필드가 필요합니다.")
+                    PermissionsStaff.objects.get_or_create(user=user, course=course)
+                    user.role = new_role
+
+                else:
+                    raise serializers.ValidationError("지원하지 않는 권한입니다.")
+
+                user.save(update_fields=["role", "updated_at"])
+
+        except serializers.ValidationError as e:
+            return Response({"detail": "권한 변경에 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"role": user.role}, status=status.HTTP_200_OK)

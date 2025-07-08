@@ -2,6 +2,7 @@ from typing import Any, Optional, Sequence
 
 from rest_framework import serializers
 
+from apps.courses.models import Course, Generation
 from apps.users.models import User
 
 
@@ -119,10 +120,10 @@ class AdminUserSerializer(serializers.ModelSerializer[User]):
 
 
 # 어드민 회원 권한 변경 시리얼라이저
-class AdminUserRoleUpdateSerializer(serializers.ModelSerializer[User]):
-    class Meta:
-        model = User
-        fields = ["role"]
+class AdminUserRoleUpdateSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=User.Role.choices)
+    generation = serializers.PrimaryKeyRelatedField(queryset=Generation.objects.all(), required=False)
+    course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), required=False)
 
 
 # 페이지네이션 시리얼라이저
