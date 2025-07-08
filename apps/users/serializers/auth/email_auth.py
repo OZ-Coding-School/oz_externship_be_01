@@ -3,7 +3,7 @@ from typing import Any
 from rest_framework import serializers
 from rest_framework.serializers import CharField, EmailField, Serializer
 
-from apps.users.utils.redis import get_stored_email_code
+from apps.users.utils.redis_utils import get_stored_email_code
 
 
 class EmailSendCodeSerializer(Serializer[Any]):

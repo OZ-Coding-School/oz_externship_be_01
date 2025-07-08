@@ -29,8 +29,8 @@ from apps.users.views.admin_withdrawal_restore_views import (
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
 from apps.users.views.auth.phone_auth import (
-    PhoneSendCodeView,
-    PhoneVerifyCodeView,
+    SendPhoneCodeAPIView,
+    VerifyPhoneCodeAPIView
 )
 from apps.users.views.auth.signup import SignUpAPIView
 from apps.users.views.auth.social_login import (
@@ -55,8 +55,8 @@ urlpatterns = [
     # auth 관련 url
     path("email/send-code", SendEmailCodeView.as_view(), name="send_email_code"),
     path("email/verify-code", VerifyEmailCodeView.as_view(), name="verify_email_code"),
-    path("phone/send-code/", PhoneSendCodeView.as_view(), name="phone_send_code"),
-    path("phone/verify-code/", PhoneVerifyCodeView.as_view(), name="phone_verify_code"),
+    path("phone/send-code/", SendPhoneCodeAPIView.as_view(), name="phone_send_code"),
+    path("phone/verify-code/", VerifyPhoneCodeAPIView.as_view(), name="phone_verify_code"),
     path("login/email", EmailLoginAPIView.as_view(), name="email_login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("signup", SignUpAPIView.as_view(), name="sign_up"),
