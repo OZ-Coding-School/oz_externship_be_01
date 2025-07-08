@@ -9,7 +9,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import EnrollmentRequest
 from apps.users.models import User
 from apps.users.serializers.profile_serializers import (
     NicknameCheckSerializer,
@@ -33,37 +32,8 @@ class UserProfileView(APIView):
         user = request.user
         assert isinstance(user, User)
 
-        user_data = {
-            "profile_image_url": user.profile_image_url,
-            "email": user.email,
-            "name": user.name,
-            "nickname": user.nickname,
-            "phone_number": user.phone_number,
-            "birthday": user.birthday,
-        }
-
-        if user.role == user.Role.STUDENT:
-            enrollment = (
-                EnrollmentRequest.objects.filter(user=user)
-                .select_related("generation__course")
-                .order_by("-created_at")
-                .first()
-            )
-            if enrollment:
-                course_name = enrollment.generation.course.name
-                generation_number = f"{enrollment.generation.number}기"
-            else:
-                course_name = None
-                generation_number = None
-
-            user_data.update(
-                {
-                    "course_name": course_name,
-                    "generation": generation_number,
-                }
-            )
-
-        return Response(user_data, status=status.HTTP_200_OK)
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # 프로필 수정
@@ -78,14 +48,16 @@ class UserProfileUpdateView(APIView):
         responses={200: OpenApiTypes.OBJECT},
     )
     def put(self, request: Request) -> Response:
-
-        serializer = UserProfileUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        validated = serializer.validated_data
-
         user = request.user
         assert isinstance(user, User)
+
+        serializer = UserProfileUpdateSerializer(
+            instance=user,
+            data=request.data,
+            context={"request": request},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
 
         # 기본 이미지 삭제->프로필 업로드
         if "profile_image_file" in request.FILES:
@@ -94,7 +66,13 @@ class UserProfileUpdateView(APIView):
 
             # 기본이미지 삭제
             if user.profile_image_url:
-                uploader.delete_file(user.profile_image_url)
+                delete_success = uploader.delete_file(user.profile_image_url)
+
+                if not delete_success:
+                    return Response(
+                        {"message": "기존 프로필 이미지 삭제에 실패했습니다."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
 
             # 새 프로필 이미지 업로드
             filename = f"{user.id}_{uuid.uuid4().hex}_{file_obj.name}"
@@ -106,22 +84,9 @@ class UserProfileUpdateView(APIView):
                     {"message": "프로필 이미지 업로드에 실패했습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
-            user.profile_image_url = uploaded_url
+            serializer.validated_data["profile_image_url"] = uploaded_url
 
-        user.save()
-
-        if "nickname" in validated:
-            new_nickname = validated["nickname"]
-            if is_nickname_duplicated(new_nickname, user_id=user.id):
-                return Response({"message": "이미 사용 중인 닉네임입니다."}, status=400)
-            user.nickname = new_nickname
-
-        # 휴대폰번호 인증 구현 되면 수정 예정
-        if "phone_number" in validated:
-            user.phone_number = validated["phone_number"]
-
-        if "password" in validated:
-            user.set_password(validated["password"])
+        serializer.save(instance=user)
 
         return Response(
             {
