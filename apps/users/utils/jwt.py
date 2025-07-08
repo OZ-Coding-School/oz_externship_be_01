@@ -17,6 +17,8 @@ def generate_jwt_token_pair(user_id: int) -> Dict[str, str]:
         "type": "refresh",
     }
 
+    assert settings.SECRET_KEY is not None, "SECRET_KEY must be set"
+
     access_token: str = jwt.encode(payload_access, settings.SECRET_KEY, algorithm="HS256")
     refresh_token: str = jwt.encode(payload_refresh, settings.SECRET_KEY, algorithm="HS256")
 
