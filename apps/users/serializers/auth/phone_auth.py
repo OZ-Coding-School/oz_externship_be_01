@@ -1,13 +1,25 @@
-from typing import Any
-
 from rest_framework import serializers
-from rest_framework.serializers import Serializer
+
+from apps.users.utils.twilio_utils import (
+    check_verification_code,
+    normalize_phone_number,
+)
 
 
-class PhoneSendCodeSerializer(Serializer[Any]):
-    phone_number = serializers.CharField()
+class SendPhoneCodeSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
 
 
-class PhoneVerifyCodeSerializer(Serializer[Any]):
-    phone_number = serializers.CharField()
-    code = serializers.CharField()
+class VerifyPhoneCodeSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    code = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        phone = attrs.get("phone")
+        code = attrs.get("code")
+        phone = normalize_phone_number(phone)
+        result = check_verification_code(phone_number=phone, code=code)
+        if not result:
+            raise serializers.ValidationError("invalid verification code.")
+
+        return attrs
