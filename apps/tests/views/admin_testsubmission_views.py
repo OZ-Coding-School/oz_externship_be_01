@@ -14,7 +14,7 @@ from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_submission_serializers import (
     AdminTestDetailSerializer,
-    AdminTestListSerializer,
+    AdminTestSubmissionListSerializer,
     TestSubmissionFilterSerializer,
 )
 from apps.users.models.permissions import PermissionsStudent
@@ -64,7 +64,7 @@ from apps.users.models.permissions import PermissionsStudent
 )
 class AdminTestSubmissionsView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
-    serializer_class = AdminTestListSerializer
+    serializer_class = AdminTestSubmissionListSerializer
 
     def get(self, request: Request) -> Response:
         filter_serializer = TestSubmissionFilterSerializer(data=request.query_params)

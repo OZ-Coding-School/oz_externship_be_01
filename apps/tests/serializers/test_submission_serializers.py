@@ -43,7 +43,7 @@ class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
+class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestListDeploymentSerializer(read_only=True)
     student = AdminListStudentSerializer(read_only=True)
     total_score = serializers.SerializerMethodField()
@@ -71,23 +71,23 @@ class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
                 continue
 
         # 한 번에 문제들 조회
-        questions = TestQuestion.objects.filter(id__in=questions_ids)
+        snapshot = obj.deployment.questions_snapshot_json
+        question_dice = {int(q["id"]): q for q in snapshot}
 
-        # ID별로 쉽게 접근하도록 딕셔너리 생성
-        question_dice = {question.id: question for question in questions}
-
-        # 반복문으로 캐시된 문제를 객체로 처리
+        # 채점
         for question_id_str, submitted_answer in answers.items():
             try:
                 question_id = int(question_id_str)
             except ValueError:
                 continue
-            question = question_dice.get(question_id)  # 딕셔너리에서 꺼내기
+
+            question = question_dice.get(question_id)
             if not question:
                 continue  # 문제 없으면 패스
 
-            if self.is_correct(submitted_answer, question.answer):
-                total += question.point
+            # snapshot의 정답과 비교
+            if self.is_correct(submitted_answer, question["answer"]):
+                total += question["point"]
 
         return total
 

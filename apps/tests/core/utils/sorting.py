@@ -1,9 +1,11 @@
 from apps.tests.models import TestSubmission
-from apps.tests.serializers.test_submission_serializers import AdminTestListSerializer
+from apps.tests.serializers.test_submission_serializers import (
+    AdminTestSubmissionListSerializer,
+)
 
 
 def annotate_total_score(submissions: list[TestSubmission]) -> list[TestSubmission]:
-    serializer = AdminTestListSerializer()
+    serializer = AdminTestSubmissionListSerializer()
     for submission in submissions:
         submission.total_score = serializer.get_total_score(submission)  # type: ignore[attr-defined]
     return submissions
