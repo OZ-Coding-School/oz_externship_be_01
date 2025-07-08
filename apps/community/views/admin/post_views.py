@@ -9,14 +9,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.community.models import Post, PostAttachment, PostImage, PostCategory
+from apps.community.models import Post, PostCategory
 from apps.community.serializers.post_serializers import (
     PostDetailSerializer,
     PostListSerializer,
     PostUpdateSerializer,
 )
 from apps.tests.permissions import IsAdminOrStaff
-from core.utils.s3_file_upload import S3Uploader
+
 
 
 # 어드민 게시글 목록 조회
@@ -39,8 +39,8 @@ class AdminPostListView(APIView):
             OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY,
                              description="정렬: 최신순( 기본값 ) | 오래된 순  | 조회수 많은 순 | 좋아요가 많은 순 "),
         ],
-        tags=["Admin Post"],
-        summary="관리자 게시글 목록 조회",
+        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        summary="관리자 게시글 목록 조회 (기능 구현)",
     )
     def get(self, request: Request) -> Response:
         queryset = Post.objects.select_related("category", "author").all()
@@ -109,7 +109,8 @@ class AdminPostDetailView(APIView):
         operation_id="admin_post_detail",
         request=None,
         responses=PostDetailSerializer,
-        tags=["Admin Post"],
+        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        summary="관리자 게시글 상세 조회(기능 구현)",
     )
     def get(self, request: Request, post_id: int) -> Response:
 
@@ -135,31 +136,19 @@ class AdminPostUpdateView(APIView):
         operation_id="admin_post_update",
         request=PostUpdateSerializer,
         responses=PostDetailSerializer,
-        tags=["Admin Post"],
+        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        summary="관리자 게시글 수정(기능 구현)",
     )
     def patch(self, request: Request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
-        serializer = PostUpdateSerializer(post, data=request.data, partial=True)
+
+        serializer = PostUpdateSerializer(post, data=request.data, context={"request": request}, partial=True)
 
         if serializer.is_valid():
-            serializer.save()
-            uploader = S3Uploader()
+            updated_post = serializer.save()
+            updated_post = Post.objects.prefetch_related("attachments", "images").get(id=updated_post.id)
+            return Response(PostDetailSerializer(updated_post).data, status=status.HTTP_200_OK)
 
-            # 파일 업로드 처리
-            for file in request.FILES.getlist("attachments"):
-                s3_key = f"oz_externship_be/community/attachments/{file.name}"
-                url = uploader.upload_file(file, s3_key)
-                if url:
-                    PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
-
-            for image in request.FILES.getlist("images"):
-                s3_key = f"oz_externship_be/community/images/{image.name}"
-                url = uploader.upload_file(image, s3_key)
-                if url:
-                    PostImage.objects.create(post=post, image_url=url, image_name=image.name)
-
-            post = Post.objects.prefetch_related("attachments", "images").get(id=post.id)
-            return Response(PostDetailSerializer(post).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
