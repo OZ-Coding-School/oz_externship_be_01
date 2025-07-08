@@ -41,6 +41,7 @@ from apps.users.views.profile_views import (
     UserProfileUpdateView,
     UserProfileView,
 )
+from apps.users.views.student_enrollments_views import EnrollmentRequestView
 from apps.users.views.withdrawal_views import UserDeleteView, UserRestoreView
 
 urlpatterns = [
@@ -96,6 +97,7 @@ urlpatterns = [
         RejectEnrollmentRequestView.as_view(),
         name="admin-student-enrollments-reject",
     ),
+    path("users/student/enrollments/", EnrollmentRequestView.as_view(), name="enrollment-requests"),
     path(
         "admin/withdrawal/<int:user_id>/restore/",
         AdminWithdrawalRestoreAPIView.as_view(),
