@@ -223,6 +223,7 @@ class TestDeploymentDeleteView(APIView):
     배포 삭제 API
     DELETE 요청 시 특정 배포를 삭제
     """
+
     permission_classes = [IsAdminUser]
     serializer_class = DeploymentCreateSerializer
 
@@ -239,10 +240,10 @@ class TestDeploymentDeleteView(APIView):
         except TestDeployment.DoesNotExist:
             # 배포가 존재하지 않는 경우 404 Not Found 응답 반환
             return Response({"detail": "존재하지 않는 배포입니다.."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         except Exception as e:
             # 그 외 모든 예외는 500 Internal Server Error 응답 반환
             return Response(
                 {"detail": "배포 내역 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
