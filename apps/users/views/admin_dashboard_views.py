@@ -1,11 +1,14 @@
+from collections import OrderedDict
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, OrderedDict, TypedDict, Union
+from typing import Any, Dict, List, TypedDict, Union
 
+from dateutil.relativedelta import relativedelta
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import TruncDay, TruncMonth, TruncYear
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -133,12 +136,9 @@ class AdminJoinTrendView(APIView):
         today = datetime.today()
         base_qs = User.objects.all()
 
-        labels: List[str] = []
-        raw_counts: Dict[str, int] = {}
-
         if range_type == "daily":
             start_date = today - timedelta(days=29)
-            qs_daily: List[Dict[str, Any]] = list(
+            qs_daily = list(
                 base_qs.filter(created_at__date__gte=start_date.date())
                 .annotate(period=TruncDay("created_at"))
                 .values("period")
@@ -149,23 +149,20 @@ class AdminJoinTrendView(APIView):
             raw_counts = {item["period"].strftime("%Y-%m-%d"): item["count"] for item in qs_daily}
 
         elif range_type == "monthly":
-            start_month = (today.replace(day=1) - timedelta(days=365)).replace(day=1)
-            qs_monthly: List[Dict[str, Any]] = list(
+            start_month = (today.replace(day=1) - relativedelta(months=12)).replace(day=1)
+            qs_monthly = list(
                 base_qs.filter(created_at__date__gte=start_month.date())
                 .annotate(period=TruncMonth("created_at"))
                 .values("period")
                 .annotate(count=Count("id"))
                 .order_by("period")
             )
-            labels = []
-            for m in range(12):
-                dt = start_month + timedelta(days=30 * m)
-                labels.append(dt.strftime("%Y-%m"))
+            labels = [(start_month + relativedelta(months=m)).strftime("%Y-%m") for m in range(13)]
             raw_counts = {item["period"].strftime("%Y-%m"): item["count"] for item in qs_monthly}
 
         elif range_type == "yearly":
             start_year = today.year - 4
-            qs_yearly: List[Dict[str, Any]] = list(
+            qs_yearly = list(
                 base_qs.filter(created_at__year__gte=start_year)
                 .annotate(period=TruncYear("created_at"))
                 .values("period")
@@ -175,14 +172,14 @@ class AdminJoinTrendView(APIView):
             labels = [str(y) for y in range(start_year, today.year + 1)]
             raw_counts = {item["period"].strftime("%Y"): item["count"] for item in qs_yearly}
 
+        else:
+            raise ValidationError("range_type은 'daily', 'monthly', 'yearly' 중 하나여야 합니다.")
+
         # 누락된 구간은 0으로 채움
         data = OrderedDict((label, raw_counts.get(label, 0)) for label in labels)
 
         # chart_type 조건 설정
-        if range_type == "daily":
-            chart_type = ChartTypeEnum.LINE.value
-        else:
-            chart_type = ChartTypeEnum.BAR.value
+        chart_type = ChartTypeEnum.LINE.value if range_type == "daily" else ChartTypeEnum.BAR.value
 
         return Response(
             {
