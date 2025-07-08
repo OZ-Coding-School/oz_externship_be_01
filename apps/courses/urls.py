@@ -1,6 +1,10 @@
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
+from apps.courses.views.course_views import (
+    CourseDetailView,
+    CourseListCreateView,
+)
 from apps.courses.views.dropdown_list_views import (
     GenerationDropdownListAPIView,  # 프론트 추가분
 )
@@ -22,8 +26,6 @@ from apps.courses.views.subject_views import (
     SubjectDropdownListAPIView,
     SubjectListCreateAPIView,
 )
-
-from .views.course_views import CourseDetailView, CourseListCreateView
 
 urlpatterns = [
     path("courses/", CourseListCreateView.as_view(), name="v1_admin_course_list"),
