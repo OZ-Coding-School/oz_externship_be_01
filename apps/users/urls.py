@@ -8,10 +8,10 @@ from apps.users.views.admin_dashboard_views import (
     AdminWithdrawalReasonTrendView,
     AdminWithdrawTrendView,
 )
+from apps.users.views.admin_enrollments_approve_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_enrollments_rejection_views import (
     RejectEnrollmentRequestView,
 )
-from apps.users.views.admin_enrollments_views import AdminApproveEnrollmentsView
 from apps.users.views.admin_user_views import (
     AdminUserDeleteView,
     AdminUserDetailView,
