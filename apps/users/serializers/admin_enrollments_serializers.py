@@ -11,7 +11,7 @@ class EnrollmentRequestIdsSerializer(serializers.Serializer[Any]):
         child=serializers.IntegerField(), help_text="승인할 수강생 등록 신청의 ID 리스트"
     )
 
-    def validate_ids(self, ids: list[int]) -> list[int]:
+    def validate_enrollment_request_ids(self, ids: list[int]) -> list[int]:
         if not ids:
             raise serializers.ValidationError("승인할 수강신청 ID 목록이 비어 있습니다.")
         return ids
