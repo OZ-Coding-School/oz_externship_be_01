@@ -54,3 +54,10 @@ class IsStudent(BasePermission):
 
         # 위 조건을 모두 통과하지 못하면 접근 거부
         return False
+
+
+# 어드민(ADMIN) 역할을 가진 사용자만 허용
+class IsAdminRole(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and getattr(user, "role", None) == User.Role.ADMIN)

@@ -6,6 +6,7 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
@@ -13,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.tests.permissions import IsAdminOrStaff
+from apps.tests.permissions import IsAdminOrStaff, IsAdminRole
 from apps.users.models import User
 from apps.users.serializers.admin_user_serializers import (
     AdminUserDetailSerializer,
@@ -125,21 +126,17 @@ class AdminUserDetailView(APIView):
     )
     def get(self, request: Request, user_id: int) -> Response:
         try:
-            user = (
-                User.objects.select_related("withdrawal")
-                .prefetch_related(
-                    "ta_permissions__generation__course",
-                    "staff_permissions__course",
-                    "student_permissions__generation__course",
-                )
-                .get(id=user_id)
-            )
+            user = User.objects.prefetch_related(
+                "ta_permissions__generation__course",
+                "staff_permissions__course",
+                "student_permissions__generation__course",
+            ).get(id=user_id)
 
         except User.DoesNotExist:
-            return Response({"detail": "존재하지 않는 유저입니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "존재하지 않는 유저입니다."}, status=404)
 
         serializer = self.serializer_class(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=200)
 
 
 # 어드민 회원 정보 수정
@@ -199,21 +196,26 @@ class AdminUserUpdateView(APIView):
 
 # 어드민 회원 삭제
 class AdminUserDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminRole]
 
     @extend_schema(
         summary="어드민 회원 삭제",
         description="어드민이 특정 회원을 삭제합니다.",
         responses={
             204: OpenApiResponse(description="삭제 성공"),
+            403: OpenApiResponse(description="권한이 없습니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
         tags=["Admin - 회원 관리"],
     )
     def delete(self, request: Request, user_id: int) -> Response:
-        if not isinstance(user_id, int) or user_id <= 0:
-            return Response({"detail": "해당 사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        user = get_object_or_404(User, id=user_id)
 
+        # 자기 자신은 삭제하지 못하도록 방지
+        if request.user.id == user.id:
+            return Response({"detail": "자기 자신은 삭제할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
