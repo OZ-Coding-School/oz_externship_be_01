@@ -12,8 +12,12 @@ User = get_user_model()
 class PostCreateSerializer(serializers.ModelSerializer):
     category_id = serializers.IntegerField()
     author_id = serializers.IntegerField()
-    attachments = serializers.ListField(child=serializers.FileField(), max_length=5, write_only=True, required=False, default=list)
-    images = serializers.ListField(child=serializers.ImageField(), max_length=5, write_only=True, required=False, default=list)
+    attachments = serializers.ListField(
+        child=serializers.FileField(), max_length=5, write_only=True, required=False, default=list
+    )
+    images = serializers.ListField(
+        child=serializers.ImageField(), max_length=5, write_only=True, required=False, default=list
+    )
 
     class Meta:
         model = Post
