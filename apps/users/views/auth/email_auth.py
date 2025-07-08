@@ -11,7 +11,7 @@ from apps.users.serializers.auth.email_auth import (
     EmailVerifyCodeSerializer,
 )
 from apps.users.utils.email import send_verification_code_to_email
-from apps.users.utils.redis import get_stored_email_code, store_email_code
+from apps.users.utils.redis_utils import get_stored_email_code, store_email_code
 
 
 class SendEmailCodeView(APIView):

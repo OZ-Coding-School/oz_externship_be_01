@@ -2,27 +2,32 @@ import os
 
 from twilio.rest import Client
 
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")  # +15005550006 (trial)
 
-def normalize_phone_number(phone_number: str) -> str:
-    phone_number = phone_number.strip().replace("-", "")
-    if phone_number.startswith("0"):
-        return "+82" + phone_number[1:]
-    elif phone_number.startswith("+82"):
-        return phone_number
-    raise ValueError("잘못된 전화번호 형식입니다.")
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 
-def send_sms_code(phone_number: str, code: str) -> None:
-    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-    from_number = os.environ.get("TWILIO_PHONE_NUMBER")
+def send_sms_verification_code(phone_number: str, code: str) -> str:
+    message = client.messages.create(
+        body=f"[OZ] 인증번호는 [{code}]입니다.",
+        from_=TWILIO_PHONE_NUMBER,
+        to=phone_number,
+    )
+    return message.sid
 
-    if not account_sid or not auth_token or not from_number:
-        raise ValueError("Twilio 환경변수가 설정되지 않았습니다.")
 
-    client = Client(account_sid, auth_token)
-    normalized_phone = normalize_phone_number(phone_number)
+def normalize_phone_number(phone: str) -> str:
+    # 숫자만 남기기
+    phone = phone.replace("-", "").replace(" ", "").strip()
 
-    message = client.messages.create(to=normalized_phone, from_=from_number, body=f"[OZ 인증] 본인인증 코드: {code}")
-
-    print(f"SMS 전송 완료: {message.sid}")
+    # 국내 번호일 경우 국제 포맷으로 변환
+    if phone.startswith("010"):
+        return "+82" + phone[1:]
+    elif phone.startswith("011"):
+        return "+82" + phone[1:]
+    elif phone.startswith("+82"):
+        return phone
+    else:
+        raise ValueError("지원되지 않는 전화번호 형식입니다.")

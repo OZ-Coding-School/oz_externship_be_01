@@ -1,3 +1,4 @@
+"""
 from django.db import models
 
 
@@ -9,3 +10,4 @@ class PhoneVerificationCode(models.Model):
 
     class Meta:
         db_table = "phone_verification_code"
+"""
