@@ -29,17 +29,11 @@ class TestQuestionCreateView(APIView):
             400: OpenApiResponse(description="요청 오류"),
         },
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request):
         serializer = TestQuestionCreateSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(
-                {
-                    **serializer.validated_data,
-                    "id": 5,
-                    "message": "테스트 질문이 성공적으로 생성되었습니다.",
-                },
-                status=status.HTTP_201_CREATED,
-            )
+            question = serializer.save()
+            return Response(TestQuestionCreateSerializer(question).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -13,17 +13,62 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
 
     class Meta:
         model = TestQuestion
-        fields = [
-            "test_id",
-            "type",
-            "question",
-            "prompt",
-            "blank_count",
-            "options_json",
-            "answer",
-            "point",
-            "explanation",
-        ]
+        fields = "__all__"
+
+    def validate(self, data):
+        test = data.get("test")
+        if not test:
+            raise serializers.ValidationError("유효한 쪽지시험이 필요합니다.")
+
+        # 문제 개수 제한 (최대 20개)
+        if test.questions.count() >= 20:
+            raise serializers.ValidationError("쪽지시험 당 최대 20문제까지만 등록할 수 있습니다.")
+
+        # 배점 합산 제한 (쵀대 100점)
+        current_total = sum(q.point for q in test.questions.all())
+        if current_total + data.get("point", 0) > 100:
+            raise serializers.ValidationError(" 총 배점은 100점을 초과할 수 없습니다.")
+
+        # 문제 유형별 필드 체크
+        q_type = data.get("type")
+
+        if q_type == "multiple_choice_single" or q_type == "multiple_choice_multiple":
+            if not data.get("options_json"):
+                raise serializers.ValidationError("객관신은 options_json(보기)가 필요합니다.")
+            if not data.get("answer"):
+                raise serializers.ValidationError("객관식은 answer(정답)가 필요합니다.")
+
+        elif q_type == "fill_in_blank":
+            if not data.get("prompt"):
+                raise serializers.ValidationError("빈칸 채우기 문제는 prompt(지문)이 필요합니다.")
+            if not data.get("blank_count") or data.get("blank_count") < 1:
+                raise serializers.ValidationError("빈칸 개수는 1개 이상이어야 합니다.")
+            if not data.get("answer"):
+                raise serializers.ValidationError("빈칸 채우기 문제는 answer(정답)이 필요합니다.")
+
+        elif q_type == "short_answer":
+            if not data.get("answer"):
+                raise serializers.ValidationError("주관식 단답형 answer(정답)이 필요합니다.")
+
+
+        elif q_type == "ordering":
+            if not data.get("options_json") or len(eval(data.get("options_json", "[]"))) < 2:
+                raise serializers.ValidationError("순서 정렬형 문제는 최소 2개의 보기가 필요합니다.")
+
+            if not data.get("answer"):
+                raise serializers.ValidationError("순서 정렬형 문제는 answer(정답)가 필요합니다.")
+
+        elif q_type == "ox":
+            if data.get("answer") not in ["O", "X", "o", "x", True, False, "true", "false"]:
+                raise serializers.ValidationError("OX 퀴즈 정답은 'O' 또는 'X', true/false 형식이어야 합니다.")
+        else:
+            raise serializers.ValidationError(f"지원하지 않는 문제 유형입니다: {q_type}")
+
+        return data
+
+
+
+
 
 
 # 수정
