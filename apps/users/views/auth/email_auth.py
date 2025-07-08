@@ -11,14 +11,14 @@ from apps.users.serializers.auth.email_auth import (
 )
 from apps.users.tasks import send_verification_email_task
 from apps.users.utils.redis_utils import (
-    delete_signup_email_code,
-    get_signup_email_code,
-    mark_signup_email_as_verified,
-    store_signup_email_code,
-    store_restore_email_code,
-    get_restore_email_code,
     delete_restore_email_code,
+    delete_signup_email_code,
+    get_restore_email_code,
+    get_signup_email_code,
     mark_restore_email_as_verified,
+    mark_signup_email_as_verified,
+    store_restore_email_code,
+    store_signup_email_code,
 )
 from core.utils.base62 import generate_base62_code
 

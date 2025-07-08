@@ -10,10 +10,6 @@ from apps.users.serializers.auth.phone_auth import (
     SendPhoneCodeSerializer,
     VerifyPhoneCodeSerializer,
 )
-from apps.users.utils.redis_utils import (
-    get_phone_code,
-    save_phone_code,
-)
 from apps.users.utils.twilio_utils import (
     normalize_phone_number,
     send_sms_verification_code,
@@ -36,7 +32,7 @@ class SendPhoneCodeAPIView(APIView):
     def post(self, request):
         serializer = SendPhoneCodeSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             phone = serializer.validated_data["phone"]
@@ -44,7 +40,7 @@ class SendPhoneCodeAPIView(APIView):
             send_sms_verification_code(phone)
             return Response({"message": "인증번호 전송 성공!"})
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class VerifyPhoneCodeAPIView(APIView):
@@ -59,6 +55,6 @@ class VerifyPhoneCodeAPIView(APIView):
     def post(self, request):
         serializer = VerifyPhoneCodeSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "phone authentication success."}, status=200)
+        return Response({"message": "phone authentication success."}, status=status.HTTP_200_OK)
