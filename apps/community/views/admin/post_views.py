@@ -1,3 +1,5 @@
+from django.db.models import F
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
@@ -168,8 +170,8 @@ class AdminPostDeleteView(APIView):
         uploader = S3Uploader()
 
         for attachment in post.attachments.all():
-            uploader.delete_file(attachment.file_url)  # S3 삭제
-        post.attachments.all().delete()  # DB 삭제
+            uploader.delete_file(attachment.file_url)
+        post.attachments.all().delete()
 
 
         for image in post.images.all():
@@ -192,14 +194,17 @@ class AdminPostVisibilityToggleView(APIView):
                 description="게시글 노출 상태가 정상적으로 변경되었습니다.", response=PostDetailSerializer
             )
         },
-        tags=["Admin Post"],
+        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        summary="관리자 게시글 노출 on/off(기능 구현)",
     )
     def patch(self, request, post_id: int) -> Response:
-        post = get_object_or_404(Post, id=post_id)
+        with transaction.atomic():
+            updated_count = Post.objects.filter(id=post_id).update(is_visible=~F("is_visible"))
 
-        # 현재 값 반전
-        post.is_visible = not post.is_visible
-        post.save()
+            if updated_count == 0:
+                return Response({"detail": "게시글을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        post = Post.objects.get(id=post_id)
 
         return Response(
             {
