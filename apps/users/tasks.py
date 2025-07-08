@@ -37,7 +37,6 @@ def delete_expired_withdrawn_users():
         logger.info(f"[Celery] 탈퇴 유예 기간이 만료된 사용자 삭제: {user.email} (ID: {user.id})")
 
         user.delete()
-        withdrawal.delete()
         count += 1
 
     logger.info(f"[Celery] 탈퇴 유예 기간이 지난 사용자 {count}명 삭제")

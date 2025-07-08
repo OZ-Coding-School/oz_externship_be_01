@@ -82,6 +82,14 @@ jobs:
                 python manage.py collectstatic --noinput && \
                 gunicorn --workers 3 --bind 0.0.0.0:8000 config.wsgi:application"
             
+            docker run -d \
+              --name celery \
+              --network ws \
+              --env-file ${{ secrets.ENV_FILE_NAME }} \
+              ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev \
+              sh -c "celery -A config worker --beat --scheduler django --loglevel=info"
+            
+            
                         
             docker stop ${{ secrets.NGINX_CONTAINER_NAME }} || true
             docker rm ${{ secrets.NGINX_CONTAINER_NAME }} || true
