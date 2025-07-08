@@ -26,13 +26,15 @@ def compare_answers(question_type, snapshot_answer, student_answer) -> bool:
 
 
 # 스냅샷 기준 학생 제출 답안 채점
-def calculate_submission_score(snapshot_json: dict, answers_json: dict) -> int:
+def calculate_submission_score(snapshot_json: list, answers_json: dict) -> int:
     total_score = 0
-    for question_id, question_data in snapshot_json.items():
-        question_type = question_data.get("type")
-        snapshot_answer = question_data.get("answer")
-        point = question_data.get("point", 0)
-        student_answer = answers_json.get(question_id)
+    for question in snapshot_json:
+        question_id = question.get("id")  # "id" 사용, 코어 함수 기준
+        question_type = question.get("type")
+        snapshot_answer = question.get("answer")
+        point = question.get("point", 0)
+        # answers_json 키는 문자열  str 변환 후 조회
+        student_answer = answers_json.get(str(question_id))
 
         if compare_answers(question_type, snapshot_answer, student_answer):
             total_score += point
