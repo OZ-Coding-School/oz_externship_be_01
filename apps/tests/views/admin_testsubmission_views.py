@@ -1,23 +1,21 @@
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import Course, Generation, Subject, User
 from apps.tests.core.utils.filters import filter_test_submissions
 from apps.tests.core.utils.sorting import annotate_total_score, sort_by_total_score
-from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.models import TestSubmission
 from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_submission_serializers import (
     AdminTestDetailSerializer,
-    AdminTestSubmissionListSerializer,
     TestSubmissionFilterSerializer,
+    AdminTestSubmissionListSerializer,
 )
-from apps.users.models.permissions import PermissionsStudent
 
 
 # 쪽지 시험 응시 내역 전체 목록 조회
@@ -99,7 +97,7 @@ class AdminTestSubmissionsView(APIView):
 
 
 # 쪽지 시험 응시 내역 상세 조회
-@extend_schema(tags=["[Admin/Mock] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDetailView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = AdminTestDetailSerializer
