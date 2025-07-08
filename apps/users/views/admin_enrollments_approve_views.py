@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models import PermissionsStudent, StudentEnrollmentRequest, User
-from apps.users.serializers.admin_enrollments_serializers import (
+from apps.users.serializers.admin_enrollments_approve_serializers import (
     ApprovalResponseSerializer,
     EnrollmentRequestIdsSerializer,
 )
@@ -33,7 +33,7 @@ class AdminApproveEnrollmentsView(APIView):
     def post(self, request: Request, *args, **kwargs) -> Response:
         serializer = EnrollmentRequestIdsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        ids: List[int] = serializer.validated_data["ids"]
+        ids: List[int] = serializer.validated_data["enrollment_request_ids"]
 
         updated_ids: List[int] = []
 
