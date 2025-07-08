@@ -2,15 +2,16 @@ from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import BasePermission  # 직접 정의할 권한 클래스용
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema  # 누락 방지용
 
 from apps.courses.models import Course, Generation
 from apps.courses.serializers.course_serializers import (
     CourseListSerializer,
     CourseSerializer,
 )
-from apps.users.models import User  # 유저 역할 확인용
+from apps.users.models import User
 from apps.users.models.permissions import PermissionsStudent
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
@@ -29,14 +30,18 @@ class IsAdminOrStaff(BasePermission):
         return user.role in allowed_roles
 
 
+@extend_schema(
+    tags=["Admin - 과정관리"],
+    description="어드민 페이지 단의 과정 생성, 목록 조회 API입니다",
+)
 class CourseListCreateView(ListCreateAPIView):
     queryset = Course.objects.all()
-    permission_classes = [IsAdminOrStaff]  # 권한 적용
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = CourseListSerializer
 
     def get_serializer_class(self):
         if self.request.method == "POST":
-            return CourseSerializer
+            return CourseSerializer  # S3Uploader를 사용하는 CourseSerializer 반환
         return CourseListSerializer
 
     def list(self, request, *args, **kwargs):
@@ -55,21 +60,25 @@ class CourseListCreateView(ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        course = serializer.save()
+        course = serializer.save()  # S3Uploader로 썸네일 업로드 & thumbnail_img_url 저장됨
         return Response(CourseSerializer(course).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=["Admin - 과정관리"],
+    description="어드민 페이지 단의 과정 상세 조회, 수정, 삭제 API입니다",
+)
 class CourseDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Course.objects.all()
-    serializer_class = CourseSerializer
-    permission_classes = [IsAdminOrStaff]
-    lookup_url_kwarg = "course_id"  # path 파라미터 인식용
+    serializer_class = CourseSerializer  # S3Uploader를 사용하는 시리얼라이저
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    lookup_url_kwarg = "course_id"
 
     def patch(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        self.perform_update(serializer)  # 썸네일 수정 시 S3Uploader로 재업로드 처리됨
         return Response(serializer.data)
 
     def delete(self, request, *args, **kwargs):
@@ -88,3 +97,4 @@ class CourseDetailView(RetrieveUpdateDestroyAPIView):
         generations.delete()
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
