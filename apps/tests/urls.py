@@ -83,9 +83,6 @@ urlpatterns = [
         "admin/test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"
     ),
     path("admin/test-list/", TestQuestionListView.as_view(), name="test-question-list"),
-    path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
-    path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
-    path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
     path("validate-status/<int:test_deployment_id>/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
     # 참가 코드 검증 (user용)
     path("tests/<int:test_deployment_id>/validate/", UserCodeValidationView.as_view(), name="user-code-validate"),
