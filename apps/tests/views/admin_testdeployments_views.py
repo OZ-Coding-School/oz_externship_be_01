@@ -1,10 +1,11 @@
 from datetime import datetime
+from http.client import responses
 from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,7 +17,7 @@ from apps.tests.serializers.test_deployment_serializers import (
     DeploymentStatusUpdateSerializer,
 )
 
-## 🔹 시험 데이터 (test.id 기준)
+# 🔹 시험 데이터 (test.id 기준)
 MOCK_TESTS: Dict[int, Dict[str, Any]] = {
     1: {"id": 1, "title": "HTML 기초", "subject": {"title": "웹프로그래밍"}},
     2: {"id": 2, "title": "CSS 심화", "subject": {"title": "웹디자인"}},
@@ -109,7 +110,7 @@ MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentStatusUpdateSerializer,
     responses={200: dict, 404: dict},
     summary="배포 상태 변경",
@@ -144,7 +145,7 @@ class TestDeploymentStatusView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer(many=True)},
     summary="시험 배포 목록 조회",
     description="등록된 모든 시험 배포 정보(ID 101,102)를 조회합니다. 페이징 없이 전체 데이터를 반환합니다.",
@@ -162,7 +163,7 @@ class DeploymentListView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer},
     summary="시험 배포 상세 조회",
     description="지정한 배포 ID(101,102)에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
@@ -187,64 +188,31 @@ class DeploymentDetailView(APIView):
     request=DeploymentCreateSerializer,
     responses={201: dict},
     summary="시험 배포 생성",
-    description="시험 ID(test_id (1) )와 기수 ID(generation(1)), 시험 시간 (60)(duration_time)을 입력하여 새로운 시험 배포를 생성합니다. 참가 코드는 무작위로 자동 생성되며, 문제 스냅샷이 포함됩니다.",
+    description=(
+        "시험 ID(test_id (1)), 기수 ID(generation(1)), 시험 시간(duration_time (60))을 입력하여 새로운 시험 배포를 생성합니다."
+        " 참가 코드(access_code)는 `uuid.uuid4().int` 값을 Base62 인코딩하여 정확히 6자리 무작위 문자열로 자동 생성되며, 문제 스냅샷이 포함됩니다."
+    ),
 )
 # TestDeployment 배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = DeploymentCreateSerializer
+    permission_classes = [IsAdminUser]
 
-    def post(self, request: Request) -> Response:
-        serializer = self.serializer_class(data=request.data)
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = DeploymentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated: Dict[str, Any] = serializer.validated_data
-
-        test_id: int = validated["test_id"]
-        generation_id: int = validated["generation"]
-
-        test_info = MOCK_TESTS.get(test_id)
-        generation_info: Optional[Dict[str, Any]] = MOCK_GENERATIONS.get(generation_id)
-
-        if not test_info:
-            return Response(
-                {"detail": "해당 시험 ID에 해당하는 시험이 존재하지 않습니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if not generation_info:
-            return Response(
-                {"detail": "존재하지 않는 기수입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        now_iso = datetime.now().isoformat()
-        new_id = max(MOCK_DEPLOYMENTS.keys(), default=100) + 1
-
-        new_deployment: Dict[str, Any] = {
-            "id": new_id,
-            "test": test_info,
-            "generation": generation_info,
-            "duration_time": validated.get("duration_time", 60),
-            "access_code": str(uuid4())[:6],
-            "status": "Activated",
-            "open_at": validated.get("open_at", now_iso),
-            "close_at": validated.get("close_at", now_iso),
-            "created_at": now_iso,
-            "updated_at": now_iso,
+        # serializer.save()를 호출하면 생성된 TestDeployment 인스턴스가 반환
+        deployment = serializer.save()
+        # 응답 데이터
+        responses_data = {
+            "deployment_id": deployment.id,
+            "access_code": deployment.access_code,
+            "status": deployment.status,
         }
-
-        MOCK_DEPLOYMENTS[new_id] = new_deployment
-
-        response_data = {
-            "deployment_id": new_deployment["id"],
-            "access_code": new_deployment["access_code"],
-            "status": new_deployment["status"],
-        }
-
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(responses_data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     summary="시험 배포 삭제",
     description="지정한 배포 I(101,102)D에 해당하는 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )

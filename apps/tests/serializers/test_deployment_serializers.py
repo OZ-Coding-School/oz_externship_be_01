@@ -1,8 +1,23 @@
+# access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성
+import json
+
+# access_code를 만들 때 사용할 수 있는 기본 문자 집합을 제공
+import string
+
+# uuid 모듈 임포트
+import uuid
+
+# open_at, close_at 필드 처리를 위해 필요
+from datetime import datetime
 from typing import Any, Dict
 
 from rest_framework import serializers
 
+# 명시적으로 임포트하여 사용합니다.
+from rest_framework.exceptions import ValidationError
+
 from apps.courses.models import Course, Generation
+from apps.tests.core.utils.base62 import encode_base62, generate_questions_snapshot_json
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -148,21 +163,52 @@ class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
 # 🔹 TestDeployment 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
-    generation = serializers.IntegerField(help_text="기수 ID")
+    generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
 
     class Meta:
         model = TestDeployment
         fields = [
             "test_id",
-            "generation",
+            "generation_id",
             "duration_time",
             "open_at",
             "close_at",
+            "status",
         ]
+        read_only_fields = ["access_code", "status", "questions_snapshot_json"]
 
-    def create(self, validated_data: Dict[str, Any]) -> TestDeployment:
-        # DB 조회나 MOCK 처리 없이, 단순히 create 호출
-        return super().create(validated_data)
+    def create(self, validated_data):
+        test_id = validated_data.pop("test_id")
+        generation_id = validated_data.pop("generation_id")
+
+        # 시험 ID로 Test 모델 객체를 조회하고 없으면 유효하지 않은 시험 ID라고 에러메시지 발생
+        try:
+            test = Test.objects.get(id=test_id)
+        except Test.DoesNotExist:
+            raise ValidationError({"test_id": "유효하지 않은 시험 ID 입니다."})
+
+        # 기수 ID Generation 모델 객체를 조회하고, 없으면 유효하지 않은 기수 ID 입니다 에러메시지 발생
+        try:
+            # 변수명 충돌을 피하기 위해 'generation.obj로 변경
+            generation_obj = Generation.objects.get(id=generation_id)
+        except Generation.DoesNotExist:
+            raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
+
+        generated_code = None
+        while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
+            uuid_int_value = uuid.uuid4().int
+            # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
+            generated_code = encode_base62(uuid_int_value, length=22)[:6]  # 대략 22자리가 나오므로 6자리로 자름
+
+        validated_data["access_code"] = generated_code
+
+        validated_data["status"] = "Activated"
+
+        return TestDeployment.objects.create(
+            test=test,
+            generation=generation_obj,
+            **validated_data,
+        )
 
 
 # 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
@@ -219,12 +265,6 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
     def get_question_count(self, obj: Any) -> int:
         snapshot = obj.get("questions_snapshot_json", {})
         return len(snapshot)
-
-
-# # 🔹 참가코드 구현 (유효성 검사라서 모델을 계승하지 않음) (잘목 만듬)
-# class AdminCodeValidationSerializer(serializers.Serializer[Any]):
-#     deployment_id = serializers.IntegerField(help_text="배포 ID")
-#     access_code = serializers.CharField(max_length=64, help_text="참가 코드")
 
 
 # 참가 코드 검증 (user)
