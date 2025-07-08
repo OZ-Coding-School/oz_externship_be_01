@@ -151,6 +151,7 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 # 질문 목록 조회
 class QuestionListSerializer(serializers.ModelSerializer[Question]):
     images = QuestionImageSerializer(many=True, read_only=True)
