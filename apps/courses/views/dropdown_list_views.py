@@ -20,6 +20,7 @@ from apps.courses.serializers.dropdown_list_serializers import (
     CourseDropdownSerializer,
     GenerationDropdownSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
 
 
 # --- CourseDropdownListAPIView (프론트 요청) ---
@@ -34,7 +35,7 @@ class CourseDropdownListAPIView(APIView):
     드롭다운 목록에 필요한 'id'와 'name' 필드만 반환합니다.
     """
 
-    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+    permission_classes = [IsAdminOrStaff]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
 
     @extend_schema(
         summary="(Admin) 기수 존재하는 과정 목록 조회 (드롭다운)",
@@ -104,7 +105,7 @@ class GenerationDropdownListAPIView(APIView):
     드롭다운 목록에 필요한 'id'와 'name' 필드만 반환합니다.
     """
 
-    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+    permission_classes = [IsAdminOrStaff]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
 
     @extend_schema(
         summary="(Admin) 특정 과정의 기수 목록 조회 (드롭다운)",

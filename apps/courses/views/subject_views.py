@@ -13,7 +13,6 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,6 +26,7 @@ from apps.courses.serializers.subject_serializers import (
     SubjectSerializer,
     SubjectUpdateSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
 
 
 # --- SubjectListCreateAPIView ---
@@ -40,7 +40,7 @@ class SubjectListCreateAPIView(APIView):
     (Admin) 과목 목록 조회 (GET) 및 등록 (POST) API.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     pagination_class = PageNumberPagination
     parser_classes = [MultiPartParser, FormParser]
 
@@ -49,25 +49,6 @@ class SubjectListCreateAPIView(APIView):
         operation_id="subject_list",
         description="관리자 또는 스태프(운영 매니저 또는 러닝 코치) 권한의 유저는 어드민 페이지 내에서 등록된 수강 과목들을 목록으로 조회할 수 있습니다. 페이지네이션 기능을 지원하며, 목록에서 조회 가능한 항목은 과목 고유 ID, 과목명, 수강 일수, 과목이 진행되는 시수, 과정명, 상태, 등록일시, 수정일시입니다.",
         parameters=[
-            OpenApiParameter(
-                name="course_id",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                description="과목을 조회할 과정의 고유 ID로 필터링",
-                required=False,
-                examples=[OpenApiExample("과정 ID 필터링 예시", value="1")],
-            ),
-            OpenApiParameter(
-                name="status",
-                type=OpenApiTypes.BOOL,
-                location=OpenApiParameter.QUERY,
-                description="과목 활성화 여부로 필터링 (true/false)",
-                required=False,
-                examples=[
-                    OpenApiExample("활성화 상태 필터링 예시 (true)", value="true"),
-                    OpenApiExample("활성화 상태 필터링 예시 (false)", value="false"),
-                ],
-            ),
             OpenApiParameter(
                 name="page",
                 type=OpenApiTypes.INT,
@@ -83,14 +64,6 @@ class SubjectListCreateAPIView(APIView):
                 description="페이지당 항목 수 (기본값: 10)",
                 required=False,
                 examples=[OpenApiExample("페이지당 항목 수 예시", value="10")],
-            ),
-            OpenApiParameter(
-                name="search",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="title로 검색 (부분 일치)",
-                required=False,
-                examples=[OpenApiExample("제목 검색 예시", value="데이터베이스")],
             ),
         ],
         responses={
@@ -174,23 +147,6 @@ class SubjectListCreateAPIView(APIView):
         queryset = Subject.objects.all().select_related("course")
 
         query_params: QueryDict = request.query_params
-        course_id_param: Optional[str] = query_params.get(cast(str, "course_id"))
-        status_param: Optional[str] = query_params.get(cast(str, "status"))
-        search_query: Optional[str] = query_params.get(cast(str, "search"))
-
-        if course_id_param:
-            try:
-                course_id_int: int = int(course_id_param)
-                queryset = queryset.filter(course__id=course_id_int)
-            except ValueError:
-                raise ValidationError({"detail": "유효하지 않은 course_id입니다."})
-
-        if status_param is not None:
-            expected_status: bool = status_param.lower() in ["true", "1"]
-            queryset = queryset.filter(status=expected_status)
-
-        if search_query:
-            queryset = queryset.filter(title__icontains=search_query)
 
         paginator = self.pagination_class()
 
@@ -340,7 +296,7 @@ class SubjectDetailAPIView(APIView):
     (Admin) 등록된 수강 과목 상세 조회 (GET), 수정 (PATCH), 삭제 (DELETE) API.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     parser_classes = [MultiPartParser, FormParser]
 
     # 객체를 가져오는 헬퍼 메서드
@@ -614,7 +570,7 @@ class SubjectDropdownListAPIView(APIView):
     드롭다운 목록에 필요한 'id'와 'title' 필드만 반환합니다.
     """
 
-    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+    permission_classes = [IsAdminOrStaff]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
 
     @extend_schema(
         summary="(Admin) 특정 과정의 과목 목록 조회 (드롭다운)",
