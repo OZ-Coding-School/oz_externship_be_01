@@ -13,7 +13,6 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,6 +26,7 @@ from apps.courses.serializers.subject_serializers import (
     SubjectSerializer,
     SubjectUpdateSerializer,
 )
+from apps.tests.permissions import IsAdminOrStaff
 
 
 # --- SubjectListCreateAPIView ---
@@ -40,7 +40,7 @@ class SubjectListCreateAPIView(APIView):
     (Admin) 과목 목록 조회 (GET) 및 등록 (POST) API.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     pagination_class = PageNumberPagination
     parser_classes = [MultiPartParser, FormParser]
 
@@ -340,7 +340,7 @@ class SubjectDetailAPIView(APIView):
     (Admin) 등록된 수강 과목 상세 조회 (GET), 수정 (PATCH), 삭제 (DELETE) API.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     parser_classes = [MultiPartParser, FormParser]
 
     # 객체를 가져오는 헬퍼 메서드
@@ -614,7 +614,7 @@ class SubjectDropdownListAPIView(APIView):
     드롭다운 목록에 필요한 'id'와 'title' 필드만 반환합니다.
     """
 
-    permission_classes = [AllowAny]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
+    permission_classes = [IsAdminOrStaff]  # TODO: 실제 권한 (Staff, Admin)으로 변경 필요
 
     @extend_schema(
         summary="(Admin) 특정 과정의 과목 목록 조회 (드롭다운)",
