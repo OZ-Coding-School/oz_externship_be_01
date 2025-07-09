@@ -68,17 +68,32 @@ class QuestionListView(ListAPIView):
     ]
     ordering = ["-created_at", "-id"]  # 최신순, 2차: 최신순
 
+    def get_minor_ids(self, category):
+        if category.category_type == "major":
+            middle_ids = category.subcategories.values_list("id", flat=True)
+            minor_ids = QuestionCategory.objects.filter(parent_id__in=middle_ids).values_list("id", flat=True)
+            return list(minor_ids)
+        elif category.category_type == "middle":
+            minor_ids = category.subcategories.values_list("id", flat=True)
+            return list(minor_ids)
+        elif category.category_type == "minor":
+            return [category.id]
+        else:
+            return []
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        major_id = self.request.query_params.get("major_id")
-        middle_id = self.request.query_params.get("middle_id")
-        minor_id = self.request.query_params.get("minor_id")
-        if major_id:
-            queryset = queryset.filter(category__parent__parent__id=major_id)
-        if middle_id:
-            queryset = queryset.filter(category__parent__id=middle_id)
-        if minor_id:
-            queryset = queryset.filter(category_id=minor_id)
+        category_id = self.request.query_params.get("category_id")
+        if category_id:
+            try:
+                category = QuestionCategory.objects.get(id=category_id)
+            except QuestionCategory.DoesNotExist:
+                return queryset.none()
+            minor_ids = self.get_minor_ids(category)
+            if minor_ids:
+                queryset = queryset.filter(category_id__in=minor_ids)
+            else:
+                return queryset.none()
         answered = self.request.query_params.get("answered")
         if answered == "true":
             queryset = queryset.filter(answer_set__isnull=False)
