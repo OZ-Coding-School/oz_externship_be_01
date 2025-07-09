@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import request, serializers
 
-from apps.tests.models import TestDeployment, TestSubmission
+from apps.tests.models import TestDeployment, TestQuestion, TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
     AdminTestListDeploymentSerializer,
@@ -43,7 +43,7 @@ class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
+class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestListDeploymentSerializer(read_only=True)
     student = AdminListStudentSerializer(read_only=True)
     total_score = serializers.SerializerMethodField()
@@ -52,8 +52,62 @@ class AdminTestListSerializer(serializers.ModelSerializer[TestSubmission]):
         model = TestSubmission
         fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
 
+    @staticmethod
+    def is_correct(submitted_answer, correct_answer):
+        # 정답과 제출 답안이 같으면 True 반환
+        return submitted_answer == correct_answer
+
     def get_total_score(self, obj):
-        return 30  # 그냥 고정 점수 예시
+        total = 0
+        answers = obj.answers_json
+
+        questions_ids = []
+
+        # 모든 문제 ID 추출
+        for qid in answers.keys():
+            try:
+                questions_ids.append(int(qid))
+            except ValueError:
+                continue
+
+        # 한 번에 문제들 조회
+        snapshot = obj.deployment.questions_snapshot_json
+        question_dice = {int(q["id"]): q for q in snapshot}
+
+        # 채점
+        for question_id_str, submitted_answer in answers.items():
+            try:
+                question_id = int(question_id_str)
+            except ValueError:
+                continue
+
+            question = question_dice.get(question_id)
+            if not question:
+                continue  # 문제 없으면 패스
+
+            # snapshot의 정답과 비교
+            if self.is_correct(submitted_answer, question["answer"]):
+                total += question["point"]
+
+        return total
+
+
+# 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
+class TestSubmissionFilterSerializer(serializers.Serializer):
+    subject_title = serializers.CharField(required=False, allow_blank=True)
+    course_title = serializers.CharField(required=False, allow_blank=True)
+    generation_number = serializers.IntegerField(required=False)
+    ordering = serializers.ChoiceField(
+        choices=[
+            ("latest", "최신순"),
+            ("total_score_desc", "점수가 높은 순"),
+            ("total_score_asc", "점수가 낮은 순"),
+        ],
+        default="latest",
+        required=False,
+    )
+    page = serializers.IntegerField(min_value=1, default=1, required=False)
+    page_size = serializers.IntegerField(min_value=1, max_value=100, default=10, required=False)
 
 
 # 관리자 쪽지 시험 응시 상세 조회

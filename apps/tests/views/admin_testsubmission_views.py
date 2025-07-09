@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -7,43 +7,99 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.courses.models import Course, Generation, Subject, User
+from apps.tests.core.utils.filters import filter_test_submissions
+from apps.tests.core.utils.sorting import annotate_total_score, sort_by_total_score
 from apps.tests.models import Test, TestDeployment, TestSubmission
+from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_submission_serializers import (
     AdminTestDetailSerializer,
-    AdminTestListSerializer,
+    AdminTestSubmissionListSerializer,
+    TestSubmissionFilterSerializer,
 )
 from apps.users.models.permissions import PermissionsStudent
 
 
 # 쪽지 시험 응시 내역 전체 목록 조회
-@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(
+    tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"],
+    parameters=[
+        OpenApiParameter(
+            name="subject_title",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="과목명으로 모든 응시내역 조회",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="course_title",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="과정명과 기수 고유 ID로 기수가 응시한 모든 응시내역 조회",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="generation_number",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="과목명, 과정명, 기수 고유 ID로 기수가 응시한 모든 응시내역 조회",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="ordering",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            enum=["latest", "total_score_desc", "total_score_asc"],
+            description="정렬 기준: 최신순(latest), 총점 높은 순(total_score_desc), 총점 낮은 순(total_score_asc)",
+        ),
+        OpenApiParameter(
+            name="page",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="페이지 번호 (기본값: 1)",
+            required=False,
+        ),
+    ],
+)
 class AdminTestSubmissionsView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = AdminTestListSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    serializer_class = AdminTestSubmissionListSerializer
 
     def get(self, request: Request) -> Response:
-        mock_data = TestSubmission(
-            id=1,
-            deployment=TestDeployment(
-                test=Test(title="프론트엔드 기초 쪽지시험", subject=Subject(title="프론트엔드 기초")),
-                generation=Generation(number=3, course=Course(name="프론트 초격차")),
-            ),
-            student=PermissionsStudent(user=User(name="William", nickname="Will")),
-            cheating_count=2,
-            # total_score=30, # 시리얼라이저 참고
-            started_at="2025-06-26T09:00:00",  # 시험 응시 시간
-            created_at="2025-06-26T10:00:00",  # 시험 제출 시간
-        )
+        filter_serializer = TestSubmissionFilterSerializer(data=request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        filters = filter_serializer.validated_data
 
-        serializer = self.serializer_class(instance=mock_data)
+        queryset = TestSubmission.objects.select_related(
+            "student__user", "deployment__test", "deployment__generation__course"
+        )
+        filtered_qs = filter_test_submissions(queryset, filters)
+
+        if any(filters.values()) and not filtered_qs.exists():
+            return Response(
+                {"detail": "검색어로 조회된 결과가 없습니다."},
+                status=404,
+            )
+
+        submissions = list(filtered_qs)
+        submissions_with_scores = annotate_total_score(submissions)
+
+        ordering = filters.get("ordering", "latest")
+        sorted_submissions = sort_by_total_score(submissions_with_scores, ordering)
+
+        paginator = AdminTestListPagination()
+        page = paginator.paginate_queryset(sorted_submissions, request)  # type: ignore
+
+        serializer = self.serializer_class(page, many=True)
+
         return Response(
             {"message": "쪽지시험 응시내역 목록 조회 완료", "data": serializer.data}, status=status.HTTP_200_OK
         )
 
 
 # 쪽지 시험 응시 내역 상세 조회
-@extend_schema(tags=["[Admin] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
+@extend_schema(tags=["[Admin/Mock] Test - submission (쪽지시험 응시 목록/상세/삭제)"])
 class AdminTestSubmissionDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = AdminTestDetailSerializer
