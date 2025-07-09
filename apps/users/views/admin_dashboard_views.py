@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, TypedDict, Union
+from typing import Any, Dict, List, TypedDict, Union, cast
 
 from dateutil.relativedelta import relativedelta
 from django.db.models import Count, OuterRef, Subquery
@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff
-from apps.users.models import StudentEnrollmentRequest, User
+from apps.users.models import StudentEnrollmentRequest, User, Withdrawal
 from apps.users.serializers.admin_dashboard_serializers import (
     ChartTypeEnum,
     ConversionTrendResponseSerializer,
@@ -229,14 +229,9 @@ class AdminWithdrawTrendView(APIView):
         )
 
 
-# 탈퇴 사유 항목 타입 정의
-class WithdrawalReasonItem(TypedDict):
-    reason: str
-    count: int
-
-
+# 탈퇴 사유 추이 원형 그래프
 class AdminWithdrawalReasonPieView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]  # 어드민 권한
 
     @extend_schema(
         responses={200: WithdrawalReasonResponseSerializer},
@@ -245,25 +240,30 @@ class AdminWithdrawalReasonPieView(APIView):
         tags=["Admin - 유저 대시보드"],
     )
     def get(self, request: Request) -> Response:
-        raw_data: List[WithdrawalReasonItem] = [
-            {"reason": "콘텐츠 불만족", "count": 12},
-            {"reason": "가격 문제", "count": 10},
-            {"reason": "기타", "count": 8},
-        ]
+        today = datetime.today()
+        six_months_ago = (today.replace(day=1) - relativedelta(months=6)).date()
 
-        total = sum(item["count"] for item in raw_data)
+        # 최근 6개월간 탈퇴 사유 집계
+        qs = (
+            Withdrawal.objects.filter(created_at__date__gte=six_months_ago)
+            .values("reason")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        total = sum(item["count"] for item in qs)
         enriched_data: List[Dict[str, Union[str, int, float]]] = [
             {
-                "reason": item["reason"],
+                "reason": str(Withdrawal.Reason(item["reason"]).label),
                 "count": item["count"],
-                "percentage": round(item["count"] / total * 100, 1),
+                "percentage": round(item["count"] / total * 100, 1) if total else 0,
             }
-            for item in raw_data
+            for item in qs
         ]
 
         return Response(
             {
-                "title": "탈퇴 사유 비율 2024-01 ~ 2024-06",
+                "title": f"탈퇴 사유 비율 {six_months_ago.strftime('%Y-%m')} ~ {today.strftime('%Y-%m')}",
                 "graph_type": "withdraw_reason",
                 "chart_type": ChartTypeEnum.PIE.value,
                 "range": "last_6_months",
@@ -273,30 +273,79 @@ class AdminWithdrawalReasonPieView(APIView):
         )
 
 
+# 탈퇴 사유 추이 막대 그래프
 class AdminWithdrawalReasonTrendView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         responses={200: WithdrawalReasonTrendResponseSerializer},
         summary="탈퇴 사유 월별 추이 그래프 조회",
         description="최근 12개월간 특정 탈퇴 사유의 월별 발생 수를 조회하여 bar 또는 line 차트용 데이터로 반환합니다.",
         tags=["Admin - 유저 대시보드"],
+        parameters=[
+            OpenApiParameter(
+                name="reason",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="탈퇴 사유: '비쌈' 또는 '불만족' 또는 '기타'",
+            )
+        ],
     )
     def get(self, request: Request) -> Response:
-        reason = request.query_params.get("reason", "기타")
+        reason_param = request.query_params.get("reason", Withdrawal.Reason.ETC.label)  # 기본값: 기타
         chart_type = request.query_params.get("chart_type", ChartTypeEnum.BAR.value)
 
-        labels = [f"2024-{m:02}" for m in range(7, 13)] + [f"2025-{m:02}" for m in range(1, 7)]
-        data = [(i * 2 + 1) % 5 for i in range(12)]
+        if chart_type not in [item.value for item in ChartTypeEnum]:
+            return Response(
+                {"detail": f"'{chart_type}'은(는) 유효하지 않은 차트 타입입니다. (bar 또는 line 중 하나)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # reason_param을 enum 값으로 역매핑
+        label_to_value = {label: value for value, label in Withdrawal.Reason.choices}
+        reason_value = label_to_value.get(reason_param)
+
+        if not reason_value:
+            return Response(
+                {"detail": f"'{reason_param}'은(는) 유효한 탈퇴 사유가 아닙니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        today = datetime.today()
+        start_date = (today.replace(day=1) - relativedelta(months=12)).date()
+
+        # 집계 쿼리
+        qs: List[Dict[str, Union[datetime, int]]] = list(
+            Withdrawal.objects.filter(reason=reason_value, created_at__date__gte=start_date)
+            .annotate(period=TruncMonth("created_at"))
+            .values("period")
+            .annotate(count=Count("id"))
+            .order_by("period")
+        )
+
+        # 라벨 생성
+        labels = [(today.replace(day=1) - relativedelta(months=(11 - i))).strftime("%Y-%m") for i in range(13)]
+
+        # 결과 정리
+        raw_counts: Dict[str, int] = {}
+        for item in qs:
+            period = item["period"]
+            if isinstance(period, datetime):
+                key = period.strftime("%Y-%m")
+            else:
+                key = str(period)
+            raw_counts[key] = cast(int, item["count"])
+
+        data = OrderedDict((label, raw_counts.get(label, 0)) for label in labels)
 
         return Response(
             {
-                "title": f"{reason} 탈퇴 사유 추이 {labels[0]} ~ {labels[-1]}",
+                "title": f"{reason_param} 탈퇴 사유 추이 {labels[0]} ~ {labels[-1]}",
                 "graph_type": "withdraw_reason",
                 "chart_type": chart_type,
                 "range": "last_12_months",
-                "reason": reason,
-                "data": dict(zip(labels, data)),
+                "reason": reason_param,
+                "data": data,
             },
             status=status.HTTP_200_OK,
         )
