@@ -9,8 +9,6 @@ def filter_test_submissions(queryset, filters):
 
     if subject:
         queryset = queryset.filter(deployment__test__subject__title__icontains=subject)
-        print(queryset.count())
-        print(list(queryset))
     if course:
         queryset = queryset.filter(deployment__generation__course__name__icontains=course)
     if generation:
