@@ -1,18 +1,21 @@
-from datetime import date, timedelta
-from typing import Any, Callable, Dict, List, OrderedDict, TypedDict, Union
+from collections import OrderedDict
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, TypedDict, Union
 
+from dateutil.relativedelta import relativedelta
 from django.db.models import Count, OuterRef, Subquery
-from django.db.models.functions import TruncMonth, TruncYear
+from django.db.models.functions import TruncDay, TruncMonth, TruncYear
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff
-from apps.users.models import StudentEnrollmentRequest
+from apps.users.models import StudentEnrollmentRequest, User
 from apps.users.serializers.admin_dashboard_serializers import (
     ChartTypeEnum,
     ConversionTrendResponseSerializer,
@@ -106,14 +109,23 @@ class AdminEnrollmentTrendView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+# 회원가입 추세 그래프
 class AdminJoinTrendView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         request=JoinTrendQuerySerializer,
         responses={200: JoinTrendResponseSerializer},
         summary="회원가입 추세 그래프 데이터 조회",
         description="일별/월별/연도별 회원가입 수를 조회합니다.",
+        parameters=[
+            OpenApiParameter(
+                name="range_type",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="단위: 'daily' 또는 'monthly' 또는 'yearly'",
+            )
+        ],
         tags=["Admin - 유저 대시보드"],
     )
     def get(self, request: Request) -> Response:
@@ -121,24 +133,61 @@ class AdminJoinTrendView(APIView):
         serializer.is_valid(raise_exception=True)
         range_type = serializer.validated_data["range_type"]
 
-        label_generators: Dict[str, Callable[[], List[str]]] = {
-            "daily": lambda: [(date(2025, 5, 21) + timedelta(days=i)).isoformat() for i in range(30)],
-            "monthly": lambda: [
-                f"{y}-{m:02}" for y in [2024, 2025] for m in (range(7, 13) if y == 2024 else range(1, 7))
-            ],
-            "yearly": lambda: [str(y) for y in range(2020, 2025)],
-        }
+        today = datetime.today()
+        base_qs = User.objects.all()
 
-        labels = label_generators[range_type]()
-        data = [(i * 3 % 10) + 1 for i in range(len(labels))]
+        if range_type == "daily":
+            start_date = today - timedelta(days=29)
+            qs_daily = list(
+                base_qs.filter(created_at__date__gte=start_date.date())
+                .annotate(period=TruncDay("created_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+            labels = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(30)]
+            raw_counts = {item["period"].strftime("%Y-%m-%d"): item["count"] for item in qs_daily}
+
+        elif range_type == "monthly":
+            start_month = (today.replace(day=1) - relativedelta(months=12)).replace(day=1)
+            qs_monthly = list(
+                base_qs.filter(created_at__date__gte=start_month.date())
+                .annotate(period=TruncMonth("created_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+            labels = [(start_month + relativedelta(months=m)).strftime("%Y-%m") for m in range(13)]
+            raw_counts = {item["period"].strftime("%Y-%m"): item["count"] for item in qs_monthly}
+
+        elif range_type == "yearly":
+            start_year = today.year - 4
+            qs_yearly = list(
+                base_qs.filter(created_at__year__gte=start_year)
+                .annotate(period=TruncYear("created_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+            labels = [str(y) for y in range(start_year, today.year + 1)]
+            raw_counts = {item["period"].strftime("%Y"): item["count"] for item in qs_yearly}
+
+        else:
+            raise ValidationError("range_type은 'daily', 'monthly', 'yearly' 중 하나여야 합니다.")
+
+        # 누락된 구간은 0으로 채움
+        data = OrderedDict((label, raw_counts.get(label, 0)) for label in labels)
+
+        # chart_type 조건 설정
+        chart_type = ChartTypeEnum.LINE.value if range_type == "daily" else ChartTypeEnum.BAR.value
 
         return Response(
             {
-                "title": f"회원가입 추세 {labels[0]} ~ {labels[-1]}",
+                "title": f"회원가입 추세 {labels[0]} ~ {labels[-1]}" if labels else "회원가입 추세",
                 "graph_type": "join",
-                "chart_type": ChartTypeEnum.BAR.value,
+                "chart_type": chart_type,
                 "range": range_type,
-                "data": dict(zip(labels, data)),
+                "data": data,
             },
             status=status.HTTP_200_OK,
         )
