@@ -39,7 +39,7 @@ app_name = "tests"
 urlpatterns = [
     # 쪽지 시험 응시
     path(
-        "test/submissions/<int:test_id>/start/",
+        "test/submissions/<int:test_deployment_id>/start/",
         TestStartView.as_view(),
         name="submission_start",
     ),
