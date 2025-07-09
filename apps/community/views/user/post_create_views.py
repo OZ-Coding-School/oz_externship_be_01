@@ -28,7 +28,7 @@ class PostCreateAPIView(APIView):
         },
         tags=["community - 게시글"],
         summary="게시글 등록",
-        description="게시글 제목, 내용, 카테고리, 이미지를ㅅ 생성한 예시입니다.",
+        description="게시글 제목, 내용, 카테고리, 이미지를 생성한 예시입니다.",
     )
     def post(self, request: Request) -> Response:
         serializer = PostCreateSerializer(data=request.data, context={"request": request})
