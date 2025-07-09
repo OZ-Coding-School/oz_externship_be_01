@@ -1,10 +1,11 @@
 from datetime import date
 from typing import Any
 
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
@@ -15,7 +16,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.permissions import IsAdminOrStaff, IsAdminRole
-from apps.users.models import User
+from apps.users.models import (
+    PermissionsStaff,
+    PermissionsStudent,
+    PermissionsTrainingAssistant,
+    User,
+)
 from apps.users.serializers.admin_user_serializers import (
     AdminUserDetailSerializer,
     AdminUserListSerializer,
@@ -221,7 +227,7 @@ class AdminUserDeleteView(APIView):
 
 # 어드민 회원 권한 변경
 class AdminUserRoleUpdateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminRole]
     serializer_class = AdminUserRoleUpdateSerializer
 
     @extend_schema(
@@ -229,33 +235,41 @@ class AdminUserRoleUpdateView(APIView):
         description="어드민 전용 회원의 권한을 변경합니다.",
         request=AdminUserRoleUpdateSerializer,
         responses={
-            200: OpenApiResponse(description="유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
-            400: OpenApiResponse(description="유효하지 않은 권한입니다."),
+            200: OpenApiResponse(description="변경된 권한을 반환합니다.", response=serializers.CharField),
+            400: OpenApiResponse(description="유효하지 않은 입력입니다."),
+            403: OpenApiResponse(description="자기 자신의 권한은 수정할 수 없습니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
         tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        serializer = self.serializer_class(data=request.data, partial=True)
+        user = get_object_or_404(User, id=user_id)
+
+        if request.user.id == user.id:
+            return Response({"detail": "자기 자신의 권한은 수정할 수 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.serializer_class(data=request.data, context={"request": request, "target_user": user})
         serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        new_role = validated_data["role"]
 
-        validated_role = serializer.validated_data.get("role")
+        try:
+            with transaction.atomic():
+                if new_role == User.Role.STUDENT:
+                    PermissionsStudent.objects.get_or_create(user=user, generation=validated_data["generation"])
 
-        mock_user = User(
-            id=user_id,
-            email="admin@example.com",
-            name="홍길동",
-            nickname="hongkildong",
-            birthday=date(1998, 8, 16),
-            gender="MALE",
-            phone_number="010-0000-0000",
-            self_introduction="안녕하세요",
-            profile_image_url="",
-            role=validated_role,
-            is_active=True,
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
+                elif new_role == User.Role.TA:
+                    PermissionsTrainingAssistant.objects.get_or_create(
+                        user=user, generation=validated_data["generation"]
+                    )
 
-        response_serializer = AdminUserSerializer(instance=mock_user)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+                elif new_role in [User.Role.OM, User.Role.LC]:
+                    PermissionsStaff.objects.get_or_create(user=user, course=validated_data["course"])
+
+                user.role = new_role
+                user.save(update_fields=["role", "updated_at"])
+
+        except Exception:
+            return Response({"detail": "권한 변경에 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"role": user.role}, status=status.HTTP_200_OK)
