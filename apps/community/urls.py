@@ -24,7 +24,6 @@ from apps.community.views.user.comment_views import (
     CommentUpdateAPIView,
 )
 
-
 urlpatterns = [
     # admin
     path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),

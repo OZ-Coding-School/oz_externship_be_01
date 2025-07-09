@@ -5,7 +5,7 @@ from celery.schedules import crontab  # type: ignore
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 
-app = Celery("oz_externship")
+app = Celery("oz_externsblahip")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()

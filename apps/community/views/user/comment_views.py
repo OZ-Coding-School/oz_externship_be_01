@@ -4,16 +4,18 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.community.models import Comment, CommentTags, Post
-from apps.community.serializers.comment_serializers import CommentResponseSerializer, CommentCreateSerializer, \
-    CommentUpdateSerializer
+from apps.community.serializers.comment_serializers import (
+    CommentCreateSerializer,
+    CommentResponseSerializer,
+    CommentUpdateSerializer,
+)
 
 User = get_user_model()
 
@@ -77,7 +79,6 @@ class CommentListAPIView(APIView):
             results.append(comment_data)
 
         return paginator.get_paginated_response(results)
-
 
 
 class CommentCreateAPIView(APIView):
