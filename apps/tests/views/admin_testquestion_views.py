@@ -21,8 +21,8 @@ class TestQuestionCreateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin/Mock] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
-        description="Mock - 어드민이 특정 쪽지시험에 문제를 출제합니다.",
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
+        description="어드민이 특정 쪽지시험에 문제를 출제합니다.",
         request=TestQuestionCreateSerializer,
         responses={
             201: OpenApiResponse(response=TestQuestionCreateSerializer, description="문제 생성 성공"),
@@ -80,6 +80,7 @@ class TestQuestionListView(APIView):
 
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
+    # permission_classes = [AllowAny]
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(
