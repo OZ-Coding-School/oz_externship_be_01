@@ -98,7 +98,7 @@ class UserTestStartSerializer(serializers.Serializer):
 
     # access_code 유효성 검사
     def validate_access_code(self, value: str) -> str:
-        test_deployment = self.context["test"]
+        test_deployment = self.context["test_deployment"]
 
         if test_deployment.access_code != value:
             raise serializers.ValidationError("유효하지 않은 참가 코드입니다.")

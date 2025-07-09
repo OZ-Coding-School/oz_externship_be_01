@@ -49,9 +49,7 @@ class TestStartView(APIView):
         if test_deployment.close_at and test_deployment.close_at < now:
             return Response({"detail": "이미 종료된 시험입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.request_serializer_class(
-            data=request.data, context={"request": request, "test": test_deployment}
-        )
+        serializer = self.request_serializer_class(data=request.data, context={"test_deployment": test_deployment})
         serializer.is_valid(raise_exception=True)
 
         response_serializer = self.response_serializer_class(instance=test_deployment)
