@@ -24,6 +24,8 @@ from apps.community.views.user.comment_views import (
     CommentUpdateAPIView,
 )
 
+from apps.community.views.user.post_create_views import PostCreateAPIView
+from apps.community.views.user.post_like import PostLikeAPIView
 urlpatterns = [
     # admin
     path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),
@@ -63,4 +65,6 @@ urlpatterns = [
     path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
     path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
     path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),  # 공지사항
+    path("posts/create/", PostCreateAPIView.as_view(), name="post-create"),
+    path('api/v1/posts/<int:post_id>/like/', PostLikeAPIView.as_view(), name='post-like'),
 ]
