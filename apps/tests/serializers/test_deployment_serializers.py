@@ -213,7 +213,6 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
     question_count = serializers.SerializerMethodField()  # 시험 문항 수 (계산 필요)
 
     # 배포 정보
-    base62_access_code = serializers.SerializerMethodField()  # Base62 인코딩된 참가 코드 (계산 필요)
     access_url = serializers.SerializerMethodField()  # 시험 응시 링크 URL (계산 필요)
     course_title = serializers.CharField(source="generation.course.name", read_only=True)  # 과정 이름
     generation_name = serializers.CharField(source="generation.name", read_only=True)  # 기수 이름
@@ -235,8 +234,7 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             "question_count",  # Meta.fields에 question_count를 사용합니다.
             # 배포 정보
             "id",  # 배포 고유 ID
-            # "access_code",
-            "base62_access_code",
+            "access_code",
             "access_url",
             "course_title",
             "generation_name",
@@ -263,14 +261,6 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
         elif isinstance(snapshot, list):
             return len(snapshot)
         return 0
-
-    def get_base62_access_code(self, obj: TestDeployment) -> str:
-        """
-        Base62 인코딩된 참가 코드를 반환합니다.
-        obj.access_code는 이미 generate_base62_code 함수에 의해 Base62로 저장되어 있으므로,
-        그 값을 그대로 반환합니다.
-        """
-        return obj.access_code
 
         # 시험 응시 링크 URL을 반환합니다.
 
@@ -391,12 +381,12 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
 
         # 문제 유형별 채점 함수 매핑
         scoring_functions = {
-            TestQuestion.QuestionType.MULTIPLE_CHOICE_SINGLE.value: _score_multiple_choice, # type: ignore
-            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI.value: _score_multiple_choice, # type: ignore
-            TestQuestion.QuestionType.OX.value: _score_multiple_choice, # type: ignore
-            TestQuestion.QuestionType.SHORT_ANSWER.value: _score_short_answer, # type: ignore
-            TestQuestion.QuestionType.ORDERING.value: _score_ordering, # type: ignore
-            TestQuestion.QuestionType.FILL_IN_BLANK.value: _score_fill_in_blank, # type: ignore
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_SINGLE.value: _score_multiple_choice,  # type: ignore
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI.value: _score_multiple_choice,  # type: ignore
+            TestQuestion.QuestionType.OX.value: _score_multiple_choice,  # type: ignore
+            TestQuestion.QuestionType.SHORT_ANSWER.value: _score_short_answer,  # type: ignore
+            TestQuestion.QuestionType.ORDERING.value: _score_ordering,  # type: ignore
+            TestQuestion.QuestionType.FILL_IN_BLANK.value: _score_fill_in_blank,  # type: ignore
         }
 
         total_score_for_submission = 0.0
