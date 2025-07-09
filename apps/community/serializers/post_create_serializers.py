@@ -51,8 +51,11 @@ class PostCreateSerializer(serializers.ModelSerializer):
         category = PostCategory.objects.get(id=validated_data.pop("category_id"))
         # validated_data['author'] = self.context['request'].user
         post = Post.objects.create(category=category, author=author, **validated_data)
-
         uploader = S3Uploader()
+
+        # 첨부파일 업로드
+        for file in attachments_data:
+            uploader = S3Uploader()
 
         # 첨부파일 업로드
         for file in attachments_data:
