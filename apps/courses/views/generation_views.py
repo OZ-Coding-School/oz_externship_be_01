@@ -156,17 +156,16 @@ class GenerationDetailView(generics.RetrieveAPIView):
             status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
             status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
             status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
-        }
+        },
     )
     def get_queryset(self):
         queryset = Generation.objects.annotate(
             registered_students=Coalesce(
-                Count('enrollment_requests',
-                      filter=Q(enrollment_requests__accepted_at__isnull=False)),
-                0
+                Count("enrollment_requests", filter=Q(enrollment_requests__accepted_at__isnull=False)), 0
             )
         ).select_related("course")
         return queryset
+
 
 # 기수 수정
 @extend_schema(
@@ -339,8 +338,10 @@ class MonthlyCourseView(APIView):
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(tags=["[Admin] 과정-기수 대시보드"],
-               summary="운영중인 모든과정",)
+@extend_schema(
+    tags=["[Admin] 과정-기수 대시보드"],
+    summary="운영중인 모든과정",
+)
 class OngoingCourseView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
