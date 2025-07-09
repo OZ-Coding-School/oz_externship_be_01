@@ -1,9 +1,7 @@
-import json
 from typing import Any, Dict, List
 
 from rest_framework import serializers
 
-# 명시적으로 임포트하여 사용합니다.
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
@@ -25,16 +23,6 @@ class CourseSerializer(serializers.ModelSerializer[Course]):
     class Meta:
         model = Course
         fields = ("id", "name")
-
-
-# 삭제 공유
-# 공통 User&Admin
-# class GenerationSerializer(serializers.ModelSerializer[Generation]):
-#     course = CourseSerializer(read_only=True)
-#
-#     class Meta:
-#         model = Generation
-#         fields = ("id", "course", "number")
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회, 상세 조회

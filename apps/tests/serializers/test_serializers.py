@@ -204,7 +204,6 @@ class TestCreateSerializer(serializers.ModelSerializer[Test]):
         return test
 
 
-# 상인님 subject 임포트 중이었는데, id가 필요없어서 새로 생성
 # 관리자 쪽지 시험 응시 전체 목록 조회, 상세 조회, 사용자 응시
 class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
 

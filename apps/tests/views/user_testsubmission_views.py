@@ -20,7 +20,7 @@ from apps.tests.serializers.test_submission_serializers import (
 from apps.users.models import PermissionsStudent
 
 
-# 쪽지 시험 응시
+# 수강생 쪽지 시험 응시
 @extend_schema(
     tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
     request=UserTestStartSerializer,
@@ -93,13 +93,16 @@ class TestSubmissionSubmitView(APIView):
         return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
 
 
-# 쪽지 시험 결과 조회
+# 수강생 쪽지 시험 결과 조회
 @extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
 class TestSubmissionResultView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestResultSerializer
 
     def get(self, request: Request, submission_id: int) -> Response:
+        """
+        쪽지 시험 결과 조회 API
+        """
         try:
             test_submission = TestSubmission.objects.select_related("student", "deployment__test").get(pk=submission_id)
         except TestSubmission.DoesNotExist:
