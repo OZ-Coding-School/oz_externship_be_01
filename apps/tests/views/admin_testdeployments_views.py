@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
 
 from django.db import transaction
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -12,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.models import TestDeployment
+from apps.tests.pagination import AdminTestListPagination
 from apps.tests.serializers.test_deployment_serializers import (
     DeploymentCreateSerializer,
     DeploymentDetailSerializer,
@@ -147,28 +149,105 @@ class TestDeploymentStatusView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer(many=True)},
-    summary="시험 배포 목록 조회",
-    description="등록된 모든 시험 배포 정보(ID 101,102)를 조회합니다. 페이징 없이 전체 데이터를 반환합니다.",
+    summary="쪽지시험 배포 목록 조회",
+    description="시험 배포 ID 를 조회합니다. 페이징을 이용하여 조회합니다",
 )
+# 쪽지시험 배포 목록 조회
 class DeploymentListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = DeploymentListSerializer
+    pagination_class = AdminTestListPagination
 
-    def get(self, request: Request) -> Response:
-        # dict.values()를 리스트로 변환
-        deployments_list = list(MOCK_DEPLOYMENTS.values())
-        serializer = DeploymentListSerializer(deployments_list, many=True)
-        data = cast(List[Dict[str, Any]], serializer.data)
-        return Response({"count": len(data), "next": None, "previous": None, "results": data})
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        # 기본 쿼리셋 정의 및 N+1 문제 방지 (select_related)
+        queryset = TestDeployment.objects.all().select_related(
+            "test", "test__subject", "generation", "generation__course"
+        )
+
+        # 검색 (search)
+        search_query: Optional[str] = request.query_params.get("search", None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(test__title__icontains=search_query) | Q(test__subject__title__icontains=search_query)
+            )
+
+        # 필터링 (status)
+        status_filter: Optional[str] = request.query_params.get("status", None)
+        if status_filter:
+            queryset = queryset.filter(status__iexact=status_filter)
+
+        # 필터링 (과정 - course_id, 기수 - generation_id) 로직
+        raw_course_id: Optional[str] = request.query_params.get("course_id", None)
+        raw_generation_id: Optional[str] = request.query_params.get("generation_id", None)
+
+        if raw_course_id:
+            try:
+                parsed_course_id: int = int(raw_course_id)
+                queryset = queryset.filter(generation__course__id=parsed_course_id)
+            except ValueError:
+                return Response(
+                    {"detail": "course_id는 유효한 정수여야 합니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if raw_generation_id:
+            try:
+                # 새로운 변수 parsed_generation_id에 정수형 값을 할당
+                parsed_generation_id: int = int(raw_generation_id)
+                queryset = queryset.filter(generation__id=parsed_generation_id)
+            except ValueError:
+                return Response(
+                    {"detail": "generation_id는 유효한 정수여야 합니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 이렇게 하면 집계 연산이 더 적은 수의 데이터에 대해 이루어져 효율적일 수 있습니다.
+        queryset = queryset.annotate(
+            total_participants=Count("submissions__student", distinct=True),
+        )
+
+        # 정렬 (ordering)
+        ordering: Optional[str] = request.query_params.get("ordering", None)
+        if ordering:
+            valid_ordering_fields = [
+                "total_participants",
+                "created_at",
+            ]
+            if ordering.lstrip("-") in valid_ordering_fields:
+                queryset = queryset.order_by(ordering)
+            else:
+                return Response(
+                    {
+                        "detail": f"유효하지 않은 정렬 필드입니다: {ordering}. 가능한 필드: {', '.join(valid_ordering_fields)}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            # 기본 정렬 (최신순)
+            queryset = queryset.order_by("-created_at")
+
+        # 페이지네이션 적용 (외부 페이지네이션 클래스 사용)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+
+        # 페이지가 비어있을 경우 (페이지 번호가 범위를 벗어난 경우)
+        if page is None:
+            return paginator.get_paginated_response([])
+
+        # 데이터 직렬화
+        serializer = self.serializer_class(page, many=True)
+
+        # 페이지네이션 응답 형식에 맞춰 반환
+        return paginator.get_paginated_response(serializer.data)
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포/생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer},
     summary="시험 배포 상세 조회",
-    description="지정한 배포 ID(101,102)에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
+    description=" 배포 ID에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
 )
 class DeploymentDetailView(APIView):
     permission_classes = [AllowAny]
@@ -186,7 +265,7 @@ class DeploymentDetailView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentCreateSerializer,
     responses={201: dict},
     summary="시험 배포 생성",
@@ -215,7 +294,7 @@ class TestDeploymentCreateView(APIView):
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     summary="시험 배포 삭제",
     description="test_id(deployment_id)룰 임력하여 시험 배포를 삭제합니다. 삭제 시 해당 배포 정보는 더 이상 조회할 수 없습니다.",
 )
