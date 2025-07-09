@@ -13,6 +13,7 @@ from apps.users.models import User
 from apps.users.serializers.profile_serializers import (
     NicknameCheckSerializer,
     UserProfileSerializer,
+    UserProfileUpdateResponseSerializer,
     UserProfileUpdateSerializer,
 )
 from apps.users.utils.nickname_validators import is_nickname_duplicated
@@ -45,9 +46,9 @@ class UserProfileUpdateView(APIView):
         request=UserProfileUpdateSerializer,
         description="내 정보 수정 API",
         tags=["user-profile"],
-        responses={200: OpenApiTypes.OBJECT},
+        responses={200: UserProfileUpdateResponseSerializer},
     )
-    def put(self, request: Request) -> Response:
+    def patch(self, request: Request) -> Response:
         user = request.user
         assert isinstance(user, User)
 
@@ -64,7 +65,7 @@ class UserProfileUpdateView(APIView):
             file_obj = request.FILES["profile_image_file"]
             uploader = S3Uploader()
 
-            # 기본이미지 삭제
+            # 기존 이미지가 있는 경우 → 삭제 시도
             if user.profile_image_url:
                 delete_success = uploader.delete_file(user.profile_image_url)
 
@@ -88,17 +89,16 @@ class UserProfileUpdateView(APIView):
 
         serializer.save(instance=user)
 
-        return Response(
-            {
-                "message": "내 정보 수정 완료",
-                "updated_fields": {
-                    "nickname": user.nickname,
-                    "phone_number": user.phone_number,
-                    "profile_image_url": user.profile_image_url,
-                },
+        response_data = {
+            "message": "내 정보 수정 완료",
+            "updated_fields": {
+                "nickname": serializer.validated_data.get("nickname", user.nickname),
+                "phone_number": serializer.validated_data.get("phone_number", user.phone_number),
+                "profile_image_url": serializer.validated_data.get("profile_image_url", user.profile_image_url),
             },
-            status=status.HTTP_200_OK,
-        )
+        }
+        response_serializer = UserProfileUpdateResponseSerializer(response_data)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 # 닉네임 중복 확인

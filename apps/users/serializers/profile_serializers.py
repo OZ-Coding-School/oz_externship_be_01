@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.courses.models import EnrollmentRequest
 from apps.users.models import User
+from apps.users.utils.redis_utils import is_phone_verified
 
 
 # 닉네임 중복체크
@@ -64,12 +65,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True, required=False)
     nickname = serializers.CharField(required=False)
     phone_number = serializers.CharField(required=False)
-    # 휴대폰 번호 인증 API 연동 시 인증 완료 여부 체크 로직 추가 예정
 
     class Meta:
         model = User
         fields = [
-            "profile_image_url",
             "profile_image_file",
             "password",
             "password2",
@@ -77,19 +76,26 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "phone_number",
         ]
 
+    # 닉네임
     def validate_nickname(self, value: str) -> str:
         user = self.context["request"].user
         if User.objects.exclude(id=user.id).filter(nickname=value).exists():
             raise serializers.ValidationError("이미 사용 중인 닉네임입니다.")
         return value
 
-    # 휴대폰 인증 API 완성 시 제거 예정
+    # 휴대폰
     def validate_phone_number(self, value: str) -> str:
         user = self.context["request"].user
+
+        if not is_phone_verified(value):
+            raise serializers.ValidationError("휴대폰 번호 인증이 완료되지 않았습니다.")
+
         if User.objects.exclude(id=user.id).filter(phone_number=value).exists():
             raise serializers.ValidationError("이미 사용 중인 전화번호입니다.")
+
         return value
 
+    # 비밀번호
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         password = data.get("password")
         password2 = data.get("password2")
@@ -110,3 +116,9 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+# 프로필 수정 응답
+class UserProfileUpdateResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    updated_fields = serializers.DictField(child=serializers.CharField(allow_null=True, allow_blank=True))
