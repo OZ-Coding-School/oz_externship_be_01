@@ -1,24 +1,12 @@
-# access_code를 생성할 때, 무작위로 문자를 선택하여 코드를 생성
-import json
-
-# access_code를 만들 때 사용할 수 있는 기본 문자 집합을 제공
-import string
-
-# uuid 모듈 임포트
-import uuid
-
-# open_at, close_at 필드 처리를 위해 필요
-from datetime import datetime
 from typing import Any, Dict, List
 
-from django.utils import timezone
 from rest_framework import serializers
 
 # 명시적으로 임포트하여 사용합니다.
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
-from apps.tests.core.utils.base62 import encode_base62
+from core.utils.base62 import generate_base62_code
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -264,11 +252,8 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
         except Generation.DoesNotExist:
             raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
 
-        generated_code = None
-        while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
-            uuid_int_value = uuid.uuid4().int
-            # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
-            generated_code = encode_base62(uuid_int_value, length=22)[:6]  # 대략 22자리가 나오므로 6자리로 자름
+        # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
+        generated_code = generate_base62_code()
 
         validated_data["access_code"] = generated_code
         validated_data["status"] = "Activated"
