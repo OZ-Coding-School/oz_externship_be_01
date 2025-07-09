@@ -1,9 +1,12 @@
-from datetime import datetime
 from typing import Any
 
+from django.core.cache import cache
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, status
+from rest_framework import filters, permissions, status
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -21,7 +24,6 @@ from ..serializers.questions_serializers import (
 
 # 1. 더미 사용자
 DUMMY_USER = User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock_user.png")
-
 # 2. 더미 질문 + 이미지 포함
 DUMMY_QUESTIONS = []
 DUMMY_QUESTION_IMAGES = []
@@ -46,22 +48,71 @@ for q in DUMMY_QUESTIONS:
     )
 
 
-# 1. 질문 목록 조회 (GET)
-class QuestionListView(APIView):
-    permission_classes = [permissions.AllowAny]
+class QuestionPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
 
-    @extend_schema(
-        responses=QuestionListSerializer(many=True),
-        description="질문 리스트 조회",
-        tags=["questions"],
-    )
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = QuestionListSerializer(DUMMY_QUESTIONS, many=True)
-        resp_data = serializer.data
-        for data in resp_data:
-            images = [image for image in DUMMY_QUESTION_IMAGES if data["id"] == image.question.id]
-            data["images"] = QuestionImageSerializer(images, many=True).data
-        return Response(resp_data, status=status.HTTP_200_OK)
+
+# 1. 질문 목록 조회 (GET)
+class QuestionListView(ListAPIView):
+    queryset = Question.objects.all().select_related("author", "category")
+    serializer_class = QuestionListSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = QuestionPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = [
+        "author__nickname",
+        "title",
+        "content",
+    ]
+    ordering = ["-created_at", "-id"]  # 최신순, 2차: 최신순
+
+    def get_minor_ids(self, category):
+        if category.category_type == "major":
+            middle_ids = category.subcategories.values_list("id", flat=True)
+            minor_ids = QuestionCategory.objects.filter(parent_id__in=middle_ids).values_list("id", flat=True)
+            return list(minor_ids)
+        elif category.category_type == "middle":
+            minor_ids = category.subcategories.values_list("id", flat=True)
+            return list(minor_ids)
+        elif category.category_type == "minor":
+            return [category.id]
+        else:
+            return []
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        category_id = self.request.query_params.get("category_id")
+        if category_id:
+            try:
+                category = QuestionCategory.objects.get(id=category_id)
+            except QuestionCategory.DoesNotExist:
+                return queryset.none()
+            minor_ids = self.get_minor_ids(category)
+            if minor_ids:
+                queryset = queryset.filter(category_id__in=minor_ids)
+            else:
+                return queryset.none()
+        answered = self.request.query_params.get("answered")
+        if answered == "true":
+            queryset = queryset.filter(answer_set__isnull=False)
+        elif answered == "false":
+            queryset = queryset.filter(answer_set__isnull=True)
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        # 1. 캐시 키를 URL+쿼리 파라미터 조합으로 생성
+        cache_key = f"question_list:{request.get_full_path()}"
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            return Response(cached_response)
+
+        # 2. 캐시에 없으면 원래 로직대로 조회
+        response = super().list(request, *args, **kwargs)
+        # 3. 캐시 저장 (예: 2분간)
+        cache.set(cache_key, response.data, timeout=120)
+        return response
 
 
 # 2. 질문 상세 조회 (GET)
@@ -74,20 +125,9 @@ class QuestionDetailView(APIView):
         tags=["questions"],
     )
     def get(self, request: Request, question_id: int, *args: Any, **kwargs: Any) -> Response:
-        # 1. 질문 찾기
-        item = next((q for q in DUMMY_QUESTIONS if q.id == question_id), None)
-        if not item:
-            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-
-        # 2. 직렬화
-        serializer = QuestionDetailSerializer(item)
-        data = serializer.data
-
-        # 3. 관련 이미지 mock 추가
-        images = [img for img in DUMMY_QUESTION_IMAGES if getattr(img.question, "id", img.question) == question_id]
-        data["images"] = QuestionImageSerializer(images, many=True).data
-
-        return Response(data, status=status.HTTP_200_OK)
+        question = get_object_or_404(Question, pk=question_id)
+        serializer = QuestionDetailSerializer(question)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # 3. 새 질문 생성 (POST)

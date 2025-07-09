@@ -1,5 +1,4 @@
 import time
-import uuid
 from typing import Any
 
 from django.core.files.uploadedfile import UploadedFile
@@ -7,6 +6,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
+from apps.qna.serializers.answers_serializers import AnswerListSerializer
 from core.utils.s3_file_upload import S3Uploader
 
 
@@ -99,19 +99,71 @@ class QuestionUpdateSerializer(serializers.ModelSerializer[Question]):
         }
 
 
+# 카테고리 이름
+class CategoryNameSerializer(serializers.ModelSerializer):
+    major = serializers.SerializerMethodField()
+    middle = serializers.SerializerMethodField()
+    minor = serializers.CharField(source="name")
+
+    class Meta:
+        model = QuestionCategory
+        fields = ["major", "middle", "minor"]
+
+    def get_major(self, obj):
+        if obj.parent and obj.parent.parent:
+            return obj.parent.parent.name
+        return None
+
+    def get_middle(self, obj):
+        if obj.parent:
+            return obj.parent.name
+        return None
+
+
+# 작성자 정보
+class AuthorInfoSerializer(serializers.Serializer):
+    nickname = serializers.CharField()
+    profile_image_url = serializers.CharField()
+
+
 # 질문 목록 조회
-class QuestionListSerializer(serializers.ModelSerializer[Question]):
-    images = QuestionImageSerializer(many=True, read_only=True)
+class QuestionListSerializer(serializers.ModelSerializer):
+    category = CategoryNameSerializer(read_only=True)
+    author = AuthorInfoSerializer(read_only=True)
+    answer_count = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
-        fields = ["id", "title", "content", "author", "category", "view_count", "created_at", "updated_at", "images"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "author",
+            "category",
+            "answer_count",
+            "view_count",
+            "created_at",
+            "thumbnail",
+        ]
+
+    def get_answer_count(self, obj):
+        return obj.answers.count()
+
+    def get_thumbnail(self, obj):
+        img = obj.images.first()
+        if img:
+            return img.img_url
+        return None
 
 
 # 질문 상세 조회
 class QuestionDetailSerializer(serializers.ModelSerializer[Question]):
     images = QuestionImageSerializer(many=True, read_only=True)
+    author = AuthorInfoSerializer(read_only=True)
+    category = CategoryNameSerializer(read_only=True)
+    answers = AnswerListSerializer(many=True, read_only=True)
 
     class Meta:
         model = Question
-        fields = ["id", "title", "content", "author", "category", "view_count", "created_at", "updated_at", "images"]
+        fields = ["id", "title", "content", "images", "author", "category", "view_count", "created_at", "answers"]
