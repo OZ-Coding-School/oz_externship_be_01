@@ -3,7 +3,7 @@ from typing import Any, Optional, Sequence
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
-from apps.users.models import User
+from apps.users.models import PermissionsStudent, User
 
 
 # 목록 전용 시리얼라이저
@@ -124,6 +124,24 @@ class AdminUserRoleUpdateSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=User.Role.choices)
     generation = serializers.PrimaryKeyRelatedField(queryset=Generation.objects.all(), required=False)
     course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), required=False)
+
+    def validate(self, attrs):
+        role = attrs.get("role")
+        generation = attrs.get("generation")
+        course = attrs.get("course")
+        user = self.context["target_user"]
+
+        if role in [User.Role.STUDENT, User.Role.TA] and not generation:
+            raise serializers.ValidationError("generation 필드는 필수입니다.")
+
+        if role in [User.Role.OM, User.Role.LC] and not course:
+            raise serializers.ValidationError("course 필드는 필수입니다.")
+
+        if role == User.Role.STUDENT:
+            if PermissionsStudent.objects.filter(user=user, generation=generation).exists():
+                raise serializers.ValidationError("이미 해당 기수에 대한 수강 권한이 존재합니다.")
+
+        return attrs
 
 
 # 페이지네이션 시리얼라이저

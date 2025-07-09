@@ -248,45 +248,28 @@ class AdminUserRoleUpdateView(APIView):
         if request.user.id == user.id:
             return Response({"detail": "자기 자신의 권한은 수정할 수 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=request.data, context={"request": request, "target_user": user})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
         new_role = validated_data["role"]
 
         try:
             with transaction.atomic():
-                if new_role in [User.Role.GENERAL, User.Role.ADMIN]:
-                    user.role = new_role
-
-                elif new_role == User.Role.STUDENT:
-                    generation = validated_data.get("generation")
-                    if not generation:
-                        raise serializers.ValidationError("Student 권한에는 generation 필드가 필요합니다.")
-                    if PermissionsStudent.objects.filter(user=user, generation=generation).exists():
-                        raise serializers.ValidationError("이미 해당 기수에 대한 수강 권한이 존재합니다.")
-                    PermissionsStudent.objects.create(user=user, generation=generation)
-                    user.role = new_role
+                if new_role == User.Role.STUDENT:
+                    PermissionsStudent.objects.get_or_create(user=user, generation=validated_data["generation"])
 
                 elif new_role == User.Role.TA:
-                    generation = validated_data.get("generation")
-                    if not generation:
-                        raise serializers.ValidationError("TA 권한에는 generation 필드가 필요합니다.")
-                    PermissionsTrainingAssistant.objects.get_or_create(user=user, generation=generation)
-                    user.role = new_role
+                    PermissionsTrainingAssistant.objects.get_or_create(
+                        user=user, generation=validated_data["generation"]
+                    )
 
                 elif new_role in [User.Role.OM, User.Role.LC]:
-                    course = validated_data.get("course")
-                    if not course:
-                        raise serializers.ValidationError(f"{new_role} 권한에는 course 필드가 필요합니다.")
-                    PermissionsStaff.objects.get_or_create(user=user, course=course)
-                    user.role = new_role
+                    PermissionsStaff.objects.get_or_create(user=user, course=validated_data["course"])
 
-                else:
-                    raise serializers.ValidationError("지원하지 않는 권한입니다.")
-
+                user.role = new_role
                 user.save(update_fields=["role", "updated_at"])
 
-        except serializers.ValidationError as e:
+        except Exception:
             return Response({"detail": "권한 변경에 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"role": user.role}, status=status.HTTP_200_OK)
