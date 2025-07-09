@@ -193,8 +193,9 @@ class AdminJoinTrendView(APIView):
         )
 
 
+# 탈퇴 추이 그래프
 class AdminWithdrawTrendView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
 
     @extend_schema(
         request=TrendQuerySerializer,
@@ -202,28 +203,65 @@ class AdminWithdrawTrendView(APIView):
         summary="회원 탈퇴 추세 조회",
         description="월별 또는 년별 단위로 회원 탈퇴 수를 그래프 데이터 형태로 반환합니다.",
         tags=["Admin - 유저 대시보드"],
+        parameters=[
+            OpenApiParameter(
+                name="unit",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="단위: 'monthly' 또는 'yearly'",
+            )
+        ],
     )
     def get(self, request: Request) -> Response:
         serializer = TrendQuerySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         unit = serializer.validated_data["unit"]
 
+        today = datetime.today()
+        base_qs = Withdrawal.objects.all()
+
+        labels: List[str] = []
+
         if unit == "monthly":
-            labels = [f"2024-{m:02}" for m in range(7, 13)] + [f"2025-{m:02}" for m in range(1, 7)]
-            data = [1, 0, 2, 1, 0, 3, 1, 2, 0, 1, 2, 3]
+            start_month = today.replace(day=1) - relativedelta(years=1)
+            qs_monthly = list(
+                base_qs.filter(updated_at__date__gte=start_month.date())
+                .annotate(period=TruncMonth("updated_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+            for i in range(13):
+                month = start_month + relativedelta(months=i)
+                labels.append(month.strftime("%Y-%m"))
+            raw_counts = {item["period"].strftime("%Y-%m"): item["count"] for item in qs_monthly}
             range_ = "last_12_months"
-        else:
-            labels = [str(y) for y in range(2021, 2025)]
-            data = [10, 13, 8, 15]
+
+        elif unit == "yearly":
+            start_year = today - relativedelta(years=4)
+            qs_yearly = list(
+                base_qs.filter(updated_at__date__gte=start_year.date())
+                .annotate(period=TruncYear("updated_at"))
+                .values("period")
+                .annotate(count=Count("id"))
+                .order_by("period")
+            )
+            labels = [str(start_year.year + i) for i in range(5)]
+            raw_counts = {item["period"].strftime("%Y"): item["count"] for item in qs_yearly}
             range_ = "last_4_years"
+
+        else:
+            raise ValidationError("unit은 'monthly' 또는 'yearly' 중 하나여야 합니다.")
+
+        data = OrderedDict((label, raw_counts.get(label, 0)) for label in labels)
 
         return Response(
             {
-                "title": f"회원 탈퇴 추세 {labels[0]} ~ {labels[-1]}",
+                "title": f"회원 탈퇴 추세 {labels[0]} ~ {labels[-1]}" if labels else "회원 탈퇴 추세",
                 "graph_type": "withdraw",
                 "chart_type": ChartTypeEnum.BAR.value,
                 "range": range_,
-                "data": dict(zip(labels, data)),
+                "data": data,
             },
             status=status.HTTP_200_OK,
         )
