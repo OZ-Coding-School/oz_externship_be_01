@@ -1,7 +1,6 @@
 from typing import Any, Dict, List
 
 from rest_framework import serializers
-
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
