@@ -1,12 +1,11 @@
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import uuid4
 
 from django.core.files.uploadedfile import UploadedFile
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
-from apps.users.models import PermissionsStudent
-from apps.users.models import User
+from apps.users.models import PermissionsStudent, User
 from core.utils.s3_file_upload import S3Uploader
 
 
@@ -101,15 +100,16 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer[User]):
     def update(self, instance: User, validated_data: dict[str, Any]) -> User:
         profile_img_file: Optional[UploadedFile] = validated_data.pop("profile_image_file", None)
 
-        if profile_img_file:
+        if profile_img_file is not None:
             uploader = S3Uploader()
+            name = cast(str, profile_img_file.name)
+            ext = name.split(".")[-1]
 
             # 기존 이미지 삭제
             if instance.profile_image_url:
                 uploader.delete_file(instance.profile_image_url)
 
             # 새 이미지 업로드
-            ext = profile_img_file.name.split('.')[-1]
             s3_key = f"users/profile_images/user_{instance.id}_{uuid4().hex}.{ext}"
             s3_url = uploader.upload_file(profile_img_file, s3_key)
 
@@ -124,7 +124,6 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer[User]):
 
         instance.save()
         return instance
-
 
 
 # 어드민 회원 권한 변경 시리얼라이저

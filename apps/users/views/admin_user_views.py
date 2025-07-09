@@ -23,7 +23,8 @@ from apps.users.serializers.admin_user_serializers import (
     AdminUserDetailSerializer,
     AdminUserListSerializer,
     AdminUserRoleUpdateSerializer,
-    PaginatedAdminUserListSerializer, AdminUserUpdateSerializer,
+    AdminUserUpdateSerializer,
+    PaginatedAdminUserListSerializer,
 )
 
 
@@ -152,7 +153,9 @@ class AdminUserUpdateView(APIView):
         description="어드민이 특정 회원 정보를 수정합니다. (이미지 포함 가능)",
         request=AdminUserUpdateSerializer,
         responses={
-            200: OpenApiResponse(description="수정된 유저의 상세 정보를 반환합니다.", response=AdminUserDetailSerializer),
+            200: OpenApiResponse(
+                description="수정된 유저의 상세 정보를 반환합니다.", response=AdminUserDetailSerializer
+            ),
             400: OpenApiResponse(description="잘못된 요청입니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
