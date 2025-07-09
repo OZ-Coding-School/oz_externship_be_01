@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.qna.dummy import dummy
-from apps.qna.models import QuestionCategory
+from apps.qna.models import Question, QuestionCategory
 from apps.qna.serializers.admin_serializers import (
     AdminCategoryCreateSerializer,
     AdminCategoryListSerializer,
@@ -44,43 +44,114 @@ class AdminCategoryCreateView(APIView):
 
 # 카테고리 삭제(DELETE)
 class AdminCategoryDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # ⚠️ 추후 관리자 권한으로 변경 필요
 
     @extend_schema(
         tags=["QnA (Admin)"],
-        description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.(미완성)",
-        summary="미완성",
-        request=AdminCategoryListSerializer,
-        responses=AdminCategoryListSerializer,
+        summary="카테고리 삭제",
+        description="카테고리 삭제 (Hard Delete) - 하위 카테고리 및 질문 일반질문으로 이동",
+        parameters=[
+            OpenApiParameter(
+                name="category_type",
+                description="카테고리 타입 필터 (major, middle, minor)",
+                required=True,
+                type=OpenApiTypes.STR,
+                enum=["major", "middle", "minor"],  # 조회와 동일하게 명시
+            ),
+            OpenApiParameter(
+                name="category_id",
+                description="삭제할 카테고리 ID",
+                required=True,
+                type=OpenApiTypes.INT,
+            ),
+        ],
+        responses={
+            200: {"description": "삭제 성공"},
+            404: {"description": "카테고리를 찾을 수 없음"},
+            400: {"description": "일반질문 카테고리는 삭제할 수 없음"},
+        },
     )
-    def delete(self, request: Request, category_id: int) -> Response:
+    def delete(self, request):
+        category_type = request.query_params.get("category_type", "").strip()
+        category_id = request.query_params.get("category_id", "").strip()
+
+        # 필수값 검증
+        if not category_type or not category_id:
+            return Response({"error": "category_type과 category_id는 필수입니다."}, status=400)
+
+        # 유효한 category_type인지 검증
+        if category_type not in ["major", "middle", "minor"]:
+            return Response({"error": "category_type 파라미터는 major, middle, minor 중 하나여야 합니다."}, status=400)
+
         try:
-            category = QuestionCategory.objects.prefetch_related("subcategories", "questions").get(id=category_id)
+            category_id = int(category_id)
+        except ValueError:
+            return Response({"error": "category_id는 정수여야 합니다."}, status=400)
 
-            # 하위 카테고리 존재 확인
-            if category.subcategories.exists():
-                return Response(
-                    {"detail": "하위 카테고리가 존재하여 삭제할 수 없습니다. 먼저 하위 카테고리를 삭제해주세요."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        try:
+            # category_type까지 조건으로 추가해 일치하는 카테고리만 삭제 대상
+            category = QuestionCategory.objects.get(id=category_id, category_type=category_type)
 
-            # 해당 카테고리에 속한 질문 존재 확인
-            if category.questions.exists():
+            if category.category_type == "general":
+                return Response({"error": "일반질문 카테고리는 삭제할 수 없습니다."}, status=400)
+
+            general_category = QuestionCategory.objects.filter(category_type="general").first()
+            if not general_category:
+                return Response({"error": "일반질문 카테고리가 존재하지 않습니다."}, status=500)
+
+            warning_message = f"해당 카테고리에 속한 {'중분류, 소분류 카테고리가 함께 삭제되며 ' if category_type == 'major' else '소분류 카테고리가 함께 삭제되며 ' if category_type == 'middle' else ''}각 카테고리에 속한 질의응답은 일반질문 카테고리로 전환됩니다. 삭제된 항목은 되돌릴 수 없습니다."
+
+            with transaction.atomic():
+                categories_to_delete = self._collect_subcategories(category)
+
+                # 해당 카테고리 및 하위 카테고리에 속한 질문 일반 카테고리로 이동
+                questions_to_move = Question.objects.filter(category__in=categories_to_delete)
+                questions_to_move.update(category=general_category)
+
+                # 카테고리 삭제
+                for cat in categories_to_delete:
+                    cat.delete()
+
                 return Response(
                     {
-                        "detail": "해당 카테고리에 질문이 존재하여 삭제할 수 없습니다. 먼저 질문을 다른 카테고리로 이동하거나 삭제해주세요."
+                        "success": True,
+                        "message": "카테고리가 성공적으로 삭제되었습니다.",
+                        "warning_message": warning_message,
+                        "deleted_category": {
+                            "id": category.id,
+                            "name": category.name,
+                            "category_type": category.category_type,
+                        },
+                        "moved_to_category": {
+                            "id": general_category.id,
+                            "name": general_category.name,
+                        },
                     },
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=200,
                 )
 
-            # 삭제 실행
-            with transaction.atomic():
-                category.delete()
-
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
         except QuestionCategory.DoesNotExist:
-            return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "해당 카테고리를 찾을 수 없습니다."}, status=404)
+        except Exception as e:
+            return Response({"error": f"카테고리 삭제 중 오류가 발생했습니다: {str(e)}"}, status=500)
+
+    def _collect_subcategories(self, category):
+        """해당 카테고리 및 하위 카테고리들을 순차적으로 수집"""
+        categories = [category]
+
+        if category.category_type == "major":
+            middle_categories = category.subcategories.filter(category_type="middle")
+            categories.extend(middle_categories)
+
+            for middle in middle_categories:
+                minor_categories = middle.subcategories.filter(category_type="minor")
+                categories.extend(minor_categories)
+
+        elif category.category_type == "middle":
+            minor_categories = category.subcategories.filter(category_type="minor")
+            categories.extend(minor_categories)
+
+        return categories
 
 
 # 카테고리 목록 조회(GET)
