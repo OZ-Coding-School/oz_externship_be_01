@@ -2,6 +2,7 @@ from typing import Any, Optional, cast
 from uuid import uuid4
 
 from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
@@ -99,30 +100,39 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer[User]):
 
     def update(self, instance: User, validated_data: dict[str, Any]) -> User:
         profile_img_file: Optional[UploadedFile] = validated_data.pop("profile_image_file", None)
+        new_s3_url: Optional[str] = None
+        old_s3_url: Optional[str] = instance.profile_image_url
 
         if profile_img_file is not None:
             uploader = S3Uploader()
             name = cast(str, profile_img_file.name)
             ext = name.split(".")[-1]
-
-            # 기존 이미지 삭제
-            if instance.profile_image_url:
-                uploader.delete_file(instance.profile_image_url)
-
-            # 새 이미지 업로드
             s3_key = f"users/profile_images/user_{instance.id}_{uuid4().hex}.{ext}"
-            s3_url = uploader.upload_file(profile_img_file, s3_key)
+            new_s3_url = uploader.upload_file(profile_img_file, s3_key)
 
-            if not s3_url:
+            if not new_s3_url:
                 raise serializers.ValidationError("프로필 이미지 업로드에 실패했습니다.")
 
-            instance.profile_image_url = s3_url
+            # 미리 URL 교체
+            instance.profile_image_url = new_s3_url
 
-        # 나머지 필드 업데이트
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        try:
+            with transaction.atomic():
+                # 일반 필드 처리
+                for attr, value in validated_data.items():
+                    setattr(instance, attr, value)
+                instance.save()
 
-        instance.save()
+                # DB 저장 성공 후 → 이전 이미지 삭제
+                if profile_img_file and old_s3_url:
+                    transaction.on_commit(lambda: uploader.delete_file(old_s3_url))
+
+        except Exception as e:
+            # DB 실패 시 업로드했던 새 이미지 삭제
+            if profile_img_file and new_s3_url:
+                transaction.on_commit(lambda: uploader.delete_file(new_s3_url))
+            raise e
+
         return instance
 
 

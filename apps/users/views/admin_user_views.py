@@ -167,7 +167,7 @@ class AdminUserUpdateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        response_serializer = AdminUserUpdateSerializer(instance=user)
+        response_serializer = AdminUserDetailSerializer(instance=user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
