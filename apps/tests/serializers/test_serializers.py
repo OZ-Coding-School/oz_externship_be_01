@@ -84,6 +84,7 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
             "prompt",
             "options",
             "answer",
+            "explanation",
         )
 
     def get_options(self, obj):
@@ -108,6 +109,7 @@ class TestDetailSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "subject",
+            "thumbnail_img_url",
             "question_count",
             "questions",
             "created_at",
