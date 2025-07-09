@@ -204,41 +204,221 @@ class DeploymentListSerializer(serializers.ModelSerializer[Any]):
         # 전체 제출의 총합 점수를 제출 수로 나누어 평균을 계산합니다.
         return total_scores_sum / len(submissions)
 
+# 쪽지 시험 배포 상세 조회
+class DeploymentDetailSerializer(serializers.ModelSerializer):
+    # 🔹 시험 정보 🔹
+    test_id = serializers.IntegerField(source="test.id", read_only=True)
+    test_title = serializers.CharField(source="test.title", read_only=True)
+    subject_title = serializers.CharField(source="test.subject.title", read_only=True)
+    question_count = serializers.SerializerMethodField() # 시험 문항 수 (계산 필요)
 
-class DeploymentDetailSerializer(serializers.Serializer[Any]):
-    # 🔹 시험 정보
-    test_id = serializers.IntegerField(source="test.id")
-    test_title = serializers.CharField(source="test.title")
-    subject_title = serializers.CharField(source="test.subject.title")
-    question_count = serializers.SerializerMethodField()
+    # 🔹 배포 정보 🔹
+    base62_access_code = serializers.SerializerMethodField() # Base62 인코딩된 참가 코드 (계산 필요)
+    access_url = serializers.SerializerMethodField() # 시험 응시 링크 URL (계산 필요)
+    course_title = serializers.CharField(source="generation.course.name", read_only=True) # 과정 이름
+    generation_name = serializers.CharField(source="generation.name", read_only=True) # 기수 이름
 
-    # 🔹 배포 정보
-    deployment_id = serializers.IntegerField(source="id")
-    access_code = serializers.CharField()
-    access_url = serializers.SerializerMethodField()
-    course_title = serializers.CharField(source="generation.course.title")
-    generation_name = serializers.CharField(source="generation.name")
-    duration_time = serializers.IntegerField()
-    open_at = serializers.DateTimeField()
-    close_at = serializers.DateTimeField()
-    status = serializers.CharField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField()
+    # 🔹 응시 정보 🔹
+    total_participants = serializers.IntegerField(read_only=True)
+    unsubmitted_participants = serializers.SerializerMethodField() # 미참여 인원수 (계산 필요)
 
-    # 🔹 응시 정보
-    total_participants = serializers.IntegerField()
-    unsubmitted_participants = serializers.IntegerField()
-
-    # ⬇️ Custom 필드 처리
-    def get_access_url(self, obj: Any) -> str:
-        return f"https://ozschool.com/test/{obj['id']}?code={obj['access_code']}"
-
-    def get_question_count(self, obj: Any) -> int:
-        snapshot = obj.get("questions_snapshot_json", {})
-        return len(snapshot)
+    # 🔹 평균 점수 추가 (상세 조회에서도 필요하다면) 🔹
+    average_score = serializers.SerializerMethodField()
 
 
-#  쪽지시험 배포 생성
+    class Meta:
+        model = TestDeployment # ModelSerializer이므로 모델 지정
+        fields = [
+            # 시험 정보
+            "test_id",
+            "test_title",
+            "subject_title",
+            "question_count", # Meta.fields에 question_count를 사용합니다.
+
+            # 배포 정보
+            "id", # 배포 고유 ID
+            "access_code",
+            "base62_access_code",
+            "access_url",
+            "course_title",
+            "generation_name",
+            "duration_time",
+            "open_at",
+            "close_at",
+            "status",
+            "created_at",
+            "updated_at", # 배포 수정 일시
+
+            # 응시 정보
+            "total_participants",
+            "unsubmitted_participants",
+            "average_score",
+        ]
+        read_only_fields = fields # 모든 필드를 읽기 전용으로 설정
+
+    # ⬇️ Custom 필드 처리 메서드들 ⬇️
+
+    def get_question_count(self, obj: TestDeployment) -> int:
+        """TestDeployment의 questions_snapshot_json을 사용하여 시험 문항 수를 반환합니다."""
+        snapshot = obj.questions_snapshot_json
+        if isinstance(snapshot, dict) and "questions" in snapshot:
+            return len(snapshot["questions"])
+        elif isinstance(snapshot, list):
+            return len(snapshot)
+        return 0
+
+    def get_base62_access_code(self, obj: TestDeployment) -> str:
+        """
+        Base62 인코딩된 참가 코드를 반환합니다.
+        obj.access_code는 이미 generate_base62_code 함수에 의해 Base62로 저장되어 있으므로,
+        그 값을 그대로 반환합니다.
+        """
+        return obj.access_code
+
+    def get_access_url(self, obj: TestDeployment) -> str:
+        """시험 응시 링크 URL을 반환합니다."""
+        # 실제 서비스 URL은 Django settings에서 가져오는 것이 좋습니다.
+        return f"https://ozschool.com/test/{obj.id}?code={obj.access_code}"
+
+    def get_unsubmitted_participants(self, obj: TestDeployment) -> int:
+        """미참여 인원 수를 계산하여 반환합니다."""
+        total_participants = getattr(obj, 'total_participants', 0)
+        # 뷰에서 annotate된 total_generation_students 값을 사용합니다.
+        # 뷰의 쿼리셋에 `total_generation_students=Count('generation__students', distinct=True)`가 필요합니다.
+        total_generation_students = getattr(obj, 'total_generation_students', 0)
+        return max(0, total_generation_students - total_participants)
+
+    def get_average_score(self, obj: TestDeployment) -> float:
+        """
+        이 배포의 제출된 시험들의 평균 점수를 계산합니다.
+        (개별 제출 점수가 DB에 저장되지 않는 경우 시리얼라이저에서 계산)
+        """
+        submissions = obj.submissions.all()
+
+        if not submissions:
+            return 0.0
+
+        total_scores_sum = 0.0
+        questions_snapshot = obj.questions_snapshot_json
+
+        for submission in submissions:
+            # 🔹 시리얼라이저 내부의 헬퍼 메서드를 호출합니다. 🔹
+            submission_score = self._calculate_score_for_single_submission(
+                submission.answers_json,
+                questions_snapshot
+            )
+            total_scores_sum += submission_score
+
+        return total_scores_sum / len(submissions)
+
+    # 🔹 _calculate_score_for_single_submission 헬퍼 메서드 (내부 최적화 적용 및 self 추가) 🔹
+    def _calculate_score_for_single_submission(
+        self, submitted_answers: Dict[str, Any], questions_snapshot: List[Dict[str, Any]]
+    ) -> float:
+        """
+        단일 제출에 대한 점수를 계산합니다.
+        문제 유형별 채점 로직을 내부 헬퍼 함수와 딕셔너리를 사용하여 최적화합니다.
+        """
+        # 🔹 문제 유형별 채점 헬퍼 함수들 (메서드 내부에 정의) 🔹
+        def _score_multiple_choice(correct_ans: Any, submitted_ans: Any, point: int) -> float:
+            correct_options = correct_ans
+            if isinstance(correct_ans, str):
+                try:
+                    correct_options = json.loads(correct_ans)
+                except json.JSONDecodeError:
+                    return 0.0 # 유효하지 않은 JSON, 점수 없음
+
+            submitted_options = submitted_ans
+            if isinstance(submitted_ans, str):
+                try:
+                    submitted_options = json.loads(submitted_ans)
+                except json.JSONDecodeError:
+                    return 0.0 # 유효하지 않은 JSON, 점수 없음
+
+            if isinstance(correct_options, list) and isinstance(submitted_options, list):
+                if set(correct_options) == set(submitted_options):
+                    return float(point)
+            elif correct_options == submitted_options:
+                return float(point)
+            return 0.0
+
+        def _score_short_answer(correct_ans: Any, submitted_ans: Any, point: int) -> float:
+            if str(correct_ans).strip().lower() == str(submitted_ans).strip().lower():
+                return float(point)
+            return 0.0
+
+        def _score_ordering(correct_ans: Any, submitted_ans: Any, point: int) -> float:
+            correct_order = correct_ans
+            if isinstance(correct_ans, str):
+                try:
+                    correct_order = json.loads(correct_ans)
+                except json.JSONDecodeError:
+                    return 0.0
+
+            submitted_order = submitted_ans
+            if isinstance(submitted_ans, str):
+                try:
+                    submitted_order = json.loads(submitted_ans)
+                except json.JSONDecodeError:
+                    return 0.0
+
+            if isinstance(correct_order, list) and isinstance(submitted_order, list) and correct_order == submitted_order:
+                return float(point)
+            return 0.0
+
+        def _score_fill_in_blank(correct_ans: Any, submitted_ans: Any, point: int) -> float:
+            correct_blanks = correct_ans
+            if isinstance(correct_ans, str):
+                try:
+                    correct_blanks = json.loads(correct_ans)
+                except json.JSONDecodeError:
+                    return 0.0
+
+            submitted_blanks = submitted_ans # 🔹 여기에 빨간 줄이 표시되었던 부분 🔹
+            if isinstance(submitted_ans, str):
+                try:
+                    submitted_blanks = json.loads(submitted_ans)
+                except json.JSONDecodeError:
+                    return 0.0
+
+            if isinstance(correct_blanks, dict) and isinstance(submitted_blanks, dict):
+                is_correct_all_blanks = True
+                for key, val in correct_blanks.items():
+                    if str(submitted_blanks.get(key, '')).strip().lower() != str(val).strip().lower():
+                        is_correct_all_blanks = False
+                        break
+                if is_correct_all_blanks:
+                    return float(point)
+            return 0.0
+
+        # 🔹 문제 유형별 채점 함수 매핑 🔹
+        scoring_functions = {
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_SINGLE.value: _score_multiple_choice,
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI.value: _score_multiple_choice,
+            TestQuestion.QuestionType.OX.value: _score_multiple_choice,
+            TestQuestion.QuestionType.SHORT_ANSWER.value: _score_short_answer,
+            TestQuestion.QuestionType.ORDERING.value: _score_ordering,
+            TestQuestion.QuestionType.FILL_IN_BLANK.value: _score_fill_in_blank,
+            # 🔹 여기에 다른 문제 유형이 있다면 추가하세요. 🔹
+        }
+
+        total_score_for_submission = 0.0
+        for q_snapshot in questions_snapshot:
+            question_id = str(q_snapshot.get('id'))
+            correct_answer = q_snapshot.get('answer')
+            question_point = q_snapshot.get('point', 0)
+            question_type = q_snapshot.get('type')
+
+            submitted_answer = submitted_answers.get(question_id)
+
+            # 정답과 제출된 답안이 모두 존재하고, 채점 함수가 정의된 경우에만 채점
+            if correct_answer is not None and submitted_answer is not None and question_type in scoring_functions:
+                score_func = scoring_functions[question_type]
+                total_score_for_submission += score_func(correct_answer, submitted_answer, question_point)
+
+        return total_score_for_submission
+
+# 쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
     generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
