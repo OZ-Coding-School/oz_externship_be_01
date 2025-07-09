@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,13 +22,14 @@ User = get_user_model()
 
 # 댓글 조희
 class CommentListAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         operation_id="댓글 조회",
-        summary="특정 게시글의 댓글 목록 조회",
+        summary="특정 게시글의 댓글 목록 조회 (기능구현 완료)",
         description="게시글 ID를 기반으로 해당 게시글에 달린 댓글 목록을 조회. 페이지네이션이 적용.",
-        tags=["댓글"],
+        tags=["[User] Community - Comment ( 댓글 조회/생성/삭제/수정 )"],
         responses={
             200: CommentResponseSerializer(many=True),
             400: OpenApiResponse(
@@ -80,18 +82,19 @@ class CommentListAPIView(APIView):
 
 
 class CommentCreateAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         operation_id="댓글 작성",
-        summary="댓글 작성",
+        summary="댓글 작성 (기능구현 완료)",
         description="게시글에 댓글을 작성합니다.",
         request=CommentCreateSerializer,
         responses={
             201: {"id": 45, "post_id": 123, "user": {"id": 7, "nickname": "태연123"}, "content": "입력한 댓글 내용"},
             400: {"detail": "내용이 비어 있습니다."},
         },
-        tags=["댓글"],
+        tags=["[User] Community - Comment ( 댓글 조회/생성/삭제/수정 )"],
     )
     def post(self, request: Request, post_id: int) -> Response:
         serializer = CommentCreateSerializer(data=request.data)
@@ -120,13 +123,14 @@ class CommentCreateAPIView(APIView):
 
 
 class CommentUpdateAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         operation_id="댓글 수정",
-        summary="댓글 수정",
+        summary="댓글 수정 (기능구현 완료)",
         description="댓글 내용을 수정합니다.",
-        tags=["댓글"],
+        tags=["[User] Community - Comment ( 댓글 조회/생성/삭제/수정 )"],
         request=CommentUpdateSerializer,
         responses={
             200: CommentResponseSerializer,
@@ -151,13 +155,14 @@ class CommentUpdateAPIView(APIView):
 
 
 class CommentDeleteAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
         operation_id="댓글 삭제",
-        summary="댓글 삭제",
+        summary="댓글 삭제 (기능구현 완료)",
         description="댓글을 삭제합니다.",
-        tags=["댓글"],
+        tags=["[User] Community - Comment ( 댓글 조회/생성/삭제/수정 )"],
         responses={
             200: OpenApiResponse(description="댓글이 삭제되었습니다."),
             403: OpenApiResponse(description="해당 댓글을 삭제할 권한이 없습니다."),
