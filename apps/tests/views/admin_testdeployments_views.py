@@ -249,6 +249,7 @@ class DeploymentListView(APIView):
     summary="시험 배포 상세 조회",
     description=" 배포 ID에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
 )
+# 쪽지시험 배포 상세 조회
 class DeploymentDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = DeploymentDetailSerializer
