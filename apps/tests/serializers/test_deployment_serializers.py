@@ -6,7 +6,6 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
-from core.utils.base62 import generate_base62_code
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -16,6 +15,7 @@ from apps.tests.serializers.test_serializers import (
     AdminTestListSerializer,
     UserTestSerializer,
 )
+from core.utils.base62 import generate_base62_code
 
 
 # 공통 User&Admin
