@@ -1,16 +1,13 @@
-from datetime import date
 from typing import Any
 
 from django.db import transaction
 from django.db.models import Q, QuerySet
-from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,8 +23,7 @@ from apps.users.serializers.admin_user_serializers import (
     AdminUserDetailSerializer,
     AdminUserListSerializer,
     AdminUserRoleUpdateSerializer,
-    AdminUserSerializer,
-    PaginatedAdminUserListSerializer,
+    PaginatedAdminUserListSerializer, AdminUserUpdateSerializer,
 )
 
 
@@ -147,56 +143,28 @@ class AdminUserDetailView(APIView):
 
 # 어드민 회원 정보 수정
 class AdminUserUpdateView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = AdminUserSerializer
+    permission_classes = [IsAdminOrStaff]
+    serializer_class = AdminUserUpdateSerializer
     parser_classes = [MultiPartParser]
 
     @extend_schema(
         summary="어드민 회원 정보 수정",
-        description="어드민이 특정 회원 정보를 수정합니다.",
-        request=AdminUserSerializer,
+        description="어드민이 특정 회원 정보를 수정합니다. (이미지 포함 가능)",
+        request=AdminUserUpdateSerializer,
         responses={
-            200: OpenApiResponse(description="수정된 유저의 상세 정보를 반환합니다.", response=AdminUserSerializer),
+            200: OpenApiResponse(description="수정된 유저의 상세 정보를 반환합니다.", response=AdminUserDetailSerializer),
             400: OpenApiResponse(description="잘못된 요청입니다."),
             404: OpenApiResponse(description="존재하지 않는 유저입니다."),
         },
         tags=["Admin - 회원 관리"],
     )
     def patch(self, request: Request, user_id: int) -> Response:
-        mock_user = User(
-            id=user_id,
-            email="admin@example.com",
-            name="홍길동",
-            nickname="hongkildong",
-            birthday=date(1998, 8, 16),
-            gender="MALE",
-            phone_number="010-0000-0000",
-            self_introduction="안녕하세요",
-            profile_image_url="media/users/profile_images/example.png",
-            role="ADMIN",
-            is_active=True,
-            created_at=timezone.now(),
-            updated_at=timezone.now(),
-        )
-
-        serializer = self.serializer_class(
-            instance=mock_user,
-            data=request.data,
-            partial=True,
-        )
+        user = get_object_or_404(User, id=user_id)
+        serializer = self.serializer_class(instance=user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        mock_user.name = serializer.validated_data.get("name")
-        mock_user.gender = serializer.validated_data.get("gender")
-        mock_user.phone_number = serializer.validated_data.get("phone_number")
-        profile_img_file = serializer.validated_data.get("profile_image_file")
-        mock_user.profile_image_url = (
-            f"media/users/profile_images/{profile_img_file}"
-            if profile_img_file is not None
-            else mock_user.profile_image_url
-        )
-        mock_user.self_introduction = serializer.validated_data.get("self_introduction")
+        serializer.save()
 
-        response_serializer = self.serializer_class(instance=mock_user)
+        response_serializer = AdminUserUpdateSerializer(instance=user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
