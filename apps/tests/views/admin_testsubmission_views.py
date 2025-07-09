@@ -65,6 +65,9 @@ class AdminTestSubmissionsView(APIView):
     serializer_class = AdminTestSubmissionListSerializer
 
     def get(self, request: Request) -> Response:
+        """
+        쪽지 시험 응시 내역 목록 조회 API
+        """
         filter_serializer = TestSubmissionFilterSerializer(data=request.query_params)
         filter_serializer.is_valid(raise_exception=True)
         filters = filter_serializer.validated_data
@@ -103,6 +106,9 @@ class AdminTestSubmissionDetailView(APIView):
     serializer_class = AdminTestDetailSerializer
 
     def get(self, request: Request, submission_id: int) -> Response:
+        """
+        쪽지 시험 응시 내역 상세 조회 API
+        """
         try:
             test_submission = TestSubmission.objects.select_related("student", "deployment__test").get(pk=submission_id)
         except TestSubmission.DoesNotExist:
@@ -123,6 +129,9 @@ class AdminTestSubmissionDeleteView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     def delete(self, request: Request, submission_id: int) -> Response:
+        """
+        쪽지 시험 응시 내역 삭제 API
+        """
         test_submission = get_object_or_404(TestSubmission, pk=submission_id)
         test_submission.delete()
         return Response({"message": f"쪽지시험 응시내역 {submission_id} 삭제 완료"}, status=status.HTTP_200_OK)
