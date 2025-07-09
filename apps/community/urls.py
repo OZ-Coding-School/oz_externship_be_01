@@ -23,9 +23,9 @@ from apps.community.views.user.comment_views import (
     CommentListAPIView,
     CommentUpdateAPIView,
 )
-
 from apps.community.views.user.post_create_views import PostCreateAPIView
 from apps.community.views.user.post_like import PostLikeAPIView
+
 urlpatterns = [
     # admin
     path("admin/categories/create/", AdminCommunityCategoryCreateAPIView.as_view(), name="admin_category_create"),

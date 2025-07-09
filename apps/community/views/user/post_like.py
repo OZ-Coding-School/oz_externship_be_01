@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -8,7 +9,7 @@ from apps.community.serializers.post_like_serializer import PostLikeResponseSeri
 
 
 class PostLikeAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["게시글좋아요"],
@@ -37,7 +38,7 @@ class PostLikeAPIView(APIView):
         return Response({"liked": True, "like_count": post.likes_count}, status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=["게시글좋아요"],
+        tags=["[User] Community - Posts ( 게시글 댓글 )"],
         summary="게시글 좋아요 취소",
         description="로그인한 사용자가 게시글에 남긴 좋아요를 취소합니다.",
         responses={
