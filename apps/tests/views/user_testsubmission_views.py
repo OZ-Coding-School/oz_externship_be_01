@@ -88,9 +88,11 @@ class TestSubmissionResultView(APIView):
     serializer_class = UserTestResultSerializer
 
     def get(self, request: Request, submission_id: int) -> Response:
-        test_submission = get_object_or_404(
-            TestSubmission.objects.select_related("student", "deployment__test"), pk=submission_id
-        )
+        try:
+           test_submission = TestSubmission.objects.select_related("student", "deployment__test").get(pk=submission_id)
+        except TestSubmission.DoesNotExist:
+            return Response({"detail": f"{submission_id}에 해당하는 객체가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
 
         if test_submission.student.user != request.user:
             return Response({"detail": "본인만 결과조회가 가능합니다."}, status=status.HTTP_403_FORBIDDEN)
