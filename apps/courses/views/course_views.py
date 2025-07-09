@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from drf_spectacular.utils import extend_schema  # 누락 방지용
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -30,9 +30,17 @@ class IsAdminOrStaff(BasePermission):
         return user.role in allowed_roles
 
 
-@extend_schema(
-    tags=["Admin - 과정관리"],
-    description="어드민 페이지 단의 과정 생성, 목록 조회 API입니다",
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Admin - 과정 관리"],
+        summary="(Admin) 과정 목록 조회",
+        description="관리자가 생성된 과정 목록을 조회합니다.",
+    ),
+    post=extend_schema(
+        tags=["Admin - 과정 관리"],
+        summary="(Admin) 과정 생성",
+        description="관리자가 새로운 과정을 등록합니다.",
+    ),
 )
 class CourseListCreateView(ListCreateAPIView):
     queryset = Course.objects.all()
@@ -64,13 +72,26 @@ class CourseListCreateView(ListCreateAPIView):
         return Response(CourseSerializer(course).data, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(
-    tags=["Admin - 과정관리"],
-    description="어드민 페이지 단의 과정 상세 조회, 수정, 삭제 API입니다",
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Admin - 과정 관리"],
+        summary="(Admin) 과정 상세 조회",
+        description="관리자가 선택한 과정의 상세 정보를 조회합니다.",
+    ),
+    patch=extend_schema(
+        tags=["Admin - 과정 관리"],
+        summary="(Admin) 과정 수정",
+        description="관리자가 기존 과정의 내용을 수정합니다.",
+    ),
+    delete=extend_schema(
+        tags=["Admin - 과정 관리"],
+        summary="(Admin) 과정 삭제",
+        description="수강생이 없는 경우, 관리자가 과정을 삭제합니다.",
+    ),
 )
 class CourseDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Course.objects.all()
-    serializer_class = CourseSerializer  # S3Uploader를 사용하는 시리얼라이저
+    serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     lookup_url_kwarg = "course_id"
 
@@ -78,7 +99,7 @@ class CourseDetailView(RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)  # 썸네일 수정 시 S3Uploader로 재업로드 처리됨
+        self.perform_update(serializer)
         return Response(serializer.data)
 
     def delete(self, request, *args, **kwargs):
@@ -97,3 +118,4 @@ class CourseDetailView(RetrieveUpdateDestroyAPIView):
         generations.delete()
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
