@@ -158,7 +158,7 @@ class TestDeploymentStatusView(APIView):
 # 쪽지시험 배포 목록 조회
 class DeploymentListView(APIView):
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
     serializer_class = DeploymentListSerializer
     pagination_class = AdminTestListPagination
 
@@ -186,7 +186,32 @@ class DeploymentListView(APIView):
         # 필터링 (status)
         status_filter: Optional[str] = request.query_params.get("status", None)
         if status_filter:
-            queryset = queryset.filter(status__iexact=status_filter)  #
+            queryset = queryset.filter(status__iexact=status_filter)
+
+        # 필터링 (과정 - course_id, 기수 - generation_id) 로직
+        raw_course_id: Optional[str] = request.query_params.get("course_id", None)
+        raw_generation_id: Optional[str] = request.query_params.get("generation_id", None)
+
+        if raw_course_id:
+            try:
+                parsed_course_id: int = int(raw_course_id)
+                queryset = queryset.filter(generation__course__id=parsed_course_id)
+            except ValueError:
+                return Response(
+                    {"detail": "course_id는 유효한 정수여야 합니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if raw_generation_id:
+            try:
+                # 🔹 새로운 변수 parsed_generation_id에 정수형 값을 할당 🔹
+                parsed_generation_id: int = int(raw_generation_id)
+                queryset = queryset.filter(generation__id=parsed_generation_id)
+            except ValueError:
+                return Response(
+                    {"detail": "generation_id는 유효한 정수여야 합니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         # 정렬 (ordering)
         ordering: Optional[str] = request.query_params.get("ordering", None)
