@@ -63,14 +63,15 @@ class GenerationCreateSerializer(serializers.ModelSerializer[Generation]):
 # 기수 목록
 class GenerationListSerializer(serializers.ModelSerializer[Generation]):
     course_name = serializers.CharField(source="course.name", read_only=True)
+    course_tag = serializers.CharField(source="course.tag", read_only=True)
     registered_students = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Generation
         fields = [
             "id",
-            "course",
             "course_name",
+            "course_tag",
             "number",
             "max_student",
             "registered_students",
@@ -81,14 +82,7 @@ class GenerationListSerializer(serializers.ModelSerializer[Generation]):
             "updated_at",
         ]
 
-        read_only_fields = [
-            "id",
-            "course",
-            "course_name",
-            "registered_students",
-            "created_at",
-            "updated_at",
-        ]
+        read_only_fields = fields
 
 
 # 기수 상세 조회

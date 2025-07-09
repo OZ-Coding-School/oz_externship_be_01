@@ -12,7 +12,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.courses.models import Course, EnrollmentRequest, Generation
+from apps.courses.core.pagination import CustomPageNumberPagination
+from apps.courses.models import Course, Generation
 from apps.courses.serializers.generation_serializer import (
     CourseTrendSerializer,
     GenerationCreateSerializer,
@@ -72,16 +73,58 @@ class GenerationCreateView(APIView):
 
 # 기수 목록 API
 @extend_schema(
-    tags=["Admin - 기수관리 Mock"],
+    tags=["Admin - 기수관리"],
 )
-class GenerationListView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = GenerationListSerializer
+# apps/courses/views/generation_views.py
 
-    def get(self, request: Request) -> Response:
-        queryset = Generation.objects.select_related("course").annotate(registered_students=Count("students"))
-        serializer = self.serializer_class(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GenerationListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    serializer_class = GenerationListSerializer
+    pagination_class = CustomPageNumberPagination
+
+    @extend_schema(
+        summary="등록된 기수 목록 조회",
+        parameters=[
+            OpenApiParameter(
+                name="course_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="과정ID를 통해 특정 기수 조회",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="조회할 페이지 번호",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="페이지당 항목 수 (default: 10, max: 100)",
+                required=False,
+            ),
+        ],
+    )
+    def get_queryset(self):
+        queryset = Generation.objects.annotate(
+            registered_students=Coalesce(
+                Count("enrollment_requests", filter=Q(enrollment_requests__accepted_at__isnull=False)), 0
+            )
+        ).select_related("course")
+
+        queryset = queryset.order_by("course_name", "number")  # 이름 순으로 정렬 후 기수 순으로 정렬
+
+        course_id = self.request.query_params.get("course_id")
+        if course_id:
+            try:
+                queryset = queryset.filter(course_id=int(course_id))
+            except ValueError:
+                return Generation.objects.none()
+        return queryset
 
 
 # 기수 상세 정보 API
@@ -89,8 +132,8 @@ class GenerationListView(APIView):
     tags=["Admin - 기수관리 Mock"],
 )
 class GenerationDetailView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = GenerationListSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    serializer_class = GenerationDetailSerializer
 
     def get(self, request: Request, pk: int) -> Response:
         try:
@@ -106,7 +149,7 @@ class GenerationDetailView(APIView):
     tags=["Admin - 기수관리 Mock"],
 )
 class GenerationUpdateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = GenerationCreateSerializer
 
     def patch(self, request: Request, pk: int) -> Response:
@@ -126,7 +169,7 @@ class GenerationUpdateView(APIView):
     tags=["Admin - 기수관리 Mock"],
 )
 class GenerationDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     def delete(self, request: Request, pk: int) -> Response:
         try:
@@ -145,7 +188,7 @@ class GenerationDeleteView(APIView):
     tags=["[Admin] 과정-기수 대시보드"],
 )
 class CourseTrendView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = CourseTrendSerializer
 
     @extend_schema(
@@ -211,7 +254,7 @@ class CourseTrendView(APIView):
     tags=["[Admin] 과정-기수 대시보드"],
 )
 class MonthlyCourseView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = MonthlyCourseSerializer
 
     @extend_schema(
@@ -270,7 +313,7 @@ class MonthlyCourseView(APIView):
 
 @extend_schema(tags=["[Admin] 과정-기수 대시보드"])
 class OngoingCourseView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     def get(self, request: Request) -> Response:
         # 활성화된 Generation을 select_related로 Course와 함께 가져옴 ( N + 1 문제 해결 )
