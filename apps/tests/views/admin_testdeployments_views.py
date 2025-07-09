@@ -197,7 +197,7 @@ class DeploymentDetailView(APIView):
 )
 # 쪽지시험  배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     serializer_class = DeploymentCreateSerializer
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:

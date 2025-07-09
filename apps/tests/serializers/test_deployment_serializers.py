@@ -147,6 +147,7 @@ class Meta(BaseTimestampedSerializer.Meta):
     model = Test
     fields = ["id", "subject", "title", "thumbnail_img_url", *BaseTimestampedSerializer.Meta.fields]
 
+
 # 스냅샷 저장 로직( 배포 생성에 필요함)
 def _generate_questions_snapshot_data(test_instance: Test) -> List[Dict[str, Any]]:
     if hasattr(test_instance, "questions") and test_instance.questions.exists():
@@ -164,12 +165,14 @@ def _generate_questions_snapshot_data(test_instance: Test) -> List[Dict[str, Any
         return questions_data
     return []
 
+
 # 활성화 ,비황성화
 class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
     class Meta:
         model = TestDeployment
         fields = ["status"]
         extra_kwargs = {"status": {"required": True}}
+
 
 # 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
 class DeploymentListSerializer(serializers.Serializer[Any]):
@@ -226,6 +229,7 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
         snapshot = obj.get("questions_snapshot_json", {})
         return len(snapshot)
 
+
 # 🔹 TestDeployment 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
@@ -278,6 +282,7 @@ class DeploymentCreateSerializer(serializers.ModelSerializer):
             generation=generation_obj,
             **validated_data,
         )
+
 
 # 참가 코드 검증 (user)
 class UserCodeValidationSerializer(serializers.Serializer):
