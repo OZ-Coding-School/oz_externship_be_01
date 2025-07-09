@@ -27,6 +27,7 @@ from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
 @extend_schema(
     tags=["Admin - 기수관리"],
+    summary="기수등록 API",
 )
 # 기수 등록 API
 class GenerationCreateView(APIView):
@@ -74,6 +75,7 @@ class GenerationCreateView(APIView):
 # 기수 목록 API
 @extend_schema(
     tags=["Admin - 기수관리"],
+    summary="기수목록 API",
 )
 # apps/courses/views/generation_views.py
 
@@ -116,12 +118,12 @@ class GenerationListView(generics.ListAPIView):
             )
         ).select_related("course")
 
-        queryset = queryset.order_by("course_name", "number")  # 이름 순으로 정렬 후 기수 순으로 정렬
+        queryset = queryset.order_by("course__name", "number")  # 이름 순으로 정렬 후 기수 순으로 정렬
 
         course_id = self.request.query_params.get("course_id")
         if course_id:
             try:
-                queryset = queryset.filter(course_id=int(course_id))
+                queryset = queryset.filter(course__id=int(course_id))
             except ValueError:
                 return Generation.objects.none()
         return queryset
@@ -129,24 +131,47 @@ class GenerationListView(generics.ListAPIView):
 
 # 기수 상세 정보 API
 @extend_schema(
-    tags=["Admin - 기수관리 Mock"],
+    tags=["Admin - 기수관리"],
+    summary="기수상세정보 API",
 )
-class GenerationDetailView(APIView):
+class GenerationDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = GenerationDetailSerializer
+    lookup_field = "pk"
 
-    def get(self, request: Request, pk: int) -> Response:
-        try:
-            gen = Generation.objects.select_related("course").annotate(registered_students=Count("students")).get(pk=pk)
-        except Generation.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(gen)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+    @extend_schema(
+        description="특정 기수의 상세정보 조회",
+        parameters=[
+            OpenApiParameter(
+                name="pk",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="조회할 기수의 고유 ID",
+                required=True,
+            )
+        ],
+        responses={
+            status.HTTP_200_OK: GenerationDetailSerializer,
+            status.HTTP_404_NOT_FOUND: {"description": "해당 기수를 찾을 수 없습니다."},
+            status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
+            status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
+        }
+    )
+    def get_queryset(self):
+        queryset = Generation.objects.annotate(
+            registered_students=Coalesce(
+                Count('enrollment_requests',
+                      filter=Q(enrollment_requests__accepted_at__isnull=False)),
+                0
+            )
+        ).select_related("course")
+        return queryset
 
 # 기수 수정
 @extend_schema(
     tags=["Admin - 기수관리 Mock"],
+    summary="기수 수정 API",
 )
 class GenerationUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
@@ -167,6 +192,7 @@ class GenerationUpdateView(APIView):
 # 기수 삭제
 @extend_schema(
     tags=["Admin - 기수관리 Mock"],
+    summary="기수 삭제 API",
 )
 class GenerationDeleteView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
@@ -186,6 +212,7 @@ class GenerationDeleteView(APIView):
 
 @extend_schema(
     tags=["[Admin] 과정-기수 대시보드"],
+    summary="과정 - 기수별 등록인원",
 )
 class CourseTrendView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
@@ -252,6 +279,7 @@ class CourseTrendView(APIView):
 
 @extend_schema(
     tags=["[Admin] 과정-기수 대시보드"],
+    summary="월별 등록인원",
 )
 class MonthlyCourseView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
@@ -311,7 +339,8 @@ class MonthlyCourseView(APIView):
             return Response({"detail": f"서버오류: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@extend_schema(tags=["[Admin] 과정-기수 대시보드"])
+@extend_schema(tags=["[Admin] 과정-기수 대시보드"],
+               summary="운영중인 모든과정",)
 class OngoingCourseView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
