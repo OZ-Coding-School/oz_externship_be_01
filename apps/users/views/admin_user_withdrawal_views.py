@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from apps.tests.permissions import IsAdminOrStaff
 from apps.users.models.withdrawals import Withdrawal
 from apps.users.serializers.admin_user_withdrawal_serializers import (
+    AdminListWithdrawalSerializer,
     WithdrawalResponseSerializer,
 )
 from apps.users.views.admin_user_views import AdminUserListPaginator
@@ -58,6 +59,6 @@ class AdminListWithdrawalView(APIView):
 
         paginator = AdminUserListPaginator()
         paginated_qs = paginator.paginate_queryset(withdrawals, request)
-        serializer = WithdrawalResponseSerializer(paginated_qs, many=True)
+        serializer = AdminListWithdrawalSerializer(paginated_qs, many=True)
 
         return paginator.get_paginated_response(serializer.data)
