@@ -154,10 +154,8 @@ class TestDeploymentStatusView(APIView):
     summary="쪽지시험 배포 목록 조회",
     description="시험 배포 ID 를 조회합니다. 페이징을 이용하여 조회합니다",
 )
-
 # 쪽지시험 배포 목록 조회
 class DeploymentListView(APIView):
-
     permission_classes = [AllowAny]
     serializer_class = DeploymentListSerializer
     pagination_class = AdminTestListPagination
@@ -165,22 +163,14 @@ class DeploymentListView(APIView):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # 기본 쿼리셋 정의 및 N+1 문제 방지 (select_related)
         queryset = TestDeployment.objects.all().select_related(
-            "test", "test__subject", "generation", "generation__course"  #  #  #  #
-        )
-
-        # total_participants 어노테이트(집계)
-        queryset = queryset.annotate(
-            total_participants=Count("submissions__student", distinct=True),  #
+            "test", "test__subject", "generation", "generation__course"
         )
 
         # 검색 (search)
         search_query: Optional[str] = request.query_params.get("search", None)
         if search_query:
             queryset = queryset.filter(
-                Q(test__title__icontains=search_query)  #
-                | Q(test__subject__title__icontains=search_query)  #
-                | Q(generation__course__name__icontains=search_query)  #
-                | Q(generation__name__icontains=search_query)  #
+                Q(test__title__icontains=search_query) | Q(test__subject__title__icontains=search_query)
             )
 
         # 필터링 (status)
@@ -204,7 +194,7 @@ class DeploymentListView(APIView):
 
         if raw_generation_id:
             try:
-                # 🔹 새로운 변수 parsed_generation_id에 정수형 값을 할당 🔹
+                # 새로운 변수 parsed_generation_id에 정수형 값을 할당
                 parsed_generation_id: int = int(raw_generation_id)
                 queryset = queryset.filter(generation__id=parsed_generation_id)
             except ValueError:
@@ -213,18 +203,17 @@ class DeploymentListView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # 이렇게 하면 집계 연산이 더 적은 수의 데이터에 대해 이루어져 효율적일 수 있습니다.
+        queryset = queryset.annotate(
+            total_participants=Count("submissions__student", distinct=True),
+        )
+
         # 정렬 (ordering)
         ordering: Optional[str] = request.query_params.get("ordering", None)
         if ordering:
             valid_ordering_fields = [
-                "deployment_id",  #
-                "test__title",  #
-                "test__subject__title",  #
-                "generation__course__name",  #
-                "generation__number",  #
                 "total_participants",
-                "status",  #
-                "created_at",  #
+                "created_at",
             ]
             if ordering.lstrip("-") in valid_ordering_fields:
                 queryset = queryset.order_by(ordering)
@@ -237,7 +226,7 @@ class DeploymentListView(APIView):
                 )
         else:
             # 기본 정렬 (최신순)
-            queryset = queryset.order_by("-created_at")  #
+            queryset = queryset.order_by("-created_at")
 
         # 페이지네이션 적용 (외부 페이지네이션 클래스 사용)
         paginator = self.pagination_class()

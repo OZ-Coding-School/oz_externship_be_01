@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List
 
 from rest_framework import serializers
@@ -6,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
+from apps.tests.core.utils.grading import calculate_total_score
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -162,27 +164,51 @@ class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
         extra_kwargs = {"status": {"required": True}}
 
 
-# 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
-class DeploymentListSerializer(serializers.Serializer[Any]):
-    deployment_id = serializers.IntegerField(source="id")
-    test_title = serializers.CharField(source="test.title")
-    subject_title = serializers.CharField(source="test.subject.title")
+# 쪽지시험 배포 목록 조회
+class DeploymentListSerializer(serializers.ModelSerializer[Any]):
+    deployment_id = serializers.IntegerField(source="id", read_only=True)
+    test_title = serializers.CharField(source="test.title", read_only=True)  #
+    subject_title = serializers.CharField(source="test.subject.title", read_only=True)  #
     course_generation = serializers.SerializerMethodField()
-    total_participants = serializers.SerializerMethodField()
+    total_participants = serializers.IntegerField(read_only=True)
     average_score = serializers.SerializerMethodField()
-    status = serializers.CharField()
-    created_at = serializers.DateTimeField()
 
-    def get_course_generation(self, obj: Dict[str, Any]) -> str:
-        course: str = obj.get("generation", {}).get("course", {}).get("title", "")
-        generation: str = obj.get("generation", {}).get("name", "")
-        return f"{course} {generation}"
+    class Meta:
+        model = TestDeployment  #
+        fields = [
+            "deployment_id",  #
+            "test_title",
+            "subject_title",
+            "course_generation",
+            "total_participants",
+            "average_score",
+            "status",  #
+            "created_at",  #
+        ]
 
-    def get_total_participants(self, obj: Dict[str, Any]) -> int:
-        return int(obj.get("total_participants", 0))
+    def get_course_generation(self, obj: Any) -> str:
+        course_name = obj.generation.course.name if obj.generation and obj.generation.course else ""
+        generation_number = obj.generation.number if obj.generation else ""
+        return f"{course_name} {generation_number}기"
 
-    def get_average_score(self, obj: Dict[str, Any]) -> float:
-        return int(obj.get("average_score", 0.0))
+    def get_average_score(self, obj: TestDeployment) -> float:
+        """
+        각 배포의 제출된 시험들의 평균 점수를 계산합니다.
+        """
+        submissions = obj.submissions.all()  # 해당 배포의 모든 제출을 가져옵니다.
+
+        if not submissions:
+            return 0.0  # 제출이 없으면 평균 점수는 0입니다.
+
+        total_scores_sum = 0.0
+
+        # 각 제출을 반복하며 점수를 계산하고 합산합니다.
+        for submission in submissions:
+            submission_score = calculate_total_score(submission.answers_json)
+            total_scores_sum += submission_score
+
+        # 전체 제출의 총합 점수를 제출 수로 나누어 평균을 계산합니다.
+        return total_scores_sum / len(submissions)
 
 
 class DeploymentDetailSerializer(serializers.Serializer[Any]):
@@ -218,7 +244,7 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
         return len(snapshot)
 
 
-# 🔹 TestDeployment 생성
+#  쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
     generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
