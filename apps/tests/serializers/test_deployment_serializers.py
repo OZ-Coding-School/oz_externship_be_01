@@ -9,7 +9,7 @@ import uuid
 
 # open_at, close_at 필드 처리를 위해 필요
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -18,7 +18,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
-from apps.tests.core.utils.base62 import encode_base62, generate_questions_snapshot_json
+from apps.tests.core.utils.base62 import encode_base62
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -147,6 +147,22 @@ class Meta(BaseTimestampedSerializer.Meta):
     model = Test
     fields = ["id", "subject", "title", "thumbnail_img_url", *BaseTimestampedSerializer.Meta.fields]
 
+# 스냅샷 저장 로직( 배포 생성에 필요함)
+def _generate_questions_snapshot_data(test_instance: Test) -> List[Dict[str, Any]]:
+    if hasattr(test_instance, "questions") and test_instance.questions.exists():
+        questions_data = [
+            {
+                "id": q.id,
+                "question": q.question,
+                "prompt": q.prompt,
+                "type": q.type,
+                "options_json": q.options_json,
+                "answer": q.answer,
+            }
+            for q in test_instance.questions.all()
+        ]
+        return questions_data
+    return []
 
 # 활성화 ,비황성화
 class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
@@ -154,58 +170,6 @@ class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
         model = TestDeployment
         fields = ["status"]
         extra_kwargs = {"status": {"required": True}}
-
-
-# 🔹 TestDeployment 생성
-class DeploymentCreateSerializer(serializers.ModelSerializer):
-    test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
-    generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
-
-    class Meta:
-        model = TestDeployment
-        fields = [
-            "test_id",
-            "generation_id",
-            "duration_time",
-            "open_at",
-            "close_at",
-            "status",
-        ]
-        read_only_fields = ["access_code", "status", "questions_snapshot_json"]
-
-    def create(self, validated_data):
-        test_id = validated_data.pop("test_id")
-        generation_id = validated_data.pop("generation_id")
-
-        # 시험 ID로 Test 모델 객체를 조회하고 없으면 유효하지 않은 시험 ID라고 에러메시지 발생
-        try:
-            test = Test.objects.get(id=test_id)
-        except Test.DoesNotExist:
-            raise ValidationError({"test_id": "유효하지 않은 시험 ID 입니다."})
-
-        # 기수 ID Generation 모델 객체를 조회하고, 없으면 유효하지 않은 기수 ID 입니다 에러메시지 발생
-        try:
-            # 변수명 충돌을 피하기 위해 'generation.obj로 변경
-            generation_obj = Generation.objects.get(id=generation_id)
-        except Generation.DoesNotExist:
-            raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
-
-        generated_code = None
-        while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
-            uuid_int_value = uuid.uuid4().int
-            # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
-            generated_code = encode_base62(uuid_int_value, length=22)[:6]  # 대략 22자리가 나오므로 6자리로 자름
-
-        validated_data["access_code"] = generated_code
-
-        validated_data["status"] = "Activated"
-
-        return TestDeployment.objects.create(
-            test=test,
-            generation=generation_obj,
-            **validated_data,
-        )
-
 
 # 목록 조히 시리얼 라이저 ( 모델 기반으로 할려면 DB 필요)
 class DeploymentListSerializer(serializers.Serializer[Any]):
@@ -262,6 +226,58 @@ class DeploymentDetailSerializer(serializers.Serializer[Any]):
         snapshot = obj.get("questions_snapshot_json", {})
         return len(snapshot)
 
+# 🔹 TestDeployment 생성
+class DeploymentCreateSerializer(serializers.ModelSerializer):
+    test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
+    generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
+
+    class Meta:
+        model = TestDeployment
+        fields = [
+            "test_id",
+            "generation_id",
+            "duration_time",
+            "open_at",
+            "close_at",
+            "status",
+        ]
+        read_only_fields = ["access_code", "status", "questions_snapshot_json"]
+
+    def create(self, validated_data):
+        test_id = validated_data.pop("test_id")
+        generation_id = validated_data.pop("generation_id")
+
+        # 시험 ID로 Test 모델 객체를 조회하고 없으면 유효하지 않은 시험 ID라고 에러메시지 발생
+        try:
+            test = Test.objects.get(id=test_id)
+        except Test.DoesNotExist:
+            raise ValidationError({"test_id": "유효하지 않은 시험 ID 입니다."})
+
+        # 기수 ID Generation 모델 객체를 조회하고, 없으면 유효하지 않은 기수 ID 입니다 에러메시지 발생
+        try:
+            # 변수명 충돌을 피하기 위해 'generation.obj로 변경
+            generation_obj = Generation.objects.get(id=generation_id)
+        except Generation.DoesNotExist:
+            raise ValidationError({"generation_id": "유효하지 않은 기수 ID 입니다."})
+
+        generated_code = None
+        while generated_code is None or TestDeployment.objects.filter(access_code=generated_code).exists():
+            uuid_int_value = uuid.uuid4().int
+            # Base62 인코딩 함수를 호출하며 6자리 길이 지정을 요청
+            generated_code = encode_base62(uuid_int_value, length=22)[:6]  # 대략 22자리가 나오므로 6자리로 자름
+
+        validated_data["access_code"] = generated_code
+        validated_data["status"] = "Activated"
+
+        # _generate_questions_snapshot_data 함수를 호출하여 questions_snapshot_json 필드 채우기
+        questions_snapshot_data = _generate_questions_snapshot_data(test)
+        validated_data["questions_snapshot_json"] = questions_snapshot_data
+
+        return TestDeployment.objects.create(
+            test=test,
+            generation=generation_obj,
+            **validated_data,
+        )
 
 # 참가 코드 검증 (user)
 class UserCodeValidationSerializer(serializers.Serializer):

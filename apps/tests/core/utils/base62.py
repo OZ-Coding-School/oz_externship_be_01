@@ -25,25 +25,3 @@ def encode_base62(num: int, length: int = 6) -> str:
     encoded_str = "".join(reversed(result))
     # 지정된 길이에 맞추기 위해 앞에 '0' 채우기
     return encoded_str.zfill(length)
-
-
-def generate_questions_snapshot_json(test_instance: models.Model) -> str | None:
-    """
-    Test 인스턴스에서 질문 스냅샷 JSON 문자열을 생성합니다.
-    """
-    if hasattr(test_instance, "questions") and test_instance.questions.exists():
-        questions_data = [
-            {
-                "id": q.id,
-                "question": q.question,
-                "prompt": q.prompt,
-                "type": q.type,
-                "options": getattr(q, "options_json", None),
-                "answer": q.answer,
-                "point": q.point,
-                "explanation": q.explanation,
-            }
-            for q in test_instance.questions.all()
-        ]
-        return json.dumps(questions_data, ensure_ascii=False)
-    return None

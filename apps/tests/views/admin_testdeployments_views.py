@@ -195,9 +195,10 @@ class DeploymentDetailView(APIView):
         " 참가 코드(access_code)는 `uuid.uuid4().int` 값을 Base62 인코딩하여 정확히 6자리 무작위 문자열로 자동 생성되며, 문제 스냅샷이 포함됩니다."
     ),
 )
-# TestDeployment 배포 생성 API 뷰 클래스
+# 쪽지시험  배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
+    serializer_class = DeploymentCreateSerializer
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = DeploymentCreateSerializer(data=request.data)
