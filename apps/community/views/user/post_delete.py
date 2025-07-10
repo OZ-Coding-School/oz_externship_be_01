@@ -17,8 +17,6 @@ class PostDeleteAPIView(APIView):
         description=(
             "로그인한 사용자가 자신의 게시글을 삭제합니다. "
             "관리자(staff)는 모든 게시글을 삭제할 수 있습니다."
-            "- 삭제는 되돌릴 수 없으며, 삭제 시점에 안내 메시지 팝업이 필요합니다."
-            "- 삭제된 게시글은 복구되지 않습니다."
         ),
         responses={
             204: OpenApiResponse(description="삭제 성공"),
