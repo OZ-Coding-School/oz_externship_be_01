@@ -57,14 +57,10 @@ class PostLikeFalseAPIView(APIView):
 
         try:
             like = PostLike.objects.get(user=request.user, post=post)
+            if like.is_liked:
+                like.is_liked = False
+                like.save()
         except PostLike.DoesNotExist:
-            return Response({"detail": "좋아요한 내역이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not like.is_liked:
-            return Response({"detail": "좋아요한 내역이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 좋아요 취소 처리
-        like.is_liked = False
-        like.save()
+            pass  # 좋아요 기록이 없는 경우, 아무 것도 하지 않음
 
         return Response({"liked": False}, status=status.HTTP_200_OK)
