@@ -7,8 +7,10 @@ from apps.community.serializers.attachment_serializers import (
     PostAttachmentResponseSerializer,
     PostImageResponseSerializer,
 )
+from apps.community.serializers.category_serializers import (
+    CategoryDetailResponseSerializer,
+)
 from apps.community.serializers.comment_serializers import CommentResponseSerializer
-from apps.community.serializers.category_serializers import CategoryDetailResponseSerializer
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
@@ -39,6 +41,7 @@ class PostListSerializer(serializers.ModelSerializer[Post]):
             "created_at",
         )
         read_only_fields = fields
+
 
 # 게시글 디테일
 class PostDetailSerializer(serializers.ModelSerializer[Post]):
