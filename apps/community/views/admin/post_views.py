@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -205,18 +205,19 @@ class AdminPostVisibilityToggleView(APIView):
         summary="관리자 게시글 노출 on/off(기능 구현)",
     )
     def patch(self, request, post_id: int) -> Response:
-        with transaction.atomic():
-            updated_count = Post.objects.filter(id=post_id).update(is_visible=~F("is_visible"))
+        try:
+            with transaction.atomic():
+                post = Post.objects.select_for_update().get(id=post_id)
+                post.is_visible = not post.is_visible
+                post.save()
 
-            if updated_count == 0:
-                return Response({"detail": "게시글을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {
+                    "message": f"게시글 노출 상태가 {'활성화' if post.is_visible else '비활성화'}되었습니다.",
+                    "data": PostDetailSerializer(post).data,
+                },
+                status=status.HTTP_200_OK,
+            )
 
-        post = Post.objects.get(id=post_id)
-
-        return Response(
-            {
-                "message": f"게시글 노출 상태가 {'활성화' if post.is_visible else '비활성화'}되었습니다.",
-                "data": PostDetailSerializer(post).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+        except Post.DoesNotExist:
+            return Response({"detail": "게시글을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
