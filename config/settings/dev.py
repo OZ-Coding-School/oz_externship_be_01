@@ -1,6 +1,6 @@
 from config.settings.base import *
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS: list[str] = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(" ")
 
 # Static files (CSS, JavaScript, Images)
