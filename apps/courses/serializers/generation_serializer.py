@@ -132,8 +132,7 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
             raise serializers.ValidationError("수강 종료일은 수강 시작일 이후여야 합니다.")
 
         if start_date and end_date:
-            duration = end_date - start_date # timedelta 객체 반환
-
+            duration = end_date - start_date  # timedelta 객체 반환
 
         if duration < timedelta(days=7):
             raise serializers.ValidationError("수강 기간은 최소 7일 이상이어야 합니다.")
