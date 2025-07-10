@@ -44,7 +44,7 @@ class PostListAPIView(APIView):
         sort: str = request.query_params.get("ordering", "recent")
         valid_sort = {"recent": "-created_at", "old": "created_at", "views": "-view_count", "likes": "-likes_count"}
 
-        if sort not in valid_sort:
+        if sort not in valid_sort.keys():
             return Response(
                 {
                     "error_code": "INVALID_QUERY",
@@ -81,7 +81,7 @@ class PostListAPIView(APIView):
         queryset = queryset.annotate(comment_total=Count("comments")).order_by(valid_sort[sort])
 
         paginator = PageNumberPagination()
-        paginator.page_size_query_param = "size"
+        paginator.page_size_query_param = "page_size"
         paginated = paginator.paginate_queryset(queryset, request)
 
         serializer = PostListViewSerializer(paginated, many=True)

@@ -7,7 +7,6 @@ from apps.community.models import Post, PostAttachment, PostCategory, PostImage
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
 
-# User = get_user_model()
 
 
 class PostCreateSerializer(serializers.ModelSerializer):
@@ -52,10 +51,6 @@ class PostCreateSerializer(serializers.ModelSerializer):
         # validated_data['author'] = self.context['request'].user
         post = Post.objects.create(category=category, author=author, **validated_data)
         uploader = S3Uploader()
-
-        # 첨부파일 업로드
-        for file in attachments_data:
-            uploader = S3Uploader()
 
         # 첨부파일 업로드
         for file in attachments_data:
