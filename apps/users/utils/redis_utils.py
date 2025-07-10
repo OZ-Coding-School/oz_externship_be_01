@@ -114,3 +114,16 @@ def is_reset_email_verified(email: str) -> bool:
 def delete_reset_email_code(email: str) -> None:
     redis = get_redis_connection("default")
     redis.delete(f"reset:email:{email}")
+
+
+# 이메일 찾기 위한 휴대폰 인증
+# 휴대폰 인증 완료 표시 (기본 TTL 5분)
+def mark_email_find_phone_as_verified(phone: str, ttl: int = 300) -> None:
+    redis = get_redis_connection("default")
+    redis.set(f"email_find:verified:{phone}", "true", ex=ttl)
+
+
+# 휴대폰 인증 여부 확인
+def is_email_find_phone_verified(phone: str) -> bool:
+    redis = get_redis_connection("default")
+    return redis.get(f"email_find:verified:{phone}") == b"true"

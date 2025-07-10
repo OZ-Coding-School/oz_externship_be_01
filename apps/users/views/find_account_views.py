@@ -18,6 +18,7 @@ from apps.users.tasks import send_verification_email_task
 from apps.users.utils.email_masking_utils import mask_email
 from apps.users.utils.redis_utils import (
     get_reset_email_code,
+    is_email_find_phone_verified,
     is_phone_verified,
     mark_reset_email_as_verified,
     store_reset_email_code,
@@ -42,7 +43,7 @@ class EmailFindView(APIView):
         name = serializer.validated_data["name"]
         phone_number = serializer.validated_data["phone_number"]
 
-        if not is_phone_verified(phone_number):
+        if not is_email_find_phone_verified(phone_number):
             return Response({"message": "휴대폰 인증을 먼저 완료해주세요."}, status=400)
 
         try:

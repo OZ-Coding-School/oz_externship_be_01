@@ -31,6 +31,10 @@ from apps.users.views.admin_withdrawal_restore_views import (
 )
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
+from apps.users.views.auth.find_email_phone_verification import (
+    EmailFindPhoneSendCodeAPIView,
+    EmailFindPhoneVerifyCodeAPIView,
+)
 from apps.users.views.auth.phone_auth import (
     SendPhoneCodeAPIView,
     VerifyPhoneCodeAPIView,
@@ -99,6 +103,8 @@ urlpatterns = [
     path("account/send-reset-code/", PasswordResetEmailSendView.as_view(), name="send-reset-code"),
     path("account/verify-code/", PasswordResetVerifyCodeView.as_view(), name="verify-code"),
     path("account/change-password/", PasswordChangeView.as_view(), name="change-password"),
+    path("find/email/phone/send/", EmailFindPhoneSendCodeAPIView.as_view(), name="email-find-phone-send"),
+    path("find/email/phone/verify/", EmailFindPhoneVerifyCodeAPIView.as_view(), name="email-find-phone-verify"),
     path(
         "admin/users/student-enrollments/approve/",
         AdminApproveEnrollmentsView.as_view(),
