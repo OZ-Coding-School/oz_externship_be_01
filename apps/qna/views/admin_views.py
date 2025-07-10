@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.qna.dummy import dummy
-from apps.qna.models import QuestionCategory
+from apps.qna.models import Question, QuestionCategory
 from apps.qna.serializers.admin_serializers import (
     AdminCategoryCreateSerializer,
     AdminCategoryListSerializer,
@@ -44,43 +44,86 @@ class AdminCategoryCreateView(APIView):
 
 # 카테고리 삭제(DELETE)
 class AdminCategoryDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # ⚠️ 추후 관리자 권한으로 변경 필요
 
     @extend_schema(
         tags=["QnA (Admin)"],
-        description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.(미완성)",
-        summary="미완성",
-        request=AdminCategoryListSerializer,
-        responses=AdminCategoryListSerializer,
+        summary="카테고리 삭제",
+        description="카테고리 삭제 (Hard Delete) - 하위 카테고리 및 질문 일반질문으로 이동",
+        responses={
+            200: {"description": "삭제 성공"},
+            404: {"description": "카테고리를 찾을 수 없음"},
+            400: {"description": "일반질문 카테고리는 삭제할 수 없음"},
+        },
     )
-    def delete(self, request: Request, category_id: int) -> Response:
+    def delete(self, request, category_id: int):
         try:
-            category = QuestionCategory.objects.prefetch_related("subcategories", "questions").get(id=category_id)
+            # category_id로 카테고리 조회
+            category = QuestionCategory.objects.prefetch_related("subcategories", "subcategories__subcategories").get(
+                id=category_id
+            )
 
-            # 하위 카테고리 존재 확인
-            if category.subcategories.exists():
-                return Response(
-                    {"detail": "하위 카테고리가 존재하여 삭제할 수 없습니다. 먼저 하위 카테고리를 삭제해주세요."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            if category.category_type == "general":
+                return Response({"error": "일반질문 카테고리는 삭제할 수 없습니다."}, status=400)
 
-            # 해당 카테고리에 속한 질문 존재 확인
-            if category.questions.exists():
+            # 일반질문 카테고리 확보 (없으면 생성)
+            general_category, created = QuestionCategory.objects.get_or_create(
+                category_type="general",
+                defaults={
+                    "name": "일반질문",
+                    "parent": None,
+                },
+            )
+
+            with transaction.atomic():
+                # 삭제할 카테고리들 수집 (하위 카테고리 포함)
+                categories_to_delete = self._collect_delete_ids(category)
+
+                # 해당 카테고리 및 하위 카테고리에 속한 질문 일반 카테고리로 이동
+                questions_to_move = Question.objects.filter(category__in=categories_to_delete)
+                questions_to_move.update(category=general_category)
+
+                # 카테고리 삭제 - QuerySet의 delete() 메서드 사용
+                QuestionCategory.objects.filter(id__in=categories_to_delete).delete()
+
                 return Response(
                     {
-                        "detail": "해당 카테고리에 질문이 존재하여 삭제할 수 없습니다. 먼저 질문을 다른 카테고리로 이동하거나 삭제해주세요."
+                        "success": True,
+                        "message": "카테고리가 성공적으로 삭제되었습니다.",
+                        "deleted_category": {
+                            "id": category.id,
+                            "name": category.name,
+                            "category_type": category.category_type,
+                        },
+                        "moved_to_category": {
+                            "id": general_category.id,
+                            "name": general_category.name,
+                        },
                     },
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=200,
                 )
 
-            # 삭제 실행
-            with transaction.atomic():
-                category.delete()
-
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
         except QuestionCategory.DoesNotExist:
-            return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "해당 카테고리를 찾을 수 없습니다."}, status=404)
+        except Exception as e:
+            return Response({"error": f"카테고리 삭제 중 오류가 발생했습니다: {str(e)}"}, status=500)
+
+    def _collect_delete_ids(self, category):
+        collected_ids = [category.id]
+
+        if category.category_type == "major":
+            middle_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in middle_categories])
+
+            for middle in middle_categories:
+                minor_categories = middle.subcategories.all()
+                collected_ids.extend([c.id for c in minor_categories])
+
+        elif category.category_type == "middle":
+            minor_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in minor_categories])
+
+        return collected_ids
 
 
 # 카테고리 목록 조회(GET)
