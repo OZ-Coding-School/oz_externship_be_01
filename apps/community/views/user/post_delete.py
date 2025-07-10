@@ -15,8 +15,7 @@ class PostDeleteAPIView(APIView):
         tags=["[User] Community - Posts ( 게시글 좋아요, 삭제)"],
         summary="게시글 삭제",
         description=(
-            "로그인한 사용자가 자신의 게시글을 삭제합니다. "
-            "관리자(staff)는 모든 게시글을 삭제할 수 있습니다."
+            "로그인한 사용자가 자신의 게시글을 삭제합니다. " "관리자(staff)는 모든 게시글을 삭제할 수 있습니다."
         ),
         responses={
             204: OpenApiResponse(description="삭제 성공"),
