@@ -14,6 +14,7 @@ from apps.community.serializers.comment_serializers import CommentResponseSerial
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
+from core.utils.validators import validate_uploaded_files, BLOCKED_ATTACHMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
 
 
 # 공지 사항 등록
@@ -43,38 +44,78 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
             "images",
         )
 
+    def validate_attachments(self, attachments):
+        validate_uploaded_files(
+            files=attachments,
+            max_count=3,
+            max_size_mb= 10,
+            blocked_extensions=BLOCKED_ATTACHMENT_EXTENSIONS,
+            field_name="attachments",
+        )
+        return attachments
+
+    def validate_images(self, images):
+        validate_uploaded_files(
+            files=images,
+            max_count=5,
+            max_size_mb= 5,
+            allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+            field_name="images",
+        )
+        return images
+
     def create(self, validated_data):
         attachments = self.context["request"].FILES.getlist("attachments")
         images = self.context["request"].FILES.getlist("images")
 
         validated_data.pop("attachments", [])
         validated_data.pop("images", [])
-
         validated_data["category"], _ = PostCategory.objects.get_or_create(name="공지사항")
         validated_data["author"] = self.context["request"].user
 
-        post = Post.objects.create(**validated_data)
-
         uploader = S3Uploader()
 
-        # 첨부파일 S3 업로드
-        for file in attachments:
-            unique_file_name = f"{uuid.uuid4().hex[:6]}_{file.name}"
-            s3_key = f"oz_externship_be/community/attachments/{unique_file_name}"
-            url = uploader.upload_file(file, s3_key)
-            if url:
-                PostAttachment.objects.create(post=post, file_url=url, file_name=file.name)
+        uploaded_s3_keys = []
 
-        # 이미지 S3 업로드
-        for image in images:
-            unique_image_name = f"{uuid.uuid4().hex[:6]}_{image.name}"
-            s3_key = f"oz_externship_be/community/images/{unique_image_name}"
-            url = uploader.upload_file(image, s3_key)
-            if url:
-                PostImage.objects.create(post=post, image_url=url, image_name=image.name)
+        try:
+            success_attachments = []
+            for file in attachments:
+                unique_name = f"{uuid.uuid4().hex[:6]}_{file.name}"
+                s3_key = f"oz_externship_be/community/attachments/{unique_name}"
+                url = uploader.upload_file(file, s3_key)
+                if not url:
+                    raise serializers.ValidationError(f"[첨부파일 업로드 실패] {file.name}")
+                uploaded_s3_keys.append(url)
+                success_attachments.append(PostAttachment(file_url=url, file_name=file.name))
 
-        return post
+            success_images = []
+            for image in images:
+                unique_name = f"{uuid.uuid4().hex[:6]}_{image.name}"
+                s3_key = f"oz_externship_be/community/images/{unique_name}"
+                url = uploader.upload_file(image, s3_key)
+                if not url:
+                    raise serializers.ValidationError(f"[이미지 업로드 실패] {image.name}")
+                uploaded_s3_keys.append(url)
+                success_images.append(PostImage(image_url=url, image_name=image.name))
 
+            post = Post.objects.create(**validated_data)
+            for attachment_instance in success_attachments:
+                attachment_instance.post = post
+            for image_instance in success_images:
+                image_instance.post = post
+
+            PostAttachment.objects.bulk_create(success_attachments)
+            PostImage.objects.bulk_create(success_images)
+
+            return post
+
+        except Exception as e:
+            for s3_url in uploaded_s3_keys:
+                try:
+                    uploader.delete_file(s3_url)
+                except Exception:
+                    pass
+            raise serializers.ValidationError({"non_field_errors": [f"파일 업로드 중 오류가 발생했습니다: {e}"]})
 
 # 공지 사항 응답
 class NoticeResponseSerializer(serializers.ModelSerializer[Post]):

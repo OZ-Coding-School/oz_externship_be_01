@@ -12,6 +12,7 @@ from apps.community.serializers.category_serializers import CategoryDetailRespon
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
+from core.utils.validators import validate_uploaded_files, BLOCKED_ATTACHMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
 
 
 # 게시글 목록
@@ -78,41 +79,83 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
         model = Post
         fields = ("title", "content", "category", "is_visible", "attachments", "images")
 
+    def validate_attachments(self, attachments):
+        validate_uploaded_files(
+            files=attachments,
+            max_count=3,
+            max_size_mb=10,
+            blocked_extensions=BLOCKED_ATTACHMENT_EXTENSIONS,
+            field_name="attachments",
+        )
+        return attachments
+
+    def validate_images(self, images):
+        validate_uploaded_files(
+            files=images,
+            max_count=5,
+            max_size_mb=5,
+            allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+            field_name="images",
+        )
+        return images
+
     def update(self, instance, validated_data: dict) -> Post:
         uploader = S3Uploader()
         request_files = self.context["request"].FILES
 
-        # 첨부파일 처리
-        if "attachments" in self.initial_data:
-            for attachment in instance.attachments.all():
-                uploader.delete_file(attachment.file_url)
-            instance.attachments.all().delete()
+        uploaded_s3_keys = []
 
-            for file in request_files.getlist("attachments"):
-                unique_file_name = f"{uuid.uuid4().hex[:6]}_{file.name}"
-                s3_key = f"oz_externship_be/community/attachments/{unique_file_name}"
-                url = uploader.upload_file(file, s3_key)
-                if url:
-                    PostAttachment.objects.create(post=instance, file_url=url, file_name=file.name)
+        try:
+            new_attachments, new_images = [], []
 
-        # 이미지 처리
-        if "images" in self.initial_data:
-            for image in instance.images.all():
-                uploader.delete_file(image.image_url)
-            instance.images.all().delete()
+            if "attachments" in self.initial_data:
+                attachments = request_files.getlist("attachments")
 
-            for image in request_files.getlist("images"):
-                unique_image_name = f"{uuid.uuid4().hex[:6]}_{image.name}"
-                s3_key = f"oz_externship_be/community/images/{unique_image_name}"
-                url = uploader.upload_file(image, s3_key)
-                if url:
-                    PostImage.objects.create(post=instance, image_url=url, image_name=image.name)
+                for file in attachments:
+                    unique_file_name = f"{uuid.uuid4().hex[:6]}_{file.name}"
+                    s3_key = f"oz_externship_be/community/attachments/{unique_file_name}"
+                    url = uploader.upload_file(file, s3_key)
+                    if not url:
+                        raise serializers.ValidationError({"attachments": [f"{file.name} 업로드 실패"]})
+                    uploaded_s3_keys.append(url)
+                    new_attachments.append(PostAttachment(post=instance, file_url=url, file_name=file.name))
 
-        validated_data.pop("attachments", [])
-        validated_data.pop("images", [])
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+            if "images" in self.initial_data:
+                images = request_files.getlist("images")
 
-        return instance
+                for image in images:
+                    unique_name = f"{uuid.uuid4().hex[:6]}_{image.name}"
+                    s3_key = f"oz_externship_be/community/images/{unique_name}"
+                    url = uploader.upload_file(image, s3_key)
+                    if not url:
+                        raise serializers.ValidationError({"images": [f"{image.name} 업로드 실패"]})
+                    uploaded_s3_keys.append(url)
+                    new_images.append(PostImage(post=instance, image_url=url, image_name=image.name))
+
+                for old in instance.attachments.all():
+                    uploader.delete_file(old.file_url)
+                instance.attachments.all().delete()
+                PostAttachment.objects.bulk_create(new_attachments)
+
+                for old in instance.images.all():
+                    uploader.delete_file(old.image_url)
+                instance.images.all().delete()
+                PostImage.objects.bulk_create(new_images)
+
+            validated_data.pop("attachments", [])
+            validated_data.pop("images", [])
+
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            return instance
+
+        except Exception as e:
+            for s3_url in uploaded_s3_keys:
+                try:
+                    uploader.delete_file(s3_url)
+                except Exception:
+                    pass
+            raise serializers.ValidationError({"non_field_errors": [f"파일 업로드 중 오류가 발생했습니다: {e}"]})
