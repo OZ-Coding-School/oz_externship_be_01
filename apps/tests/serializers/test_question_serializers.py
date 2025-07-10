@@ -82,10 +82,11 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
 
         # 주관식 단답형 문제
         elif q_type == "short_answer":
-            if not data.get("answer"):
-                raise serializers.ValidationError("주관식 단답형 answer(정답)이 필요합니다.")
-            if not isinstance(data.get("answer"), list) or not data["answer"]:
-                raise serializers.ValidationError("정답(answer)은 리스트 형태로 입력해야 합니다.")
+            answer = data.get("answer")
+            if not answer:
+                raise serializers.ValidationError("주관식 단답형은 answer(정답)이 필요합니다.")
+            if not isinstance(answer, str):
+                raise serializers.ValidationError("정답(answer)은 문자열 형태로 입력해야 합니다.")
             data["options_json"] = None
             data["prompt"] = None
             data["blank_count"] = None
@@ -111,9 +112,9 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
         # OX 문제
         elif q_type == "ox":
             answer_list = data.get("answer")
-            # answer는 반드시 리스트 형태로 하나의 값만 포함해야 함
+            # answer는 반드시 문자열 형태로 하나의 값만 포함해야 함
             if not isinstance(answer_list, str):
-                raise serializers.ValidationError('OX 퀴즈는 정답을 하나만 리스트로 입력해야 합니다.')
+                raise serializers.ValidationError('OX 퀴즈는 정답을 하나만 문자열로 입력해야 합니다.')
             # 정답 값 검증
             answer_value = answer_list[0]
             if answer_value not in ["O", "X", "o", "x"]:
