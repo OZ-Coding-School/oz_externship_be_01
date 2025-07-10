@@ -5,7 +5,10 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.courses.models import Course, Generation
-from apps.tests.core.utils.grading import calculate_total_score
+from apps.tests.core.utils.grading import (
+    calculate_total_score,
+    get_questions_snapshot_from_submission,
+)
 from apps.tests.models import Test, TestDeployment, TestQuestion
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
@@ -194,7 +197,8 @@ class DeploymentListSerializer(serializers.ModelSerializer[Any]):
 
         # 각 제출을 반복하며 점수를 계산하고 합산합니다.
         for submission in submissions:
-            submission_score = calculate_total_score(submission.answers_json)
+            snapshot = get_questions_snapshot_from_submission(obj)
+            submission_score = calculate_total_score(submission.answers_json, snapshot)
             total_scores_sum += submission_score
 
         # 전체 제출의 총합 점수를 제출 수로 나누어 평균을 계산합니다.
