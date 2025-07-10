@@ -225,13 +225,13 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
     average_score = serializers.SerializerMethodField()
 
     class Meta:
-        model = TestDeployment  # ModelSerializer이므로 모델 지정
+        model = TestDeployment
         fields = [
             # 시험 정보
             "test_id",
             "test_title",
             "subject_title",
-            "question_count",  # Meta.fields에 question_count를 사용합니다.
+            "question_count",
             # 배포 정보
             "id",  # 배포 고유 ID
             "access_code",
@@ -252,17 +252,14 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields  # 모든 필드를 읽기 전용으로 설정
 
     # Custom 필드 처리 메서드️
-
     def get_question_count(self, obj: TestDeployment) -> int:
-        """TestDeployment의 questions_snapshot_json을 사용하여 시험 문항 수를 반환합니다."""
+        # TestDeployment의 questions_snapshot_json을 사용하여 시험 문항 수를 반환합니다.
         snapshot = obj.questions_snapshot_json
         if isinstance(snapshot, dict) and "questions" in snapshot:
             return len(snapshot["questions"])
         elif isinstance(snapshot, list):
             return len(snapshot)
         return 0
-
-        # 시험 응시 링크 URL을 반환합니다.
 
     def get_access_url(self, obj: TestDeployment) -> str:
         # 실제 서비스 URL은 Django settings에서 가져오는 것이 좋습니다.
@@ -271,8 +268,6 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
     def get_unsubmitted_participants(self, obj: TestDeployment) -> int:
         # 미참여 인원 수를 계산하여 반환합니다.
         total_participants = getattr(obj, "total_participants", 0)
-        # 뷰에서 annotate된 total_generation_students 값을 사용합니다.
-        # 뷰의 쿼리셋에 `total_generation_students=Count('generation__students', distinct=True)`가 필요합니다.
         total_generation_students = getattr(obj, "total_generation_students", 0)
         return max(0, total_generation_students - total_participants)
 
@@ -285,125 +280,14 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             return 0.0
 
         total_scores_sum = 0.0
-        questions_snapshot = obj.questions_snapshot_json
+        questions_snapshot = obj.questions_snapshot_json  # 배포의 스냅샷을 사용
 
         for submission in submissions:
-            # 시리얼라이저 내부의 헬퍼 메서드를 호출
-            submission_score = self._calculate_score_for_single_submission(submission.answers_json, questions_snapshot)
+            # grading.py의 calculate_total_score 함수를 직접 호출하여 점수 계산
+            submission_score = calculate_total_score(submission.answers_json, questions_snapshot)  #
             total_scores_sum += submission_score
 
         return total_scores_sum / len(submissions)
-
-    # _calculate_score_for_single_submission 헬퍼 메서드
-    def _calculate_score_for_single_submission(
-        self, submitted_answers: Dict[str, Any], questions_snapshot: List[Dict[str, Any]]
-    ) -> float:
-        """
-        단일 제출에 대한 점수를 계산합니다.
-        문제 유형별 채점 로직을 내부 헬퍼 함수와 딕셔너리를 사용하여 최적화합니다.
-        """
-
-        # 문제 유형별 채점 헬퍼 함수들 (메서드 내부에 정의)
-        def _score_multiple_choice(correct_ans: Any, submitted_ans: Any, point: int) -> float:
-            correct_options = correct_ans
-            if isinstance(correct_ans, str):
-                try:
-                    correct_options = json.loads(correct_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            submitted_options = submitted_ans
-            if isinstance(submitted_ans, str):
-                try:
-                    submitted_options = json.loads(submitted_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            if isinstance(correct_options, list) and isinstance(submitted_options, list):
-                if set(correct_options) == set(submitted_options):
-                    return float(point)
-            elif correct_options == submitted_options:
-                return float(point)
-            return 0.0
-
-        def _score_short_answer(correct_ans: Any, submitted_ans: Any, point: int) -> float:
-            if str(correct_ans).strip().lower() == str(submitted_ans).strip().lower():
-                return float(point)
-            return 0.0
-
-        def _score_ordering(correct_ans: Any, submitted_ans: Any, point: int) -> float:
-            correct_order = correct_ans
-            if isinstance(correct_ans, str):
-                try:
-                    correct_order = json.loads(correct_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            submitted_order = submitted_ans
-            if isinstance(submitted_ans, str):
-                try:
-                    submitted_order = json.loads(submitted_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            if (
-                isinstance(correct_order, list)
-                and isinstance(submitted_order, list)
-                and correct_order == submitted_order
-            ):
-                return float(point)
-            return 0.0
-
-        def _score_fill_in_blank(correct_ans: Any, submitted_ans: Any, point: int) -> float:
-            correct_blanks = correct_ans
-            if isinstance(correct_ans, str):
-                try:
-                    correct_blanks = json.loads(correct_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            submitted_blanks = submitted_ans
-            if isinstance(submitted_ans, str):
-                try:
-                    submitted_blanks = json.loads(submitted_ans)
-                except json.JSONDecodeError:
-                    return 0.0
-
-            if isinstance(correct_blanks, dict) and isinstance(submitted_blanks, dict):
-                is_correct_all_blanks = True
-                for key, val in correct_blanks.items():
-                    if str(submitted_blanks.get(key, "")).strip().lower() != str(val).strip().lower():
-                        is_correct_all_blanks = False
-                        break
-                if is_correct_all_blanks:
-                    return float(point)
-            return 0.0
-
-        # 문제 유형별 채점 함수 매핑
-        scoring_functions = {
-            TestQuestion.QuestionType.MULTIPLE_CHOICE_SINGLE.value: _score_multiple_choice,  # type: ignore
-            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI.value: _score_multiple_choice,  # type: ignore
-            TestQuestion.QuestionType.OX.value: _score_multiple_choice,  # type: ignore
-            TestQuestion.QuestionType.SHORT_ANSWER.value: _score_short_answer,  # type: ignore
-            TestQuestion.QuestionType.ORDERING.value: _score_ordering,  # type: ignore
-            TestQuestion.QuestionType.FILL_IN_BLANK.value: _score_fill_in_blank,  # type: ignore
-        }
-
-        total_score_for_submission = 0.0
-        for q_snapshot in questions_snapshot:
-            question_id = str(q_snapshot.get("id"))
-            correct_answer = q_snapshot.get("answer")
-            question_point = q_snapshot.get("point", 0)
-            question_type = q_snapshot.get("type")
-
-            submitted_answer = submitted_answers.get(question_id)
-
-            # 정답과 제출된 답안이 모두 존재하고, 채점 함수가 정의된 경우에만 채점
-            if correct_answer is not None and submitted_answer is not None and question_type in scoring_functions:
-                score_func = scoring_functions[question_type]
-                total_score_for_submission += score_func(correct_answer, submitted_answer, question_point)
-
-        return total_score_for_submission
 
 
 # 쪽지시험 배포 생성
