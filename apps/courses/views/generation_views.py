@@ -176,7 +176,7 @@ class GenerationDetailView(generics.RetrieveAPIView):
     summary="기수 수정 API",
 )
 class GenerationUpdateView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    permission_classes = [AllowAny]
     serializer_class = GenerationUpdateSerializer
     lookup_field = "pk"
 

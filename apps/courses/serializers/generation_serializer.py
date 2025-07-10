@@ -123,10 +123,17 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
             "start_date",
             "end_date",
         ]
+        extra_kwargs = {
+            "start_date": {"required": False},
+            "end_date": {"required": False},
+        }
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
         end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+
+        if "start_date" not in attrs and "end_date" not in attrs:
+            raise serializers.ValidationError("수강 시작일과 종료일 중 최소 하나는 제공되어야 합니다.")
 
         if start_date and end_date and start_date > end_date:
             raise serializers.ValidationError("수강 종료일은 수강 시작일 이후여야 합니다.")
@@ -136,6 +143,7 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
 
         if duration < timedelta(days=7):
             raise serializers.ValidationError("수강 기간은 최소 7일 이상이어야 합니다.")
+
         return attrs
 
 
