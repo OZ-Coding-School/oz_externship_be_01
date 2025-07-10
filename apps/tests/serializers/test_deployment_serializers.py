@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List
 
 from rest_framework import serializers
@@ -144,11 +145,13 @@ def _generate_questions_snapshot_data(test_instance: Test) -> List[Dict[str, Any
 
 
 # 활성화 ,비황성화
-class DeploymentStatusUpdateSerializer(serializers.ModelSerializer[Any]):
+class DeploymentStatusUpdateSerializer(serializers.ModelSerializer):
+    # CharField에 choices 옵션을 사용하여 유효성 검사 수행
+    status = serializers.ChoiceField(choices=TestDeployment.TestStatus.choices, required=True)
+
     class Meta:
         model = TestDeployment
         fields = ["status"]
-        extra_kwargs = {"status": {"required": True}}
 
 
 # 쪽지시험 배포 목록 조회
