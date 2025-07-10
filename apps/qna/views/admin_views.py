@@ -50,22 +50,20 @@ class AdminCategoryDeleteView(APIView):
         tags=["QnA (Admin)"],
         summary="카테고리 삭제",
         description="카테고리 삭제 (Hard Delete) - 하위 카테고리 및 질문 일반질문으로 이동",
-        parameters=[
-            OpenApiParameter(
-                name="category_id",
-                description="삭제할 카테고리 ID",
-                required=True,
-                type=OpenApiTypes.INT,
-            ),
-        ],
         responses={
             200: {"description": "삭제 성공"},
             404: {"description": "카테고리를 찾을 수 없음"},
             400: {"description": "일반질문 카테고리는 삭제할 수 없음"},
         },
     )
-    def delete(self, request, category_id):
+    def delete(self, request):
         try:
+            # 요청 본문에서 category_id 추출
+            category_id = request.data.get('category_id')
+
+            if not category_id:
+                return Response({"error": "category_id는 필수 파라미터입니다."}, status=400)
+
             # category_id로 카테고리 조회
             category = QuestionCategory.objects.get(id=category_id)
 
@@ -89,9 +87,8 @@ class AdminCategoryDeleteView(APIView):
                 questions_to_move = Question.objects.filter(category__in=categories_to_delete)
                 questions_to_move.update(category=general_category)
 
-                # 카테고리 삭제
-                for cat in categories_to_delete:
-                    cat.delete()
+                # 카테고리 삭제 - QuerySet의 delete() 메서드 사용
+                QuestionCategory.objects.filter(id__in=[cat.id for cat in categories_to_delete]).delete()
 
                 return Response(
                     {
