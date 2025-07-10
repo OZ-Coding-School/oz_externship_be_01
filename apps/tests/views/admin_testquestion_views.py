@@ -21,25 +21,19 @@ class TestQuestionCreateView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        tags=["[Admin/Mock] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
-        description="Mock - 어드민이 특정 쪽지시험에 문제를 출제합니다.",
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
+        description="어드민이 특정 쪽지시험에 문제를 출제합니다.",
         request=TestQuestionCreateSerializer,
         responses={
             201: OpenApiResponse(response=TestQuestionCreateSerializer, description="문제 생성 성공"),
             400: OpenApiResponse(description="요청 오류"),
         },
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request):
         serializer = TestQuestionCreateSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(
-                {
-                    **serializer.validated_data,
-                    "id": 5,
-                    "message": "테스트 질문이 성공적으로 생성되었습니다.",
-                },
-                status=status.HTTP_201_CREATED,
-            )
+            question = serializer.save()
+            return Response(TestQuestionCreateSerializer(question).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -86,6 +80,7 @@ class TestQuestionListView(APIView):
 
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
+    # permission_classes = [AllowAny]
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
     @extend_schema(
