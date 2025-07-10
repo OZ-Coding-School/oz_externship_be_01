@@ -27,7 +27,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):  # S3 업로드 로직 반영 (upload_file)
         thumbnail_file = validated_data.pop("thumbnail_img_file")
-        key = f"courses/{thumbnail_file.name}"
+        key = f"oz_externship_be/courses/{thumbnail_file.name}"
         url = self.s3_uploader.upload_file(file_obj=thumbnail_file, s3_key=key)
         validated_data["thumbnail_img_url"] = url
         return super().create(validated_data)
@@ -35,7 +35,7 @@ class CourseSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):  # S3 업로드 로직 반영 (upload_file)
         thumbnail_file = validated_data.pop("thumbnail_img_file", None)
         if thumbnail_file:
-            key = f"courses/{thumbnail_file.name}"
+            key = f"oz_externship_be/courses/{thumbnail_file.name}"
             url = self.s3_uploader.upload_file(file_obj=thumbnail_file, s3_key=key)
             validated_data["thumbnail_img_url"] = url
         return super().update(instance, validated_data)
