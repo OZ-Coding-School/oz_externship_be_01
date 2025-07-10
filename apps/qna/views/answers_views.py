@@ -23,7 +23,6 @@ from apps.users.models import User
 class AnswerCreateView(APIView):
     serializer_class = AnswerCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsStudentOrStaffOrAdminPermission]
-    parser_classes = [MultiPartParser]
 
     @extend_schema(
         request=AnswerCreateSerializer,
@@ -54,7 +53,6 @@ class AnswerCreateView(APIView):
 class AnswerUpdateView(APIView):
     serializer_class = AnswerUpdateSerializer
     permission_classes = [permissions.IsAuthenticated, IsStudentOrStaffOrAdminPermission]
-    parser_classes = [MultiPartParser]
 
     @extend_schema(
         request=AnswerUpdateSerializer,
