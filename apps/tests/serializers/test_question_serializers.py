@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework.relations import PrimaryKeyRelatedField
+from rest_framework.exceptions import NotFound
 
 from apps.tests.models import Test, TestQuestion
 
@@ -26,10 +27,10 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
         try:
             test = Test.objects.get(id=test_id)
         except Test.DoesNotExist:
-            raise serializers.ValidationError("해당 ID의 쪽지시험이 존재하지 않습니다.")
+            raise NotFound("해당 ID의 쪽지시험이 존재하지 않습니다.")
 
         # 문제 개수 제한 (최대 20개)
-        if test.questions.count() >= 20:
+        if test.questions.count() > 20:
             raise serializers.ValidationError("쪽지시험 당 최대 20문제까지만 등록할 수 있습니다.")
 
         # 배점 합산 제한 (쵀대 100점)
@@ -109,14 +110,14 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
 
         # OX 문제
         elif q_type == "ox":
-            answer_list = data.get("answer", [])
+            answer_list = data.get("answer")
             # answer는 반드시 리스트 형태로 하나의 값만 포함해야 함
-            if not isinstance(answer_list, list) or len(answer_list) != 1:
-                raise serializers.ValidationError('OX 퀴즈는 정답을 하나만 리스트로 입력해야 합니다. 예: ["O"]')
+            if not isinstance(answer_list, str):
+                raise serializers.ValidationError('OX 퀴즈는 정답을 하나만 리스트로 입력해야 합니다.')
             # 정답 값 검증
             answer_value = answer_list[0]
             if answer_value not in ["O", "X", "o", "x"]:
-                raise serializers.ValidationError("OX 퀴즈 정답은 'O' 또는 'X', true/false 형식이어야 합니다.")
+                raise serializers.ValidationError("OX 퀴즈 정답은 'O' 또는 'X' 형식이어야 합니다.")
             # 필요 없는 필드 초기화
             data["options_json"] = None
             data["prompt"] = None
