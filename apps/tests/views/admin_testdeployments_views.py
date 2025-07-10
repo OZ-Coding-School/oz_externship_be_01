@@ -7,13 +7,14 @@ from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.models import TestDeployment
 from apps.tests.pagination import AdminTestListPagination
+from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_deployment_serializers import (
     DeploymentCreateSerializer,
     DeploymentDetailSerializer,
@@ -114,37 +115,37 @@ MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
 
 
 @extend_schema(
-    tags=["[Admin] Test - Deployment(쪽지시험 배포)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     request=DeploymentStatusUpdateSerializer,
     responses={200: dict, 404: dict},
     summary="배포 상태 변경",
-    description="배포 아이디 101.102 기반으로 해당 상태를 PATCH 요청을 통해 활성화(Activated) 또는 비활성화(Deactivated)로 변경합니다. ",
+    description="배포 아이디 기반으로 해당 상태를 PATCH 요청을 통해 활성화(Activated) 또는 비활성화(Deactivated)로 변경합니다. ",
 )
+# 배포 활성화/비활성화 토글 API
+# PATCH 요청 시 해당 배포의 상태를 Activated ↔ Deactivated로 변경
 class TestDeploymentStatusView(APIView):
-
-    # 배포 활성화/비활성화 토글 API
-    # PATCH 요청 시 해당 배포의 상태를 Activated ↔ Deactivated로 변경
-
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = DeploymentStatusUpdateSerializer
 
     def patch(self, request: Request, deployment_id: int) -> Response:
-        deployment = MOCK_DEPLOYMENTS.get(deployment_id)
-        if not deployment:
+        try:
+            deployment = TestDeployment.objects.get(id=deployment_id)
+        except TestDeployment.DoesNotExist:
             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = DeploymentStatusUpdateSerializer(data=request.data)
+        serializer = self.serializer_class(instance=deployment, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        deployment["status"] = serializer.validated_data["status"]
-        deployment["updated_at"] = str(datetime.now())
+        updated_deployment = serializer.save()
 
         return Response(
             {
-                "deployment_id": deployment_id,
-                "status": deployment["status"],
+                "deployment_id": updated_deployment.id,
+                "status": updated_deployment.status,
                 "message": "배포 상태가 성공적으로 변경되었습니다.",
-            }
+                "updated_at": updated_deployment.updated_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
         )
 
 
@@ -156,7 +157,7 @@ class TestDeploymentStatusView(APIView):
 )
 # 쪽지시험 배포 목록 조회
 class DeploymentListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = DeploymentListSerializer
     pagination_class = AdminTestListPagination
 
@@ -276,7 +277,7 @@ class DeploymentDetailView(APIView):
 )
 # 쪽지시험  배포 생성 API 뷰 클래스
 class TestDeploymentCreateView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = DeploymentCreateSerializer
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -304,7 +305,7 @@ class TestDeploymentDeleteView(APIView):
     DELETE 요청 시 특정 배포를 삭제
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = DeploymentCreateSerializer
 
     def delete(self, request: Request, deployment_id: int, *args, **kwargs) -> Response:
