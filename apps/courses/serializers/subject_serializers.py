@@ -1,8 +1,12 @@
+import uuid
 from typing import Any, Dict
 
+from django.conf import settings
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 
 from apps.courses.models import Course, Subject
+from core.utils.s3_file_upload import S3Uploader
 
 
 # --- SubjectListSerializer (목록 조회용) ---
@@ -75,8 +79,15 @@ class SubjectSerializer(serializers.ModelSerializer[Subject]):
         instance = super().create(validated_data)
 
         if thumbnail_img_file:
-            instance.thumbnail_img_url = f"http://actual-s3-bucket.com/media/{instance.id}/{thumbnail_img_file.name}"
-            instance.save()
+            s3_uploader = S3Uploader()
+            file_extension = thumbnail_img_file.name.split(".")[-1] if "." in thumbnail_img_file.name else "jpg"
+            s3_key = f"oz_externship_be/subjects/{instance.id}/thumbnails/{uuid.uuid4()}.{file_extension}"
+            uploaded_url = s3_uploader.upload_file(thumbnail_img_file, s3_key)
+            if uploaded_url:
+                instance.thumbnail_img_url = uploaded_url
+                instance.save()
+            else:
+                raise APIException(f"S3 파일 업로드에 실패했습니다: {thumbnail_img_file.name}")
 
         return instance
 
@@ -146,14 +157,30 @@ class SubjectUpdateSerializer(serializers.ModelSerializer[Subject]):
 
     def update(self, instance: Subject, validated_data: Dict[str, Any]) -> Subject:
         thumbnail_img_file = validated_data.pop("thumbnail_img_file", None)
-
-        updated_instance = super().update(instance, validated_data)
+        s3_uploader = S3Uploader()
 
         if thumbnail_img_file:
-            updated_instance.thumbnail_img_url = (
-                f"http://actual-s3-bucket.com/media/updated_{updated_instance.id}/{thumbnail_img_file.name}"
-            )
-            updated_instance.save()
+
+            file_extension = thumbnail_img_file.name.split(".")[-1] if "." in thumbnail_img_file.name else "jpg"
+            s3_key = f"oz_externship_be/subjects/{instance.id}/thumbnails/{uuid.uuid4()}.{file_extension}"
+            uploaded_url = s3_uploader.upload_file(thumbnail_img_file, s3_key)
+
+            if uploaded_url:
+                if instance.thumbnail_img_url:
+                    s3_uploader.delete_file(instance.thumbnail_img_url)
+                validated_data["thumbnail_img_url"] = uploaded_url
+            else:
+                raise APIException(f"S3 파일 업로드에 실패했습니다: {thumbnail_img_file.name}")
+
+        elif (
+            "thumbnail_img_file" in self.context.get("request", {}).data
+            and self.context["request"].data["thumbnail_img_file"] is None
+        ):
+            if instance.thumbnail_img_url:
+                s3_uploader.delete_file(instance.thumbnail_img_url)
+            validated_data["thumbnail_img_url"] = None
+
+        updated_instance = super().update(instance, validated_data)
 
         return updated_instance
 
