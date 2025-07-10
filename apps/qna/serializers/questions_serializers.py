@@ -1,21 +1,14 @@
-import time
-from pathlib import Path
 from typing import Any
 
-from django.contrib.auth.models import AnonymousUser
-from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from rest_framework import serializers
-from rest_framework.exceptions import APIException
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
-from apps.users.models import User
 from apps.qna.serializers.answers_serializers import AnswerListSerializer
-from core.utils.s3_file_upload import S3Uploader
 
 
 # 질문 이미지
-class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
+class QuestionImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionImage
         fields = ["id", "img_url", "created_at", "updated_at"]
@@ -24,9 +17,7 @@ class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
 
 # 질문 생성
 class QuestionCreateSerializer(serializers.ModelSerializer):
-    image_urls = serializers.ListField(
-        child=serializers.URLField(), write_only=True, required=False, allow_empty=True, max_length=5
-    )
+    image_urls = serializers.ListField(child=serializers.URLField(), write_only=True, required=False, max_length=5)
     category_id = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -36,7 +27,6 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     def validate_image_urls(self, value):
         if len(value) > 5:
             raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
-        # URL 유효성 등 추가 검증 가능
         return value
 
     def create(self, validated_data):
@@ -55,7 +45,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 class QuestionUpdateSerializer(serializers.ModelSerializer):
     images = QuestionImageSerializer(many=True, read_only=True)
     image_urls = serializers.ListField(
-        child=serializers.URLField(), write_only=True, required=False, allow_empty=True, max_length=5
+        child=serializers.URLField(), write_only=True, required=False, max_length=5
     )
     category_id = serializers.IntegerField(required=False, write_only=True)
 
@@ -84,7 +74,6 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        # 필드별 부분 수정
         for field in ["title", "content"]:
             if field in validated_data:
                 setattr(instance, field, validated_data[field])
@@ -93,9 +82,7 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
 
         if "image_urls" in validated_data:
             new_image_urls = validated_data["image_urls"]
-            # 기존 이미지 DB만 삭제
             instance.images.all().delete()
-            # 새로운 이미지 DB 등록
             for url in new_image_urls:
                 QuestionImage.objects.create(question=instance, img_url=url)
 
@@ -162,7 +149,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
 
 
 # 질문 상세 조회
-class QuestionDetailSerializer(serializers.ModelSerializer[Question]):
+class QuestionDetailSerializer(serializers.ModelSerializer):
     images = QuestionImageSerializer(many=True, read_only=True)
     author = AuthorInfoSerializer(read_only=True)
     category = CategoryNameSerializer(read_only=True)

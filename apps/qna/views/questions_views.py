@@ -1,57 +1,26 @@
 from typing import Any
 
-from django.db import transaction
+from django.core.cache import cache
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.core.cache import cache
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, permissions, status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ...users.models import User
-from ..models import Question, QuestionCategory, QuestionImage
+from ..models import Question, QuestionCategory
 from ..permissions import IsStudentPermission
 from ..serializers.questions_serializers import (
     MajorQnACategorySerializer,
     QuestionCreateSerializer,
     QuestionDetailSerializer,
-    QuestionImageSerializer,
     QuestionListSerializer,
     QuestionUpdateSerializer,
 )
-
-# 1. 더미 사용자
-DUMMY_USER = User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock_user.png")
-# 2. 더미 질문 + 이미지 포함
-DUMMY_QUESTIONS = []
-DUMMY_QUESTION_IMAGES = []
-for i in range(1, 4):
-    question = Question(
-        id=i,
-        title=f"샘플 질문 제목 {i}",
-        content=f"샘플 질문 내용 {i}",
-        author=DUMMY_USER,
-        category=QuestionCategory(id=3, name="오류"),
-        created_at=timezone.now(),
-    )
-    DUMMY_QUESTIONS.append(question)
-
-for q in DUMMY_QUESTIONS:
-    # 더미 이미지 (2장씩)
-    DUMMY_QUESTION_IMAGES.append(
-        QuestionImage(id=1, question=q, img_url=f"/media/sample{i}_1.png", created_at=timezone.now())
-    )
-    DUMMY_QUESTION_IMAGES.append(
-        QuestionImage(id=2, question=q, img_url=f"/media/sample{i}_2.png", created_at=timezone.now())
-    )
 
 
 class QuestionPagination(PageNumberPagination):
@@ -72,7 +41,7 @@ class QuestionListView(ListAPIView):
         "title",
         "content",
     ]
-    ordering = ["-created_at", "-id"]  # 최신순, 2차: 최신순
+    ordering = ["-created_at", "-id"]
 
     def get_minor_ids(self, category):
         if category.category_type == "major":
@@ -108,17 +77,24 @@ class QuestionListView(ListAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        # 1. 캐시 키를 URL+쿼리 파라미터 조합으로 생성
-        cache_key = f"question_list:{request.get_full_path()}"
-        cached_response = cache.get(cache_key)
-        if cached_response:
-            return Response(cached_response)
+        query_params = request.query_params
+        param_keys = set(query_params.keys())
 
-        # 2. 캐시에 없으면 원래 로직대로 조회
-        response = super().list(request, *args, **kwargs)
-        # 3. 캐시 저장 (예: 2분간)
-        cache.set(cache_key, response.data, timeout=120)
-        return response
+        # 1페이지만 캐싱 (파라미터가 없거나 page=1만 있을 때만 캐싱)
+        is_main = param_keys == set() or (param_keys == {"page"} and query_params.get("page") == "1")
+
+        if is_main:
+            cache_key = f"question_list:/api/v1/qna/questions/"
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                return Response(cached_response)
+
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=3600)
+            return response
+        else:
+            # 나머지(검색, 필터, 2페이지~ 등)는 항상 DB에서
+            return super().list(request, *args, **kwargs)
 
 
 # 2. 질문 상세 조회 (GET)
@@ -150,6 +126,23 @@ class QuestionCreateView(APIView):
         serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         question = serializer.save(author=request.user)
+
+        # "최신순 1페이지, 필터·검색 없는 상태" 키에만 반영
+        # 실제로 첫 페이지 요청시 쿼리파라미터 없는 경우 아래와 같이 캐시가 저장됨
+        page1_key = "question_list:/api/v1/qna/questions/"
+        cached = cache.get(page1_key)
+        if cached:
+            from ..serializers.questions_serializers import QuestionListSerializer
+
+            new_item = QuestionListSerializer(question).data
+            # 맨 앞에 추가
+            cached["results"].insert(0, new_item)
+            cached["count"] += 1
+            # 10개 유지
+            if len(cached["results"]) > 10:
+                cached["results"] = cached["results"][:10]
+            cache.set(page1_key, cached, timeout=3600)
+
         return Response({"id": question.id}, status=status.HTTP_201_CREATED)
 
 
@@ -191,5 +184,4 @@ class CategoryListView(APIView):
             .distinct()
         )
         serializer = MajorQnACategorySerializer(queryset, many=True)
-        resp_data = serializer.data
-        return Response(resp_data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
