@@ -24,69 +24,44 @@ class QuestionImageSerializer(serializers.ModelSerializer[QuestionImage]):
 
 # 질문 생성
 class QuestionCreateSerializer(serializers.ModelSerializer):
-    image_files = serializers.ListField(
-        child=serializers.ImageField(), write_only=True, required=False, allow_empty=True, max_length=5
+    image_urls = serializers.ListField(
+        child=serializers.URLField(), write_only=True, required=False, allow_empty=True, max_length=5
     )
     category_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Question
-        fields = ["title", "content", "category_id", "image_files"]
+        fields = ["title", "content", "category_id", "image_urls"]
 
-    def validate_category_id(self, value: int) -> QuestionCategory:
-        try:
-            category = QuestionCategory.objects.get(id=value)
-        except QuestionCategory.DoesNotExist:
-            raise serializers.ValidationError("존재하지 않는 카테고리입니다.")
-
-        if category.category_type != "minor":
-            raise serializers.ValidationError("소분류 카테고리만 선택할 수 있습니다.")
-
-        return category
-
-    def validate_image_files(self, value: list[UploadedFile]) -> list[UploadedFile]:
+    def validate_image_urls(self, value):
         if len(value) > 5:
             raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
+        # URL 유효성 등 추가 검증 가능
         return value
 
-    def create(self, validated_data: dict[str, Any]) -> Question:
-        # TODO : 개발 단계: AnonymousUser 처리 이후 삭제 필요
-
-        image_files: list[UploadedFile] = validated_data.pop("image_files", [])
-        category: QuestionCategory = validated_data.pop("category_id")
+    def create(self, validated_data):
+        image_urls = validated_data.pop("image_urls", [])
+        category = validated_data.pop("category_id")
         author = validated_data.pop("author")
-        # TODO : 개발 단계: AnonymousUser일 경우 더미 사용자로 대체/ 개발 이후 삭제 필요
-        if isinstance(author, AnonymousUser):
-            author, _ = User.objects.get_or_create(
-                email="testuser@example.com", defaults={"nickname": "test", "profile_image_url": "", "is_active": True}
-            )
 
         with transaction.atomic():
             question = Question.objects.create(category=category, author=author, **validated_data)
-
-            uploader = S3Uploader()
-            for index, img in enumerate(image_files, 1):
-                ext = Path(getattr(img, "name", "image.jpg")).suffix or ".jpg"
-                timestamp = int(time.time() * 1000)
-                filename = f"question_{question.id}_image_{index}_{timestamp}{ext}"
-                s3_key = f"qna/questions/{filename}"
-                url = uploader.upload_file(img, s3_key)
-                if not url:
-                    raise serializers.ValidationError("이미지 업로드에 실패했습니다.")
+            for url in image_urls:
                 QuestionImage.objects.create(question=question, img_url=url)
-
         return question
 
 
 # 질문 수정
 class QuestionUpdateSerializer(serializers.ModelSerializer):
     images = QuestionImageSerializer(many=True, read_only=True)
-    image_files = serializers.ListField(child=serializers.FileField(), write_only=True, required=False)
+    image_urls = serializers.ListField(
+        child=serializers.URLField(), write_only=True, required=False, allow_empty=True, max_length=5
+    )
     category_id = serializers.IntegerField(required=False, write_only=True)
 
     class Meta:
         model = Question
-        fields = ["category", "category_id", "title", "content", "images", "image_files"]
+        fields = ["category", "category_id", "title", "content", "images", "image_urls"]
         read_only_fields = ["category"]
         extra_kwargs = {
             "title": {"required": False},
@@ -101,7 +76,12 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("해당 카테고리가 존재하지 않습니다.")
         if category.category_type != "minor":
             raise serializers.ValidationError("카테고리 변경은 소분류만 가능합니다.")
-        return category  # validated_data에 실제 객체로 들어감
+        return category
+
+    def validate_image_urls(self, value):
+        if len(value) > 5:
+            raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
+        return value
 
     def update(self, instance, validated_data):
         # 필드별 부분 수정
@@ -111,43 +91,13 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         if "category_id" in validated_data:
             instance.category = validated_data["category_id"]
 
-        if "image_files" in validated_data:
-            image_files = validated_data["image_files"]
-            old_images = instance.images.all()
-            old_s3_urls = [img.img_url for img in old_images]
-            s3_uploader = S3Uploader()
-
-            # 기존 이미지 DB만 삭제, S3는 보류
-            old_images.delete()
-            upload_success = True
-            new_s3_urls = []
-
-            for index, image_file in enumerate(image_files, 1):
-                file_extension = Path(getattr(image_file, "name", "image.jpg")).suffix or ".jpg"
-                timestamp = int(time.time() * 1000)
-                filename = f"question_{instance.id}_image_{index}_{timestamp}{file_extension}"
-                s3_key = f"qna/questions/{filename}"
-                s3_url = s3_uploader.upload_file(image_file, s3_key)
-                if s3_url:
-                    QuestionImage.objects.create(question=instance, img_url=s3_url)
-                    new_s3_urls.append(s3_url)
-                else:
-                    upload_success = False
-                    break
-
-            if upload_success:
-                # 새 이미지 업로드 성공 시에만 S3의 옛 이미지 삭제
-                for old_url in old_s3_urls:
-                    s3_uploader.delete_file(old_url)
-            else:
-                # 업로드 중단 시, 복구 로직 (예시)
-                for old_url in old_s3_urls:
-                    QuestionImage.objects.create(question=instance, img_url=old_url)
-                # 업로드 실패한 새 s3 URL 삭제
-                for new_url in new_s3_urls:
-                    s3_uploader.delete_file(new_url)
-                # 예외 발생 (필요에 따라 직접 에러 처리)
-                raise APIException("이미지 업로드에 실패했습니다. 기존 이미지는 보존됩니다.")
+        if "image_urls" in validated_data:
+            new_image_urls = validated_data["image_urls"]
+            # 기존 이미지 DB만 삭제
+            instance.images.all().delete()
+            # 새로운 이미지 DB 등록
+            for url in new_image_urls:
+                QuestionImage.objects.create(question=instance, img_url=url)
 
         instance.save()
         return instance

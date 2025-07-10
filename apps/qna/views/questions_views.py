@@ -139,7 +139,6 @@ class QuestionDetailView(APIView):
 # 3. 새 질문 생성 (POST)
 class QuestionCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
-    parser_classes = [MultiPartParser]
 
     @extend_schema(
         request=QuestionCreateSerializer,
@@ -157,7 +156,6 @@ class QuestionCreateView(APIView):
 # 4. 질문 부분 수정 (PATCH)
 class QuestionUpdateView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
-    parser_classes = [MultiPartParser]
 
     @extend_schema(
         request=QuestionUpdateSerializer,
