@@ -67,8 +67,9 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
     def create(self, validated_data):
         profile_image_file = validated_data.pop("profile_image_file", None)
         if profile_image_file:
-            path = default_storage.save(f"profile_images/{profile_image_file.name}", profile_image_file)
-            validated_data["profile_image_url"] = default_storage.url(path)
+            s3_uploader = S3Uploader()
+            file_url = s3_uploader.upload(file=profile_image_file, directory="profile_images")
+            validated_data["profile_image_url"] = file_url
 
         password = validated_data.pop("password")
         user = User(**validated_data)
