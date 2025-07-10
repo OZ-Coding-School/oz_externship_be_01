@@ -3,7 +3,8 @@ from uuid import uuid4
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException
 
 from apps.courses.models import Course, Generation
 from apps.users.models import PermissionsStudent, User
@@ -127,12 +128,11 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer[User]):
                 if profile_img_file and old_s3_url:
                     transaction.on_commit(lambda: uploader.delete_file(old_s3_url))
 
-        except Exception as e:
+        except Exception:
             # DB 실패 시 업로드했던 새 이미지 삭제
             if profile_img_file and new_s3_url:
                 transaction.on_commit(lambda: uploader.delete_file(new_s3_url))
-            raise e
-
+            raise APIException("회원 프로필 수정에 실패했습니다. 잠시후 다시 시도해주세요")
         return instance
 
 
