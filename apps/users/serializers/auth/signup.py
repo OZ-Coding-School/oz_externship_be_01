@@ -8,7 +8,10 @@ from django_redis import get_redis_connection
 from rest_framework import serializers
 
 from apps.users.models import User
-from apps.users.utils.redis_utils import is_phone_verified
+from apps.users.utils.redis_utils import (
+    is_phone_verified,
+    is_signup_email_verified,
+)
 from core.utils.s3_file_upload import S3Uploader
 
 
@@ -40,6 +43,8 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
     def validate_email(self, value):  # 중복 이메일
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("이미 존재하는 이메일입니다.")
+        if not is_signup_email_verified(value):
+            raise serializers.ValidationError("이메일 인증이 완료되지 않았습니다.")
         return value
 
     def validate_nickname(self, value):  # 중복 닉네임
