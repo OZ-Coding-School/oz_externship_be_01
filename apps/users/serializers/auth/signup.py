@@ -3,13 +3,14 @@ from typing import Any
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django_redis import get_redis_connection
 from rest_framework import serializers
 
 from apps.users.models import User
 from apps.users.utils.redis_utils import is_phone_verified
 from core.utils.s3_file_upload import S3Uploader
-from django.core.files.storage import default_storage
+
 
 class SignUpSerializer(serializers.ModelSerializer[Any]):
     password_confirm = serializers.CharField(write_only=True)
