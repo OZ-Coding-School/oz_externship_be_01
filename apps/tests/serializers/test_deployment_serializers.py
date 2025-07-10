@@ -147,10 +147,7 @@ def _generate_questions_snapshot_data(test_instance: Test) -> List[Dict[str, Any
 # 활성화 ,비황성화
 class DeploymentStatusUpdateSerializer(serializers.ModelSerializer):
     # CharField에 choices 옵션을 사용하여 유효성 검사 수행
-    status = serializers.ChoiceField(
-        choices=TestDeployment.TestStatus.choices,
-        required=True
-    )
+    status = serializers.ChoiceField(choices=[("Activate", "Activate"), ("Deactivate", "Deactivate")], required=True)
 
     class Meta:
         model = TestDeployment
