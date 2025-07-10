@@ -59,7 +59,7 @@ class AdminCategoryDeleteView(APIView):
     def delete(self, request):
         try:
             # 요청 본문에서 category_id 추출
-            category_id = request.data.get('category_id')
+            category_id = request.data.get("category_id")
 
             if not category_id:
                 return Response({"error": "category_id는 필수 파라미터입니다."}, status=400)
