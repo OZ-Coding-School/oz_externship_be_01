@@ -8,11 +8,13 @@ from rest_framework import serializers
 
 from apps.users.models import User
 from apps.users.utils.redis_utils import is_phone_verified
-
+from core.utils.s3_file_upload import S3Uploader
+from django.core.files.storage import default_storage
 
 class SignUpSerializer(serializers.ModelSerializer[Any]):
     password_confirm = serializers.CharField(write_only=True)
     birthday = serializers.DateField(default=date(2000, 1, 1))
+    profile_image_file = serializers.ImageField(required=False, write_only=True)
 
     class Meta:
         model = User
@@ -26,12 +28,12 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
             "phone_number",
             "birthday",
             "self_introduction",
-            "profile_image_url",
+            "profile_image_file",
         ]
         extra_kwargs = {
             "password": {"write_only": True},
             "self_introduction": {"required": False, "allow_null": True},
-            "profile_image_url": {"required": False, "allow_null": True},
+            "profile_image_file": {"write_only": True, "required": False},
         }
 
     def validate_email(self, value):  # 중복 이메일
@@ -61,7 +63,12 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
             raise serializers.ValidationError({"password": list(exc.messages)})
         return attrs
 
-    def create(self, validated_data: dict[str, Any]) -> User:
+    def create(self, validated_data):
+        profile_image_file = validated_data.pop("profile_image_file", None)
+        if profile_image_file:
+            path = default_storage.save(f"profile_images/{profile_image_file.name}", profile_image_file)
+            validated_data["profile_image_url"] = default_storage.url(path)
+
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
