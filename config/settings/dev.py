@@ -1,7 +1,7 @@
 from config.settings.base import *
 
 DEBUG = True
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', "*").split(' ')
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(" ")
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "static/"
