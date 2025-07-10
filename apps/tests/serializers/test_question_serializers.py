@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.exceptions import NotFound
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from apps.tests.models import Test, TestQuestion
 
@@ -114,7 +114,7 @@ class TestQuestionCreateSerializer(serializers.ModelSerializer):  # type: ignore
             answer_list = data.get("answer")
             # answer는 반드시 문자열 형태로 하나의 값만 포함해야 함
             if not isinstance(answer_list, str):
-                raise serializers.ValidationError('OX 퀴즈는 정답을 하나만 문자열로 입력해야 합니다.')
+                raise serializers.ValidationError("OX 퀴즈는 정답을 하나만 문자열로 입력해야 합니다.")
             # 정답 값 검증
             answer_value = answer_list[0]
             if answer_value not in ["O", "X", "o", "x"]:
