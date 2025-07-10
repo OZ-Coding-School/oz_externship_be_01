@@ -86,6 +86,7 @@ class TestSubmission(models.Model):
     started_at = models.DateTimeField()
     cheating_count = models.PositiveSmallIntegerField(default=0)
     answers_json = models.JSONField()
+    score = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
