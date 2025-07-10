@@ -15,8 +15,6 @@ if not SECRET_KEY:
 
 DEBUG = True
 
-ALLOWED_HOSTS: list[str | None] = []
-
 # Application definition
 DJANGO_APPS = [
     "django.contrib.auth",
