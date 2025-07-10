@@ -118,16 +118,19 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
 
     class Meta:
         model = Generation
+
         fields = [
             "start_date",
             "end_date",
         ]
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        start = attrs.get("start_date", getattr(self.instance, "start_date", None))
-        end = attrs.get("end_date", getattr(self.instance, "end_date", None))
-        if start and end and start > end:
-            raise serializers.ValidationError("종료일은 시작일 이후여야 합니다.")
+        start_date = attrs.get("start_date", self.instance.start_date if self.instance else None)
+        end_date = attrs.get("end_date", self.instance.end_date if self.instance else None)
+
+        if start_date and end_date and start_date > end_date:
+            raise serializers.ValidationError("수강 종료일은 수강 시작일 이후여야 합니다.")
+
         return attrs
 
 

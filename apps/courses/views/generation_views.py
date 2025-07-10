@@ -4,9 +4,11 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.db.models.functions import Coalesce, TruncMonth
+from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -19,6 +21,7 @@ from apps.courses.serializers.generation_serializer import (
     GenerationCreateSerializer,
     GenerationDetailSerializer,
     GenerationListSerializer,
+    GenerationUpdateSerializer,
     MonthlyCourseSerializer,
 )
 from apps.tests.permissions import IsAdminOrStaff
@@ -169,23 +172,62 @@ class GenerationDetailView(generics.RetrieveAPIView):
 
 # 기수 수정
 @extend_schema(
-    tags=["Admin - 기수관리 Mock"],
+    tags=["Admin - 기수관리"],
     summary="기수 수정 API",
 )
-class GenerationUpdateView(APIView):
+class GenerationUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
-    serializer_class = GenerationCreateSerializer
+    serializer_class = GenerationUpdateSerializer
+    lookup_field = "pk"
 
-    def patch(self, request: Request, pk: int) -> Response:
+    @extend_schema(
+        summary="기수 정보 수정",
+        description="관리자 또는 스태프 권한으로 특정 기수의 수강 시작일과 수강 종료일을 수정합니다.",  # 설명 수정
+        parameters=[
+            OpenApiParameter(
+                name="pk",  # URL 패턴의 <int:pk>와 일치하는 파라미터 이름
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description="수정할 기수의 고유 ID",
+                required=True,
+            ),
+        ],
+        request=GenerationUpdateSerializer,  # 요청 바디의 스키마는 GenerationUpdateSerializer를 따름
+        responses={
+            status.HTTP_200_OK: GenerationUpdateSerializer,  # 성공 응답 스키마
+            status.HTTP_400_BAD_REQUEST: {
+                "description": "유효성 검증 실패 (잘못된 날짜 형식 또는 시작일이 종료일보다 늦음)"
+            },  # 설명 수정
+            status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
+            status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
+            status.HTTP_404_NOT_FOUND: {"description": "해당 기수를 찾을 수 없음"},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
+        },
+        examples=[
+            OpenApiExample(
+                "기수 시작/종료일 부분 수정 (PATCH)",  # PATCH 요청 예시
+                value={"start_date": "2024-09-01", "end_date": "2025-02-28"},
+                request_only=True,
+                media_type="application/json",
+            ),
+            OpenApiExample(
+                "기수 시작/종료일 전체 수정 (PUT)",  # PUT 요청 예시 (두 필드 모두 포함)
+                value={"start_date": "2024-09-01", "end_date": "2025-02-28"},
+                request_only=True,
+                media_type="application/json",
+            ),
+        ],
+    )
+    def get_queryset(self):
+        queryset = Generation.objects.select_related("course")
+        return queryset
+
+    def get_object(self):
         try:
-            gen = Generation.objects.get(pk=pk)
-        except Generation.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = self.serializer_class(gen, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(GenerationDetailSerializer(gen).data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            obj = super().get_object()
+        except Http404:
+            raise NotFound("해당 기수를 찾을 수 없습니다.")
+        return obj
 
 
 # 기수 삭제
