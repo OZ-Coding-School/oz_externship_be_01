@@ -56,16 +56,12 @@ class AdminCategoryDeleteView(APIView):
             400: {"description": "일반질문 카테고리는 삭제할 수 없음"},
         },
     )
-    def delete(self, request):
+    def delete(self, request, category_id: int):
         try:
-            # 요청 본문에서 category_id 추출
-            category_id = request.data.get("category_id")
-
-            if not category_id:
-                return Response({"error": "category_id는 필수 파라미터입니다."}, status=400)
-
             # category_id로 카테고리 조회
-            category = QuestionCategory.objects.get(id=category_id)
+            category = QuestionCategory.objects.prefetch_related("subcategories", "subcategories__subcategories").get(
+                id=category_id
+            )
 
             if category.category_type == "general":
                 return Response({"error": "일반질문 카테고리는 삭제할 수 없습니다."}, status=400)
@@ -81,14 +77,14 @@ class AdminCategoryDeleteView(APIView):
 
             with transaction.atomic():
                 # 삭제할 카테고리들 수집 (하위 카테고리 포함)
-                categories_to_delete = self._collect_subcategories(category)
+                categories_to_delete = self._collect_delete_ids(category)
 
                 # 해당 카테고리 및 하위 카테고리에 속한 질문 일반 카테고리로 이동
                 questions_to_move = Question.objects.filter(category__in=categories_to_delete)
                 questions_to_move.update(category=general_category)
 
                 # 카테고리 삭제 - QuerySet의 delete() 메서드 사용
-                QuestionCategory.objects.filter(id__in=[cat.id for cat in categories_to_delete]).delete()
+                QuestionCategory.objects.filter(id__in=categories_to_delete).delete()
 
                 return Response(
                     {
@@ -112,26 +108,22 @@ class AdminCategoryDeleteView(APIView):
         except Exception as e:
             return Response({"error": f"카테고리 삭제 중 오류가 발생했습니다: {str(e)}"}, status=500)
 
-    def _collect_subcategories(self, category):
-        # 해당 카테고리 및 하위 카테고리들을 순차적으로 수집
-        categories = [category]
+    def _collect_delete_ids(self, category):
+        collected_ids = [category.id]
 
         if category.category_type == "major":
-            # 대분류인 경우: 중분류와 그 하위 소분류들까지 모두 수집
-            middle_categories = category.subcategories.filter(category_type="middle")
-            categories.extend(middle_categories)
+            middle_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in middle_categories])
+
             for middle in middle_categories:
-                minor_categories = middle.subcategories.filter(category_type="minor")
-                categories.extend(minor_categories)
+                minor_categories = middle.subcategories.all()
+                collected_ids.extend([c.id for c in minor_categories])
 
         elif category.category_type == "middle":
-            # 중분류인 경우: 하위 소분류들까지 수집
-            minor_categories = category.subcategories.filter(category_type="minor")
-            categories.extend(minor_categories)
+            minor_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in minor_categories])
 
-        # minor나 general인 경우 해당 카테고리만 삭제 (이미 categories에 포함됨)
-
-        return categories
+        return collected_ids
 
 
 # 카테고리 목록 조회(GET)
