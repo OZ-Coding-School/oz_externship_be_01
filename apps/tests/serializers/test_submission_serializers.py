@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from apps.tests.core.utils.grading import (
     calculate_correct_count,
     calculate_total_score,
+    get_questions_snapshot_from_submission,
     validate_answers_json_format,
 )
 from apps.tests.models import TestSubmission
@@ -59,8 +60,9 @@ class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmissi
         fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
 
     def get_total_score(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_total_score(obj.answers_json)
+        snapshot = get_questions_snapshot_from_submission(obj)
+        validate_answers_json_format(obj.answers_json, snapshot)
+        return calculate_total_score(obj.answers_json, snapshot)
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
@@ -108,17 +110,19 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
 
     # 총 점수
     def get_total_score(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_total_score(obj.answers_json)
+        snapshot = get_questions_snapshot_from_submission(obj)
+        validate_answers_json_format(obj.answers_json, snapshot)
+        return calculate_total_score(obj.answers_json, snapshot)
 
     # 맞은 문제 수
     def get_correct_count(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_correct_count(obj.answers_json)
+        snapshot = get_questions_snapshot_from_submission(obj)
+        validate_answers_json_format(obj.answers_json, snapshot)
+        return calculate_correct_count(obj.answers_json, snapshot)
 
     # 총 문제 수
     def get_total_questions(self, obj):
-        snapshot = obj.deployment.questions_snapshot_json
+        snapshot = get_questions_snapshot_from_submission(obj)
         if not isinstance(snapshot, list):
             raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
         return len(snapshot)
