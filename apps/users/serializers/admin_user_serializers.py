@@ -1,9 +1,14 @@
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, cast
+from uuid import uuid4
 
-from rest_framework import serializers
+from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException
 
 from apps.courses.models import Course, Generation
 from apps.users.models import PermissionsStudent, User
+from core.utils.s3_file_upload import S3Uploader
 
 
 # 목록 전용 시리얼라이저
@@ -84,39 +89,51 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
         return base
 
 
-# 수정 등 기본 시리얼라이저
-class AdminUserSerializer(serializers.ModelSerializer[User]):
-    profile_image_file = serializers.ImageField(write_only=True)
+# 수정 시리얼라이저
+class AdminUserUpdateSerializer(serializers.ModelSerializer[User]):
+    profile_image_file = serializers.ImageField(write_only=True, required=False)
     profile_image_url = serializers.URLField(read_only=True)
 
     class Meta:
         model = User
         fields = "__all__"
+        read_only_fields = ["id", "created_at", "last_login", "password", "email", "role"]
 
-        read_only_fields = [
-            "id",
-            "created_at",
-            "last_login",
-            "password",
-            "email",
-            "role",
-        ]
+    def update(self, instance: User, validated_data: dict[str, Any]) -> User:
+        profile_img_file: Optional[UploadedFile] = validated_data.pop("profile_image_file", None)
+        new_s3_url: Optional[str] = None
+        old_s3_url: Optional[str] = instance.profile_image_url
 
-    # def validate(self, attrs):
-    #     img_file = attrs.pop("profile_image_file")
-    #     # 여기에 이미지 저장 로직.
-    #     return super().validate(attrs)
+        if profile_img_file is not None:
+            uploader = S3Uploader()
+            name = cast(str, profile_img_file.name)
+            ext = name.split(".")[-1]
+            s3_key = f"users/profile_images/user_{instance.id}_{uuid4().hex}.{ext}"
+            new_s3_url = uploader.upload_file(profile_img_file, s3_key)
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # 사용자가 fields 키워드로 필드 제한할 수 있도록 허용
-        fields: Optional[Sequence[str]] = kwargs.pop("fields", None)
-        super().__init__(*args, **kwargs)
+            if not new_s3_url:
+                raise serializers.ValidationError("프로필 이미지 업로드에 실패했습니다.")
 
-        if fields is not None:
-            allowed = set(fields)
-            existing = set(self.fields)
-            for field_name in existing - allowed:
-                self.fields.pop(field_name)
+            # 미리 URL 교체
+            instance.profile_image_url = new_s3_url
+
+        try:
+            with transaction.atomic():
+                # 일반 필드 처리
+                for attr, value in validated_data.items():
+                    setattr(instance, attr, value)
+                instance.save()
+
+                # DB 저장 성공 후 → 이전 이미지 삭제
+                if profile_img_file and old_s3_url:
+                    transaction.on_commit(lambda: uploader.delete_file(old_s3_url))
+
+        except Exception:
+            # DB 실패 시 업로드했던 새 이미지 삭제
+            if profile_img_file and new_s3_url:
+                transaction.on_commit(lambda: uploader.delete_file(new_s3_url))
+            raise APIException("회원 프로필 수정에 실패했습니다. 잠시후 다시 시도해주세요")
+        return instance
 
 
 # 어드민 회원 권한 변경 시리얼라이저
