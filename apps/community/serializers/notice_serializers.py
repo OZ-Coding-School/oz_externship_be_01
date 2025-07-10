@@ -14,7 +14,11 @@ from apps.community.serializers.comment_serializers import CommentResponseSerial
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
-from core.utils.validators import validate_uploaded_files, BLOCKED_ATTACHMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
+from core.utils.validators import (
+    ALLOWED_IMAGE_EXTENSIONS,
+    BLOCKED_ATTACHMENT_EXTENSIONS,
+    validate_uploaded_files,
+)
 
 
 # 공지 사항 등록
@@ -48,7 +52,7 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
         validate_uploaded_files(
             files=attachments,
             max_count=3,
-            max_size_mb= 10,
+            max_size_mb=10,
             blocked_extensions=BLOCKED_ATTACHMENT_EXTENSIONS,
             field_name="attachments",
         )
@@ -58,7 +62,7 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
         validate_uploaded_files(
             files=images,
             max_count=5,
-            max_size_mb= 5,
+            max_size_mb=5,
             allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
             field_name="images",
         )
@@ -116,6 +120,7 @@ class NoticeCreateSerializer(serializers.ModelSerializer[Post]):
                 except Exception:
                     pass
             raise serializers.ValidationError({"non_field_errors": [f"파일 업로드 중 오류가 발생했습니다: {e}"]})
+
 
 # 공지 사항 응답
 class NoticeResponseSerializer(serializers.ModelSerializer[Post]):

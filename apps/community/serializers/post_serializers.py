@@ -12,7 +12,11 @@ from apps.community.serializers.category_serializers import CategoryDetailRespon
 from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
-from core.utils.validators import validate_uploaded_files, BLOCKED_ATTACHMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
+from core.utils.validators import (
+    ALLOWED_IMAGE_EXTENSIONS,
+    BLOCKED_ATTACHMENT_EXTENSIONS,
+    validate_uploaded_files,
+)
 
 
 # 게시글 목록
@@ -119,7 +123,6 @@ class PostUpdateSerializer(serializers.ModelSerializer[Post]):
                         raise serializers.ValidationError({"attachments": [f"{file.name} 업로드 실패"]})
                     uploaded_s3_keys.append(url)
                     new_attachments.append(PostAttachment(post=instance, file_url=url, file_name=file.name))
-
 
             if "images" in self.initial_data:
                 images = request_files.getlist("images")
