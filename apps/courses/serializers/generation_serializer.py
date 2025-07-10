@@ -125,8 +125,8 @@ class GenerationUpdateSerializer(serializers.ModelSerializer[Generation]):
         ]
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
-        end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
+        start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
 
         if start_date and end_date and start_date > end_date:
             raise serializers.ValidationError("수강 종료일은 수강 시작일 이후여야 합니다.")
