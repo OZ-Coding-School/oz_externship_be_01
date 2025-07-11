@@ -53,16 +53,11 @@ class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]
 class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestListDeploymentSerializer(read_only=True)
     student = AdminListStudentSerializer(read_only=True)
-    total_score = serializers.SerializerMethodField()
+    # total_score = serializers.SerializerMethodField()
 
     class Meta:
         model = TestSubmission
-        fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
-
-    def get_total_score(self, obj):
-        snapshot = get_questions_snapshot_from_submission(obj)
-        validate_answers_json_format(obj.answers_json, snapshot)
-        return calculate_total_score(obj.answers_json, snapshot)
+        fields = ("id", "deployment", "student", "cheating_count", "score", "started_at", "created_at")
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
@@ -79,6 +74,7 @@ class TestSubmissionFilterSerializer(serializers.Serializer):
         default="latest",
         required=False,
     )
+    score = serializers.IntegerField(required=False, min_value=0)
     page = serializers.IntegerField(min_value=1, default=1, required=False)
     page_size = serializers.IntegerField(min_value=1, max_value=100, default=10, required=False)
 
