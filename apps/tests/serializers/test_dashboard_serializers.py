@@ -57,7 +57,10 @@ class DashboardSerializer(serializers.Serializer):
             gen_key = generation.id
             # 저장된 score 사용
             score = submission.score
-            # 기수별 점수 누적합산
+            # None 점수는 통계에서 제외
+            if score is None:
+                continue
+                # 기수별 점수 누적합산
             generation_scores.setdefault(gen_key, {"generation": generation, "scores": []})["scores"].append(score)
 
         result_data = []
@@ -90,6 +93,9 @@ class DashboardSerializer(serializers.Serializer):
 
             # snapshot 없이 저장된 점수 사용
             score = submission.score
+            # 미채점 점수는 통계에서 제외
+            if score is None:
+                continue
 
             # 응시 시간(분) 계산 = 제출 시각 - 시작 시각
             elapsed_minutes = int((submission.created_at - submission.started_at) / timedelta(minutes=1))
@@ -122,6 +128,9 @@ class DashboardSerializer(serializers.Serializer):
             subject_key = subject.id
             # 저장된 점수 필드 사용
             score = submission.score
+            # 채점 안된 데이터 무시
+            if score is None:
+                continue
             # 과목별 점수 리스트에 추가
             subject_scores.setdefault(subject_key, {"subject": subject, "scores": []})["scores"].append(score)
 
