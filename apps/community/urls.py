@@ -28,6 +28,7 @@ from apps.community.views.user.post_like import (
     PostLikeFalseAPIView,
     PostLikeTrueAPIView,
 )
+from apps.community.views.user.post_list_views import PostListAPIView
 
 urlpatterns = [
     # admin
@@ -71,4 +72,5 @@ urlpatterns = [
     path("posts/create/", PostCreateAPIView.as_view(), name="post-create"),
     path("posts/<int:post_id>/like/", PostLikeTrueAPIView.as_view(), name="post-like"),
     path("posts/<int:post_id>/unlike/", PostLikeFalseAPIView.as_view(), name="post-unlike"),
+    path("posts/list", PostListAPIView.as_view(), name="post-list"),
 ]
