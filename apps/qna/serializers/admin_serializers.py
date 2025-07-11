@@ -38,10 +38,10 @@ class AdminQuestionAuthorSerializer(serializers.Serializer):
 
 
 # 카테고리 정보 (경로명은 serializer에서 구성)
-class AdminQuestionCategorySerializer(serializers.Serializer):
-    category_id = serializers.IntegerField()
-    category_name = serializers.CharField()
-
+class AdminQuestionCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name"]
 
 # 질문 목록 조회용
 class AdminQuestionListSerializer(serializers.ModelSerializer):
