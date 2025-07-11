@@ -3,42 +3,8 @@ from datetime import timedelta
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from apps.courses.models import Generation, Subject
+from apps.courses.models import Generation
 from apps.tests.models import Test, TestDeployment, TestSubmission
-
-
-# 문제 유형별 정답 비교 함수 선언
-def compare_answers(question_type, snapshot_answer, student_answer) -> bool:
-    if question_type == "multiple_choice_single":
-        return student_answer == snapshot_answer
-    elif question_type == "multiple_choice_multi":
-        return set(student_answer or []) == set(snapshot_answer or [])
-    elif question_type == "ox":
-        return str(student_answer).upper() == str(snapshot_answer).upper()
-    elif question_type == "ordering":
-        return student_answer == snapshot_answer
-    elif question_type == "fill_in_blank":
-        return student_answer == snapshot_answer
-    elif question_type == "short_answer":
-        return str(student_answer).strip().lower() == str(snapshot_answer).strip().lower()
-    else:
-        raise ValueError(f"지원하지 않는 문제 유형입니다: {question_type}")
-
-
-# 스냅샷 기준 학생 제출 답안 채점
-def calculate_submission_score(snapshot_json: list, answers_json: dict) -> int:
-    total_score = 0
-    for question in snapshot_json:
-        question_id = question.get("id")  # "id" 사용, 코어 함수 기준
-        question_type = question.get("type")
-        snapshot_answer = question.get("answer")
-        point = question.get("point", 0)
-        # answers_json 키는 문자열  str 변환 후 조회
-        student_answer = answers_json.get(str(question_id))
-
-        if compare_answers(question_type, snapshot_answer, student_answer):
-            total_score += point
-    return total_score
 
 
 # 통계 대시보드 요청용 Serializer
@@ -50,24 +16,19 @@ class DashboardSerializer(serializers.Serializer):
     # 요청 검증 및 DB 객체 주입
     def validate(self, attrs):
         chart_type = attrs["type"]
-
         if chart_type in ["average_by_generation", "score_vs_time"]:
             test_id = attrs.get("test_id")
             if not test_id:
                 raise serializers.ValidationError("해당 통계 유형에는 test_id가 필요합니다.")
-            test = get_object_or_404(Test, id=test_id)
-            attrs["test"] = test
-
+            attrs["test"] = get_object_or_404(Test, id=test_id)
         elif chart_type == "score_by_subject":
             generation_id = attrs.get("generation_id")
             if not generation_id:
                 raise serializers.ValidationError("score_by_subject 통계에는 generation_id가 필요합니다.")
-            generation = get_object_or_404(Generation, id=generation_id)
-            attrs["generation"] = generation
-
+            attrs["generation"] = get_object_or_404(Generation, id=generation_id)
         return attrs
 
-    # 응답 데이터 반환
+    # 유형별 응답 데이터 반환
     def get_response_data(self):
         chart_type = self.validated_data["type"]
         if chart_type == "average_by_generation":
@@ -89,20 +50,13 @@ class DashboardSerializer(serializers.Serializer):
         submissions = TestSubmission.objects.filter(deployment__in=deployments).select_related(
             "student", "deployment__generation"
         )
-
-        generation_scores = {}  # {generation_id: {"generation": obj, "scores": [점수들]}}
-
+        # 기수별로 제출된 점수를 분류하여 평균 계산용으로 그룹핑
+        generation_scores = {}
         for submission in submissions:
             generation = submission.deployment.generation
             gen_key = generation.id
-            snapshot_json = submission.deployment.questions_snapshot_json
-            answers_json = submission.answers_json
-            if not snapshot_json:
-                continue
-
-            # 제출 점수 계산
-            score = calculate_submission_score(snapshot_json, answers_json)
-
+            # 저장된 score 사용
+            score = submission.score
             # 기수별 점수 누적합산
             generation_scores.setdefault(gen_key, {"generation": generation, "scores": []})["scores"].append(score)
 
@@ -117,11 +71,7 @@ class DashboardSerializer(serializers.Serializer):
                 }
             )
 
-        return {
-            "type": "average_by_generation",
-            "test_title": test.title,
-            "data": result_data,
-        }
+        return {"type": "average_by_generation", "test_title": test.title, "data": result_data}
 
     # 응시 시간 대비 점수 산점도 생성
     def handle_score_vs_time(self):
@@ -137,17 +87,12 @@ class DashboardSerializer(serializers.Serializer):
 
         results = []
         for submission in submissions:
-            snapshot = submission.deployment.questions_snapshot_json
-            answers = submission.answers_json
-            if not snapshot:
-                continue
 
-            # 제출 점수 계산
-            score = calculate_submission_score(snapshot, answers)
+            # snapshot 없이 저장된 점수 사용
+            score = submission.score
 
             # 응시 시간(분) 계산 = 제출 시각 - 시작 시각
             elapsed_minutes = int((submission.created_at - submission.started_at) / timedelta(minutes=1))
-
             results.append(
                 {
                     "student_id": submission.student.id,
@@ -156,11 +101,7 @@ class DashboardSerializer(serializers.Serializer):
                 }
             )
 
-        return {
-            "type": "score_vs_time",
-            "test_title": test.title,
-            "data": results,
-        }
+        return {"type": "score_vs_time", "test_title": test.title, "data": results}
 
     # 과목별 평균 점수 계산
     def handle_score_by_subject(self):
@@ -168,11 +109,10 @@ class DashboardSerializer(serializers.Serializer):
         generation = self.validated_data["generation"]
         deployments = TestDeployment.objects.filter(generation=generation).select_related("test__subject")
 
-        # 해당 배포에 대한 응시 기록ㄱ 가져오기
+        # 해당 배포에 대한 응시 기록 가져오기
         submissions = TestSubmission.objects.filter(deployment__in=deployments).select_related("student")
-
-        subject_scores = {}  # {subject_id: {"subject": obj, "scores": [점수들]}}
-
+        # 과목별 점수 그룹핑 (저장된 점수 필드 사용)
+        subject_scores = {}
         for submission in submissions:
             test = submission.deployment.test
             # 테스트 또는 과목이 없으면 스킵
@@ -180,14 +120,8 @@ class DashboardSerializer(serializers.Serializer):
                 continue
             subject = test.subject
             subject_key = subject.id
-            snapshot_json = submission.deployment.questions_snapshot_json
-            answers_json = submission.answers_json
-            if not snapshot_json:
-                continue
-
-            # 제출한 답안 기반으로 점수 계산
-            score = calculate_submission_score(snapshot_json, answers_json)
-
+            # 저장된 점수 필드 사용
+            score = submission.score
             # 과목별 점수 리스트에 추가
             subject_scores.setdefault(subject_key, {"subject": subject, "scores": []})["scores"].append(score)
 
@@ -202,8 +136,4 @@ class DashboardSerializer(serializers.Serializer):
                 }
             )
 
-        return {
-            "type": "score_by_subject",
-            "generation": f"{generation.number}기",
-            "data": result_data,
-        }
+        return {"type": "score_by_subject", "generation": f"{generation.number}기", "data": result_data}
