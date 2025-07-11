@@ -1,12 +1,14 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import PermissionDenied
+
 from apps.community.models import Post
 from core.utils.s3_file_upload import S3Uploader
+
 
 class PostDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -21,7 +23,7 @@ class PostDeleteAPIView(APIView):
     def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
 
-        # 권한 체크: 작성자 본인만 삭제 가능
+        # 작성자 본인만 삭제 가능
         if post.author != request.user:
             raise PermissionDenied("본인의 게시물만 삭제할 수 있습니다.")
 
@@ -36,7 +38,4 @@ class PostDeleteAPIView(APIView):
         post.images.all().delete()
 
         post.delete()
-        return Response(
-            {"id": post_id, "message": "게시물이 삭제되었습니다."},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response({"id": post_id, "message": "게시물이 삭제되었습니다."}, status=status.HTTP_204_NO_CONTENT)
