@@ -1,17 +1,12 @@
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.core.utils.filters import filter_test_submissions
-from apps.tests.core.utils.grading import (
-    calculate_total_score,
-    get_questions_snapshot_from_submission,
-    validate_answers_json_format,
-)
 from apps.tests.core.utils.sorting import sort_by_total_score
 from apps.tests.models import TestSubmission
 from apps.tests.pagination import AdminTestListPagination
@@ -66,8 +61,7 @@ from apps.tests.serializers.test_submission_serializers import (
     ],
 )
 class AdminTestSubmissionsView(APIView):
-    permission_classes = [AllowAny]
-    # permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     serializer_class = AdminTestSubmissionListSerializer
 
     def get(self, request: Request) -> Response:
