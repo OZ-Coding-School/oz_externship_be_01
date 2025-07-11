@@ -1,10 +1,12 @@
 import json
 from typing import Any, Dict, List
 
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 # url
 from urllib.parse import urlparse
+
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from apps.courses.models import Course, Generation
 from apps.tests.core.utils.grading import (
     calculate_total_score,
@@ -284,6 +286,7 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             client_host = "https://ozschool.com"
 
         return f"{client_host}/exam/{obj.id}?code={obj.access_code}"
+
 
 # 쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
