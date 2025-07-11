@@ -245,24 +245,35 @@ class DeploymentListView(APIView):
 
 
 @extend_schema(
-    tags=["[MOCK/Admin] Test - Deployment(쪽지시험 배포/생성/삭제/조회/활성화)"],
+    tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
     responses={200: DeploymentListSerializer},
     summary="시험 배포 상세 조회",
     description=" 배포 ID에 해당하는 시험 배포의 상세 정보를 조회합니다. 미제출 인원 수 등 추가 데이터가 포함될 수 있습니다.",
 )
+# 쪽지시험 배포 상세 조회
 class DeploymentDetailView(APIView):
     permission_classes = [AllowAny]
     serializer_class = DeploymentDetailSerializer
 
-    def get(self, request: Request, deployment_id: int) -> Response:
-        deployment = MOCK_DEPLOYMENTS.get(deployment_id)
-        if not deployment:
-            return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request: Request, deployment_id: int, *args: Any, **kwargs: Any) -> Response:
+        try:
+            deployment = (
+                TestDeployment.objects.select_related("test", "test__subject", "generation", "generation__course")
+                .annotate(
+                    # total_participants 계산: 해당 배포에 제출된 제출물의 학생 수를 카운트합니다.
+                    total_participants=Count("submissions__student", distinct=True),
+                    # total_generation_students 계산: 해당 기수(generation)의 전체 학생 수를 카운트합니다.
+                    total_generation_students=Count("generation__students", distinct=True),
+                )
+                .get(pk=deployment_id)
+            )
+        except TestDeployment.DoesNotExist:
+            return Response({"detail": "deployment_id가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        # 상세 시리얼라이저를 사용하여 객체를 JSON 형식으로 직렬화합니다.
+        serializer = self.serializer_class(deployment, context={"request": request})
 
-        # 예: 미제출 인원 수는 하드코딩 혹은 계산 필요
-        deployment["unsubmitted_participants"] = 3  # 예시
-        serializer = self.serializer_class(deployment)
-        return Response(serializer.data)
+        # 직렬화된 데이터를 응답으로 반환합니다.
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema(

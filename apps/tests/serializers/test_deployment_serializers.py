@@ -1,6 +1,9 @@
 import json
 from typing import Any, Dict, List
 
+# url
+from urllib.parse import urlparse
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -185,9 +188,8 @@ class DeploymentListSerializer(serializers.ModelSerializer[Any]):
         return f"{course_name} {generation_number}기"
 
     def get_average_score(self, obj: TestDeployment) -> float:
-        """
-        각 배포의 제출된 시험들의 평균 점수를 계산합니다.
-        """
+
+        # 각 배포의 제출된 시험들의 평균 점수를 계산합니다.
         submissions = obj.submissions.all()  # 해당 배포의 모든 제출을 가져옵니다.
 
         if not submissions:
@@ -205,40 +207,112 @@ class DeploymentListSerializer(serializers.ModelSerializer[Any]):
         return total_scores_sum / len(submissions)
 
 
-class DeploymentDetailSerializer(serializers.Serializer[Any]):
-    # 🔹 시험 정보
-    test_id = serializers.IntegerField(source="test.id")
-    test_title = serializers.CharField(source="test.title")
-    subject_title = serializers.CharField(source="test.subject.title")
-    question_count = serializers.SerializerMethodField()
+# 쪽지 시험 배포 상세 조회
+class DeploymentDetailSerializer(serializers.ModelSerializer):
+    # 시험 정보
+    test_id = serializers.IntegerField(source="test.id", read_only=True)
+    test_title = serializers.CharField(source="test.title", read_only=True)
+    subject_title = serializers.CharField(source="test.subject.title", read_only=True)
+    question_count = serializers.SerializerMethodField()  # 시험 문항 수 (계산 필요)
 
-    # 🔹 배포 정보
-    deployment_id = serializers.IntegerField(source="id")
-    access_code = serializers.CharField()
-    access_url = serializers.SerializerMethodField()
-    course_title = serializers.CharField(source="generation.course.title")
-    generation_name = serializers.CharField(source="generation.name")
-    duration_time = serializers.IntegerField()
-    open_at = serializers.DateTimeField()
-    close_at = serializers.DateTimeField()
-    status = serializers.CharField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField()
+    # 배포 정보
+    access_url = serializers.SerializerMethodField()  # 시험 응시 링크 URL (계산 필요)
+    course_title = serializers.CharField(source="generation.course.name", read_only=True)  # 과정 이름
+    generation_name = serializers.CharField(source="generation.name", read_only=True)  # 기수 이름
 
-    # 🔹 응시 정보
-    total_participants = serializers.IntegerField()
-    unsubmitted_participants = serializers.IntegerField()
+    # 응시 정보
+    total_participants = serializers.IntegerField(read_only=True)
+    total_generation_students = serializers.IntegerField(read_only=True)
+    unsubmitted_participants = serializers.SerializerMethodField()  # 미참여 인원수 (계산 필요)
 
-    # ⬇️ Custom 필드 처리
-    def get_access_url(self, obj: Any) -> str:
-        return f"https://ozschool.com/test/{obj['id']}?code={obj['access_code']}"
+    # 평균 점수 추가 (상세 조회에서도 필요하다면)
+    average_score = serializers.SerializerMethodField()
 
-    def get_question_count(self, obj: Any) -> int:
-        snapshot = obj.get("questions_snapshot_json", {})
-        return len(snapshot)
+    class Meta:
+        model = TestDeployment
+        fields = [
+            # 시험 정보
+            "test_id",
+            "test_title",
+            "subject_title",
+            "question_count",
+            # 배포 정보
+            "id",  # 배포 고유 ID
+            "access_code",
+            "access_url",
+            "course_title",
+            "generation_name",
+            "duration_time",
+            "open_at",
+            "close_at",
+            "status",
+            "created_at",
+            "updated_at",  # 배포 수정 일시
+            # 응시 정보
+            "total_participants",
+            "total_generation_students",
+            "unsubmitted_participants",
+            "average_score",
+        ]
+        read_only_fields = fields  # 모든 필드를 읽기 전용으로 설정
+
+    # Custom 필드 처리 메서드️
+    def get_question_count(self, obj: TestDeployment) -> int:
+        # TestDeployment의 questions_snapshot_json을 사용하여 시험 문항 수를 반환합니다.
+        snapshot = obj.questions_snapshot_json
+        if isinstance(snapshot, dict) and "questions" in snapshot:
+            return len(snapshot["questions"])
+        elif isinstance(snapshot, list):
+            return len(snapshot)
+        return 0
+
+    def get_unsubmitted_participants(self, obj: TestDeployment) -> int:
+        # 미참여 인원 수를 계산하여 반환합니다.
+        total_participants = getattr(obj, "total_participants", 0)
+        total_generation_students = getattr(obj, "total_generation_students", 0)
+        return max(0, total_generation_students - total_participants)
+
+    def get_average_score(self, obj: TestDeployment) -> float:
+
+        # 이 배포의 제출된 시험들의 평균 점수를 계산합니다.
+        submissions = obj.submissions.all()
+
+        if not submissions:
+            return 0.0
+
+        total_scores_sum = 0.0
+        questions_snapshot = obj.questions_snapshot_json  # 배포의 스냅샷을 사용
+
+        for submission in submissions:
+            # grading.py의 calculate_total_score 함수를 직접 호출하여 점수 계산
+            submission_score = calculate_total_score(submission.answers_json, questions_snapshot)  #
+            total_scores_sum += submission_score
+
+        return total_scores_sum / len(submissions)
+
+    def get_access_url(self, obj):
+        request = self.context["request"]
+
+        # Referer → Origin 순으로 도메인 확보
+        client_host = None
+        referer = request.META.get("HTTP_REFERER")
+        origin = request.META.get("HTTP_ORIGIN")
+
+        if referer:
+            parsed = urlparse(referer)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
+        elif origin:
+            parsed = urlparse(origin)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
+
+        # referer, origin 이 둘다 존재하지 않으면 도메인 리턴
+        if not client_host:
+            client_host = "https://tomato-test.kro.kr"
+
+        return f"{client_host}/exam/{obj.id}"
 
 
-#  쪽지시험 배포 생성
+# 쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(write_only=True, help_text="시험 ID")
     generation_id = serializers.IntegerField(write_only=True, help_text="기수 ID")
