@@ -3,7 +3,8 @@ from typing import Any, Dict, List
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-
+# url
+from urllib.parse import urlparse
 from apps.courses.models import Course, Generation
 from apps.tests.core.utils.grading import (
     calculate_total_score,
@@ -219,6 +220,7 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
 
     # 응시 정보
     total_participants = serializers.IntegerField(read_only=True)
+    total_generation_students = serializers.IntegerField(read_only=True)
     unsubmitted_participants = serializers.SerializerMethodField()  # 미참여 인원수 (계산 필요)
 
     # 평균 점수 추가 (상세 조회에서도 필요하다면)
@@ -246,6 +248,7 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             "updated_at",  # 배포 수정 일시
             # 응시 정보
             "total_participants",
+            "total_generation_students",
             "unsubmitted_participants",
             "average_score",
         ]
@@ -261,34 +264,26 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             return len(snapshot)
         return 0
 
-    def get_access_url(self, obj: TestDeployment) -> str:
-        # 실제 서비스 URL은 Django settings에서 가져오는 것이 좋습니다.
-        return f"https://ozschool.com/test/{obj.id}?code={obj.access_code}"
+    def get_access_url(self, obj):
+        request = self.context["request"]
 
-    def get_unsubmitted_participants(self, obj: TestDeployment) -> int:
-        # 미참여 인원 수를 계산하여 반환합니다.
-        total_participants = getattr(obj, "total_participants", 0)
-        total_generation_students = getattr(obj, "total_generation_students", 0)
-        return max(0, total_generation_students - total_participants)
+        # Referer → Origin 순으로 도메인 확보
+        client_host = None
+        referer = request.META.get("HTTP_REFERER")
+        origin = request.META.get("HTTP_ORIGIN")
 
-    def get_average_score(self, obj: TestDeployment) -> float:
+        if referer:
+            parsed = urlparse(referer)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
+        elif origin:
+            parsed = urlparse(origin)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
 
-        # 이 배포의 제출된 시험들의 평균 점수를 계산합니다.
-        submissions = obj.submissions.all()
+        # referer, origin 이 둘다 존재하지 않으면 도메인 리턴
+        if not client_host:
+            client_host = "https://ozschool.com"
 
-        if not submissions:
-            return 0.0
-
-        total_scores_sum = 0.0
-        questions_snapshot = obj.questions_snapshot_json  # 배포의 스냅샷을 사용
-
-        for submission in submissions:
-            # grading.py의 calculate_total_score 함수를 직접 호출하여 점수 계산
-            submission_score = calculate_total_score(submission.answers_json, questions_snapshot)  #
-            total_scores_sum += submission_score
-
-        return total_scores_sum / len(submissions)
-
+        return f"{client_host}/exam/{obj.id}?code={obj.access_code}"
 
 # 쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):

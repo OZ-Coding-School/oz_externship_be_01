@@ -256,21 +256,19 @@ class DeploymentDetailView(APIView):
     serializer_class = DeploymentDetailSerializer
 
     def get(self, request: Request, deployment_id: int, *args: Any, **kwargs: Any) -> Response:
-        # 쿼리 최적화: select_related와 annotate를 사용하여 필요한 데이터를 한 번에 가져옵니다.
-        queryset = TestDeployment.objects.select_related(
-            "test", "test__subject", "generation", "generation__course"
-        ).annotate(
-            # total_participants 계산: 해당 배포에 제출된 제출물의 학생 수를 카운트합니다.
-            total_participants=Count("submissions__student", distinct=True),
-            # total_generation_students 계산: 해당 기수(generation)의 전체 학생 수를 카운트합니다.
-            total_generation_students=Count("generation__students", distinct=True),
-        )
-
-        # pk(배포 ID)에 해당하는 TestDeployment 객체를 가져오거나, 없으면 404 에러를 발생시킵니다.
-        deployment = get_object_or_404(queryset, pk=deployment_id)
-
+        try:
+            deployment = TestDeployment.objects.select_related(
+                "test", "test__subject", "generation", "generation__course"
+            ).annotate(
+                # total_participants 계산: 해당 배포에 제출된 제출물의 학생 수를 카운트합니다.
+                total_participants=Count("submissions__student", distinct=True),
+                # total_generation_students 계산: 해당 기수(generation)의 전체 학생 수를 카운트합니다.
+                total_generation_students=Count("generation__students", distinct=True),
+            ).get(pk=deployment_id)
+        except TestDeployment.DoesNotExist:
+            return Response({"detail": "deployment_id가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
         # 상세 시리얼라이저를 사용하여 객체를 JSON 형식으로 직렬화합니다.
-        serializer = self.serializer_class(deployment)
+        serializer = self.serializer_class(deployment, context={"request": request})
 
         # 직렬화된 데이터를 응답으로 반환합니다.
         return Response(serializer.data, status=status.HTTP_200_OK)
