@@ -11,7 +11,7 @@ User = get_user_model()
 class UserCommentSerializer(serializers.ModelSerializer[Any]):
     class Meta:
         model = User
-        fields = ("id", "nickname")
+        fields = ("id", "nickname", "profile_image_url")
 
 
 class CommentTagSerializer(serializers.ModelSerializer[Any]):
