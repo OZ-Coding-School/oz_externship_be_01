@@ -8,7 +8,6 @@ from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
 
 
-
 class PostCreateSerializer(serializers.ModelSerializer):
     category_id = serializers.IntegerField()
     author = AuthorSerializer(read_only=True)
