@@ -266,7 +266,6 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             return len(snapshot)
         return 0
 
-
     def get_unsubmitted_participants(self, obj: TestDeployment) -> int:
         # 미참여 인원 수를 계산하여 반환합니다.
         total_participants = getattr(obj, "total_participants", 0)
@@ -311,6 +310,7 @@ class DeploymentDetailSerializer(serializers.ModelSerializer):
             client_host = "https://tomato-test.kro.kr"
 
         return f"{client_host}/exam/{obj.id}"
+
 
 # 쪽지시험 배포 생성
 class DeploymentCreateSerializer(serializers.ModelSerializer):
