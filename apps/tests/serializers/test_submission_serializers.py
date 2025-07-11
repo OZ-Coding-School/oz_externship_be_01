@@ -129,7 +129,6 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
     #     return len(snapshot)
 
 
-
 # 수강생 쪽지 시험 제출
 class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
     student = serializers.PrimaryKeyRelatedField(queryset=PermissionsStudent.objects.all())
