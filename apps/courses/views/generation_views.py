@@ -8,7 +8,7 @@ from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -232,23 +232,54 @@ class GenerationUpdateView(generics.UpdateAPIView):
 
 # 기수 삭제
 @extend_schema(
-    tags=["Admin - 기수관리 Mock"],
+    tags=["Admin - 기수관리"],
     summary="기수 삭제 API",
 )
-class GenerationDeleteView(APIView):
+class GenerationDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
-    def delete(self, request: Request, pk: int) -> Response:
+    lookup_field = 'pk'
+
+    @extend_schema(
+        summary="기수 삭제",
+        description="관리자 또는 스태프 권한으로 특정 기수를 삭제합니다. 해당 기수에 등록된 수강생이 있는 경우 삭제할 수 없습니다.",
+        parameters=[
+            # Path Parameter로 기수 ID를 받음을 스웨거 문서에 명시합니다.
+            OpenApiParameter(
+                name='pk', # URL 패턴의 <int:pk>와 일치하는 파라미터 이름
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='삭제할 기수의 고유 ID',
+                required=True
+            ),
+        ],
+        # 삭제 성공 시 204 No Content 응답 (응답 바디 없음)
+        responses={
+            status.HTTP_204_NO_CONTENT: {"description": "기수가 성공적으로 삭제되었습니다."},
+            status.HTTP_400_BAD_REQUEST: {"description": "해당 기수에 등록된 수강생이 있어 삭제할 수 없습니다."}, # <-- 새로운 400 에러 응답 추가!
+            status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
+            status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
+            status.HTTP_404_NOT_FOUND: {"description": "해당 기수를 찾을 수 없음"},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
+        }
+    )
+    def get_queryset(self):
+        queryset = Generation.objects.select_related('course')
+        return queryset
+
+    def get_object(self):
         try:
-            gen = Generation.objects.annotate(registered_students=Coalesce(Count("students"), 0)).get(pk=pk)
-        except Generation.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            obj = super().get_object()
+        except Http404:
+            raise NotFound(detail="해당 기수를 찾을 수 없습니다.")
+        return obj
 
-        if not gen.registered_students == 0 or None:
-            return Response({"이미 등록된 학생이 있어 삭제할 수 없습니다"}, status=status.HTTP_400_BAD_REQUEST)
+    # perform_destroy 메서드를 오버라이드하여 삭제 전 조건 검사 추가!
+    def perform_destroy(self, instance: Generation):
+        if instance.enrollment_requests.exists():
+            raise ValidationError("해당 기수에 등록된 수강생이 있어 삭제할 수 없습니다.")
 
-        gen.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        instance.delete()
 
 
 @extend_schema(
