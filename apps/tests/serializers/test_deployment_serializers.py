@@ -60,6 +60,7 @@ class AdminTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment])
             "duration_time",
             "open_at",
             "close_at",
+            "question_count",
             "questions_snapshot_json",
         )
 

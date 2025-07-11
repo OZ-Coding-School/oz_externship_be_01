@@ -84,9 +84,6 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestDeploymentSerializer(read_only=True)
     student = StudentSerializer(read_only=True)
 
-    total_score = serializers.SerializerMethodField()
-    correct_count = serializers.SerializerMethodField()
-    total_questions = serializers.SerializerMethodField()
     duration_minute = serializers.SerializerMethodField()
 
     class Meta:
@@ -98,30 +95,10 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
             "cheating_count",
             "started_at",
             "answers_json",
-            "total_score",
+            "score",
             "correct_count",
-            "total_questions",
             "duration_minute",
         )
-
-    # 총 점수
-    def get_total_score(self, obj):
-        snapshot = get_questions_snapshot_from_submission(obj)
-        validate_answers_json_format(obj.answers_json, snapshot)
-        return calculate_total_score(obj.answers_json, snapshot)
-
-    # 맞은 문제 수
-    def get_correct_count(self, obj):
-        snapshot = get_questions_snapshot_from_submission(obj)
-        validate_answers_json_format(obj.answers_json, snapshot)
-        return calculate_correct_count(obj.answers_json, snapshot)
-
-    # 총 문제 수
-    def get_total_questions(self, obj):
-        snapshot = get_questions_snapshot_from_submission(obj)
-        if not isinstance(snapshot, list):
-            raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
-        return len(snapshot)
 
     # 응시 소요 시간(분)
     def get_duration_minute(self, obj):
@@ -131,6 +108,26 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
         if delta.total_seconds() < 0:
             raise ValidationError("시험 종료 시간이 시작 시간보다 빠릅니다.")
         return int(delta.total_seconds() // 60)
+
+    # 총 점수
+    # def get_total_score(self, obj):
+    #     snapshot = get_questions_snapshot_from_submission(obj)
+    #     validate_answers_json_format(obj.answers_json, snapshot)
+    #     return calculate_total_score(obj.answers_json, snapshot)
+
+    # 맞은 문제 수
+    # def get_correct_count(self, obj):
+    #     snapshot = get_questions_snapshot_from_submission(obj)
+    #     validate_answers_json_format(obj.answers_json, snapshot)
+    #     return calculate_correct_count(obj.answers_json, snapshot)
+
+    # 총 문제 수
+    # def get_total_questions(self, obj):
+    #     snapshot = get_questions_snapshot_from_submission(obj)
+    #     if not isinstance(snapshot, list):
+    #         raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
+    #     return len(snapshot)
+
 
 
 # 수강생 쪽지 시험 제출
