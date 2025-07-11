@@ -4,32 +4,39 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.exceptions import PermissionDenied
 from apps.community.models import Post
-
+from core.utils.s3_file_upload import S3Uploader
 
 class PostDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["[User] Community - Posts ( 게시글 좋아요, 삭제)"],
-        summary="게시글 삭제",
-        description=(
-            "로그인한 사용자가 자신의 게시글을 삭제합니다. " "관리자(staff)는 모든 게시글을 삭제할 수 있습니다."
-        ),
-        responses={
-            204: OpenApiResponse(description="삭제 성공"),
-            403: OpenApiResponse(description="삭제 권한 없음"),
-            404: OpenApiResponse(description="존재하지 않는 게시글"),
-        },
+        operation_id="user_post_delete",
+        tags=["[User] Community - Posts(게시물 삭제)"],
+        summary="유저가 자신의 게시물 삭제",
+        request=None,
+        responses={204: None},
     )
-    def delete(self, request, post_id):
+    def delete(self, request, post_id: int) -> Response:
         post = get_object_or_404(Post, id=post_id)
 
-        # 작성자 본인 또는 관리자 권한 확인
-        is_staff = getattr(request.user, "is_staff", False)
-        if request.user != post.author and not is_staff:
-            return Response({"detail": "게시글 삭제 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        # 권한 체크: 작성자 본인만 삭제 가능
+        if post.author != request.user:
+            raise PermissionDenied("본인의 게시물만 삭제할 수 있습니다.")
+
+        uploader = S3Uploader()
+
+        for attachment in post.attachments.all():
+            uploader.delete_file(attachment.file_url)
+        post.attachments.all().delete()
+
+        for image in post.images.all():
+            uploader.delete_file(image.image_url)
+        post.images.all().delete()
 
         post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"id": post_id, "message": "게시물이 삭제되었습니다."},
+            status=status.HTTP_204_NO_CONTENT
+        )

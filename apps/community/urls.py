@@ -75,4 +75,5 @@ urlpatterns = [
     path("posts/<int:post_id>/unlike/", PostLikeFalseAPIView.as_view(), name="post-unlike"),
     path("posts/list", PostListAPIView.as_view(), name="post-list"),
     path("api/v1/community/posts/<int:post_id>/", PostDeleteAPIView.as_view(), name="post-delete"),
+    path("posts/<int:post_id>/delete/", PostDeleteAPIView.as_view(), name="user-post-delete"),
 ]
