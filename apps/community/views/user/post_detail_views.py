@@ -75,14 +75,14 @@ class UserPostDetailAPIView(APIView):
 
         for comment_dict in data.get("comments", []):
             comment_id = comment_dict["id"]
-            try:
-                tags = CommentTags.objects.select_related("tagged_user").filter(comment_id=comment_id)
-                tagged_nicks = [
-                    tag.tagged_user.nickname for tag in tags if tag.tagged_user and hasattr(tag.tagged_user, "nickname")
-                ]
-                comment_dict["tagged_user_nicknames"] = tagged_nicks
-            except Comment.DoesNotExist:
-                comment_dict["tagged_user_nicknames"] = []
+
+            tags = CommentTags.objects.select_related("tagged_user").filter(comment_id=comment_id)
+
+            tagged_nicks = [
+                tag.tagged_user.nickname for tag in tags if tag.tagged_user and hasattr(tag.tagged_user, "nickname")
+            ]
+
+            comment_dict["tagged_user_nicknames"] = tagged_nicks
 
         data.update(like_data)
 
