@@ -12,7 +12,7 @@ class PostLikeTrueAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["[User] Community - Posts ( 게시글 좋아요 )"],
+        tags=["[User] Community - Posts ( 게시글 )"],
         summary="게시글 좋아요 추가",
         description="로그인한 사용자가 게시글에 좋아요를 추가합니다.",
         responses={
@@ -32,6 +32,9 @@ class PostLikeTrueAPIView(APIView):
             like.is_liked = True
             like.save()
 
+        post.likes_count += 1
+        post.save()
+
         return Response({"liked": True}, status=status.HTTP_200_OK)
 
 
@@ -39,7 +42,7 @@ class PostLikeFalseAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["[User] Community - Posts ( 게시글 좋아요 )"],
+        tags=["[User] Community - Posts ( 게시글 )"],
         summary="게시글 좋아요 취소",
         description="로그인한 사용자가 게시글에 눌러둔 좋아요를 취소합니다.",
         responses={
@@ -62,5 +65,8 @@ class PostLikeFalseAPIView(APIView):
                 like.save()
         except PostLike.DoesNotExist:
             pass  # 좋아요 기록이 없는 경우, 아무 것도 하지 않음
+
+        post.likes_count -= 1
+        post.save()
 
         return Response({"liked": False}, status=status.HTTP_200_OK)

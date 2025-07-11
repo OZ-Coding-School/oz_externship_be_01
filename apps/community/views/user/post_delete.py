@@ -15,7 +15,7 @@ class PostDeleteAPIView(APIView):
 
     @extend_schema(
         operation_id="user_post_delete",
-        tags=["[User] Community - Posts(게시물 삭제)"],
+        tags=["[User] Community - Posts ( 게시글 )"],
         summary="유저가 자신의 게시물 삭제",
         request=None,
         responses={204: None},
