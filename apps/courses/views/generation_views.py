@@ -238,7 +238,7 @@ class GenerationUpdateView(generics.UpdateAPIView):
 class GenerationDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
 
-    lookup_field = 'pk'
+    lookup_field = "pk"
 
     @extend_schema(
         summary="기수 삭제",
@@ -246,25 +246,27 @@ class GenerationDeleteView(generics.DestroyAPIView):
         parameters=[
             # Path Parameter로 기수 ID를 받음을 스웨거 문서에 명시합니다.
             OpenApiParameter(
-                name='pk', # URL 패턴의 <int:pk>와 일치하는 파라미터 이름
+                name="pk",  # URL 패턴의 <int:pk>와 일치하는 파라미터 이름
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
-                description='삭제할 기수의 고유 ID',
-                required=True
+                description="삭제할 기수의 고유 ID",
+                required=True,
             ),
         ],
         # 삭제 성공 시 204 No Content 응답 (응답 바디 없음)
         responses={
             status.HTTP_204_NO_CONTENT: {"description": "기수가 성공적으로 삭제되었습니다."},
-            status.HTTP_400_BAD_REQUEST: {"description": "해당 기수에 등록된 수강생이 있어 삭제할 수 없습니다."}, # <-- 새로운 400 에러 응답 추가!
+            status.HTTP_400_BAD_REQUEST: {
+                "description": "해당 기수에 등록된 수강생이 있어 삭제할 수 없습니다."
+            },  # <-- 새로운 400 에러 응답 추가!
             status.HTTP_401_UNAUTHORIZED: {"description": "인증 실패 (로그인 필요)"},
             status.HTTP_403_FORBIDDEN: {"description": "권한 부족 (관리자/스태프 아님)"},
             status.HTTP_404_NOT_FOUND: {"description": "해당 기수를 찾을 수 없음"},
             status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "서버 내부 오류"},
-        }
+        },
     )
     def get_queryset(self):
-        queryset = Generation.objects.select_related('course')
+        queryset = Generation.objects.select_related("course")
         return queryset
 
     def get_object(self):
