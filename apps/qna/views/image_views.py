@@ -1,10 +1,17 @@
 import time
 import uuid
 
+from drf_spectacular.utils import extend_schema
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.qna.permissions import (
+    IsStudentOrStaffOrAdminPermission,
+    IsStudentOrStaffPermission,
+    IsStudentPermission,
+)
 from apps.qna.serializers.images_serializers import (
     ImageFileDeleteSerializer,
     ImageFileUploadSerializer,
@@ -15,6 +22,7 @@ from core.utils.s3_file_upload import S3Uploader
 class ImageUploadAPIView(APIView):
     serializer_class = ImageFileUploadSerializer
     parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated, IsStudentPermission, IsStudentOrStaffOrAdminPermission]
 
     def __init__(self):
         super().__init__()
@@ -27,6 +35,11 @@ class ImageUploadAPIView(APIView):
             self._s3uploader = S3Uploader()
         return self._s3uploader
 
+    @extend_schema(
+        request=ImageFileUploadSerializer,
+        description="QnA 이미지 업로드",
+        tags=["QNA-Image"],
+    )
     def post(self, request):
         data = request.data
         serializer = self.serializer_class(data=data)
@@ -69,6 +82,7 @@ class ImageUploadAPIView(APIView):
 
 class ImageDeleteAPIView(APIView):
     serializer_class = ImageFileDeleteSerializer
+    permission_classes = [IsAuthenticated, IsStudentPermission, IsStudentOrStaffOrAdminPermission]
 
     def __init__(self):
         super().__init__()
@@ -81,6 +95,11 @@ class ImageDeleteAPIView(APIView):
             self._s3uploader = S3Uploader()
         return self._s3uploader
 
+    @extend_schema(
+        request=ImageFileDeleteSerializer,
+        description="QnA 이미지 삭제",
+        tags=["QNA-Image"],
+    )
     def post(self, request):
         """클라이언트로부터 s3 업로드 된 이미지 URL 리스트를 받아서 S3에서 삭제"""
         data = request.data
@@ -103,6 +122,6 @@ class ImageDeleteAPIView(APIView):
                 delete_fail.append(img_url)
 
         response_data = {"delete_success": deleted_images, "delete_fail": delete_fail}
-        status = 400 if delete_fail else 204
+        status = 400 if delete_fail else 200
 
         return Response(response_data, status=status)

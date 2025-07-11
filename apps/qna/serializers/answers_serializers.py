@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.qna.models import Answer, AnswerComment, AnswerImage
@@ -84,19 +85,20 @@ class AnswerUpdateSerializer(AnswerImageMixin, serializers.ModelSerializer[Answe
         return value.strip()
 
     def update(self, instance, validated_data):
-        # 기존 AnswerImage들 삭제
-        AnswerImage.objects.filter(answer=instance).delete()
-
-        # Answer 업데이트
-        answer = super().update(instance, validated_data)
-
         content = validated_data["content"]
 
         # content에서 이미지 URL 추출
         image_urls = self._extract_image_urls_from_content(content)
 
-        # 새로운 AnswerImage 생성
-        self._save_answer_images(answer, image_urls)
+        with transaction.atomic():
+            # Answer 업데이트
+            answer = super().update(instance, validated_data)
+
+            # 기존 AnswerImage들 삭제
+            AnswerImage.objects.filter(answer=instance).delete()
+
+            # 새로운 AnswerImage 생성
+            self._save_answer_images(answer, image_urls)
 
         return answer
 
