@@ -43,6 +43,7 @@ class AdminQuestionCategorySerializer(serializers.ModelSerializer):
         model = QuestionCategory
         fields = ["id", "name"]
 
+
 # 질문 목록 조회용
 class AdminQuestionListSerializer(serializers.ModelSerializer):
     author = AdminQuestionAuthorSerializer(read_only=True)
