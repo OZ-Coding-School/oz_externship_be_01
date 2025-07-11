@@ -252,7 +252,7 @@ class DeploymentListView(APIView):
 )
 # 쪽지시험 배포 상세 조회
 class DeploymentDetailView(APIView):
-    permission_classes = [IsAdminOrStaff]
+    permission_classes = [AllowAny]
     serializer_class = DeploymentDetailSerializer
 
     def get(self, request: Request, deployment_id: int, *args: Any, **kwargs: Any) -> Response:
