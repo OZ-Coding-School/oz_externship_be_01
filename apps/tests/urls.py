@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.tests.views.admin_testquestion_views import (
+    TestQuestionBulkUpdateAPIView,
     TestQuestionCreateView,
     TestQuestionListView,
     TestQuestionUpdateDeleteView,
@@ -82,6 +83,9 @@ urlpatterns = [
     path("admin/test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
     path(
         "admin/test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"
+    ),
+    path(
+        "admin/tests-questions/bulk-update/", TestQuestionBulkUpdateAPIView.as_view(), name="test-question-bulk-update"
     ),
     path("admin/test-list/", TestQuestionListView.as_view(), name="test-question-list"),
     path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
