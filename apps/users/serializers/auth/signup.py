@@ -67,3 +67,12 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
         user.set_password(password)
         user.save()
         return user
+
+
+class SignupNicknameCheckSerializer(serializers.Serializer[dict[str, Any]]):
+    nickname = serializers.CharField()
+
+    def validate_nickname(self, value: str) -> str:
+        if value == "existing_nickname":
+            raise serializers.ValidationError("이미 사용 중인 닉네임입니다.")
+        return value
