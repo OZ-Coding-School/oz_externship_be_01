@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import Any
 
+from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import BooleanField, Case, Count, Q, When
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -16,6 +18,7 @@ from apps.qna.serializers.admin_serializers import (
     AdminCategoryCreateSerializer,
     AdminCategoryListSerializer,
     AdminQuestionImageSerializer,
+    AdminQuestionListPaginationSerializer,
     AdminQuestionListSerializer,
 )
 
@@ -271,18 +274,99 @@ class AdminQnaDetailView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-# 질문 목록 조회
+# 질문 목록 조회(GET)
 class AdminQuestionListView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=["QnA (Admin)"], description="조회할 질문 ID", summary="미완성")
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = AdminQuestionListSerializer(dummy.DUMMY_QUESTIONS, many=True)
-        resp_data = serializer.data
-        for data in resp_data:
-            images = [image for image in dummy.DUMMY_QUESTION_IMAGES if data["id"] == image.question.id]
-            data["images"] = AdminQuestionImageSerializer(images, many=True).data
-        return Response(resp_data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=["QnA (Admin)"],
+        summary="질문 목록 조회",
+        responses={200: AdminQuestionListPaginationSerializer},
+    )
+    def get(self, request: Request) -> Response:
+        q = request.query_params
+        page = int(q.get("page", 1))
+        page_size = min(int(q.get("page_size", 20)), 100)
+
+        queryset = (
+            Question.objects.select_related("category", "category__parent", "category__parent__parent", "author")
+            .prefetch_related("images", "answers")
+            .annotate(
+                answer_count=Count("answers", distinct=True),
+                has_answer=Case(
+                    When(answers__isnull=False, then=True),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            )
+        )
+
+        # 검색
+        if search := q.get("search", "").strip():
+            search_type = q.get("search_type", "title_content")
+            if search_type == "author":
+                queryset = queryset.filter(author__nickname__icontains=search)
+            elif search_type == "title":
+                queryset = queryset.filter(title__icontains=search)
+            elif search_type == "content":
+                queryset = queryset.filter(content__icontains=search)
+            else:
+                queryset = queryset.filter(Q(title__icontains=search) | Q(content__icontains=search))
+
+        # 필터
+        if cid := q.get("category_id"):
+            try:
+                queryset = queryset.filter(category_id=int(cid))
+            except ValueError:
+                pass
+        if ans := q.get("has_answer"):
+            queryset = queryset.filter(answer_count__gt=0 if ans == "Y" else 0)
+
+        # 날짜 필터
+        for field in ["created", "updated"]:
+            for suffix in ["start", "end"]:
+                param = f"{field}_{suffix}"
+                if val := q.get(param):
+                    lookup = f"{field}_at__date__{'gte' if suffix == 'start' else 'lte'}"
+                    parsed = self._parse_date(val)
+                    if parsed:
+                        queryset = queryset.filter(**{lookup: parsed})
+
+        # 정렬
+        ordering = q.get("ordering", "-created_at")
+        if ordering not in ["created_at", "-created_at", "view_count", "-view_count"]:
+            ordering = "-created_at"
+        queryset = queryset.order_by(ordering)
+
+        # 페이지네이션
+        paginator = Paginator(queryset, page_size)
+        try:
+            questions = paginator.page(page)
+        except EmptyPage:
+            questions = paginator.page(paginator.num_pages)
+
+        serializer = AdminQuestionListSerializer(questions, many=True)
+        return Response(
+            {
+                "count": paginator.count,
+                "next": self._page_url(request, questions.next_page_number()) if questions.has_next() else None,
+                "previous": (
+                    self._page_url(request, questions.previous_page_number()) if questions.has_previous() else None
+                ),
+                "results": serializer.data,
+            }
+        )
+
+    def _parse_date(self, value):
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except Exception:
+            return None
+
+    def _page_url(self, request, page_number):
+        query = request.query_params.copy()
+        query["page"] = page_number
+        return f"{request.build_absolute_uri('?')}?{query.urlencode()}"
 
 
 # 질문 삭제

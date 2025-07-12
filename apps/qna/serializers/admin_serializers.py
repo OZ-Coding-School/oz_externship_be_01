@@ -31,13 +31,74 @@ class AdminCategoryListSerializer(serializers.ModelSerializer[QuestionCategory])
         fields = ["category_id", "parent_category_id", "category_name", "category_type", "created_at", "updated_at"]
 
 
-# 질문 목록 조회
-class AdminQuestionListSerializer(serializers.ModelSerializer[Question]):
-    images = AdminQuestionImageSerializer(many=True, read_only=True)
+# 작성자 정보
+class AdminQuestionAuthorSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nickname = serializers.CharField()
+
+
+# 카테고리 정보 (경로명은 serializer에서 구성)
+class AdminQuestionCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionCategory
+        fields = ["id", "name"]
+
+
+# 질문 목록 조회용
+class AdminQuestionListSerializer(serializers.ModelSerializer):
+    author = AdminQuestionAuthorSerializer(read_only=True)
+    category = AdminQuestionCategorySerializer(read_only=True)
+    answer_count = serializers.IntegerField(read_only=True)
+    has_answer = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Question
-        fields = ["id", "title", "content", "author", "category", "view_count", "created_at", "updated_at", "images"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "author",
+            "category",
+            "view_count",
+            "answer_count",
+            "has_answer",
+            "created_at",
+            "updated_at",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        # 작성자
+        data["author"] = {"id": instance.author.id, "nickname": instance.author.nickname} if instance.author else None
+
+        # 카테고리 경로 구성
+        data["category"] = (
+            {"category_id": instance.category.id, "category_name": self._build_category_path(instance.category)}
+            if instance.category
+            else None
+        )
+
+        # DB에서 annotate로 받은 값 그대로 사용
+        data["answer_count"] = instance.answer_count
+        data["has_answer"] = instance.has_answer
+
+        return data
+
+    def _build_category_path(self, category):
+        names = []
+        while category:
+            names.append(category.name)
+            category = category.parent
+        return " > ".join(reversed(names))
+
+
+# 페이지네이션 응답 구조
+class AdminQuestionListPaginationSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = AdminQuestionListSerializer(many=True)
 
 
 # 질의 응답 상세 조회
