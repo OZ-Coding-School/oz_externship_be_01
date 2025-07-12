@@ -1,6 +1,7 @@
-from apps.tests.models import TestSubmission
+from apps.tests.models import TestDeployment, TestSubmission
 
 
+# 관리자 쪽지 시험 응시 내역 목록 조회 (과목, 과정, 기수 필터 포함)
 def filter_test_submissions(queryset, filters):
     subject = filters.get("subject_title")
     course = filters.get("course_title")
@@ -20,6 +21,7 @@ def filter_test_submissions(queryset, filters):
     return queryset
 
 
+# 사용자 쪽지 시험 목록 조회 : 응시완료 (과정, 기수 필터 포함)
 def filter_test_submissions_list(queryset, filters, student):
     course = filters.get("course_title")
     generation = filters.get("generation_number")
@@ -30,11 +32,22 @@ def filter_test_submissions_list(queryset, filters, student):
     if generation:
         queryset = queryset.filter(deployment__generation__number=generation)
 
-    if submission_status and student:
-        submitted_deployments = TestSubmission.objects.filter(student=student).values_list("deployment_id", flat=True)
-        if submission_status == "completed":
-            queryset = queryset.filter(deployment__id__in=submitted_deployments)
-        elif submission_status == "not_submitted":
-            queryset = queryset.exclude(deployment__id__in=submitted_deployments)
+    # 응시완료
+    if submission_status == "completed":
+        submitted_ids = TestSubmission.objects.filter(student=student).values_list("deployment_id", flat=True)
+        queryset = queryset.filter(deployment__id__in=submitted_ids)
+
+    return queryset
+
+
+# 사용자 쪽지 시험 목록 조회 : 미응시 (과정, 기수 필터 포함)
+def filter_not_submitted_deployments(queryset, filters):
+    course = filters.get("course_title")
+    generation = filters.get("generation_number")
+
+    if course:
+        queryset = queryset.filter(generation__course__name__icontains=course)
+    if generation:
+        queryset = queryset.filter(generation__number=generation)
 
     return queryset

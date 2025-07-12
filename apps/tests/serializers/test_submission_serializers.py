@@ -15,7 +15,6 @@ from apps.tests.serializers.test_deployment_serializers import (
     UserTestDeploymentListSerializer,
     UserTestDeploymentSerializer,
 )
-from apps.tests.serializers.test_serializers import UserTestSerializer
 from apps.users.models import PermissionsStudent, User
 
 
@@ -205,7 +204,7 @@ class UserTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmissio
         return obj.correct_count
 
 
-# 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
+# 사용자 쪽지 시험 목록 조회
 class TestSubmissionListFilterSerializer(serializers.Serializer):
     course_title = serializers.CharField(required=False, allow_blank=True)
     generation_number = serializers.IntegerField(required=False)

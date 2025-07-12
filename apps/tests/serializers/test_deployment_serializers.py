@@ -123,7 +123,7 @@ class UserTestDeploymentListSerializer(serializers.ModelSerializer[TestDeploymen
 
     class Meta:
         model = TestDeployment
-        fields = ("test", "question_count", "question_score", "submission_status")
+        fields = ("id", "test", "question_count", "question_score", "submission_status")
 
     def get_question_score(self, obj: TestDeployment) -> int:
         snapshot = get_questions_snapshot_from_deployment(obj)
