@@ -25,6 +25,7 @@ from apps.community.views.user.comment_views import (
 )
 from apps.community.views.user.post_create_views import PostCreateAPIView
 from apps.community.views.user.post_delete import PostDeleteAPIView
+from apps.community.views.user.post_detail_views import UserPostDetailAPIView
 from apps.community.views.user.post_like_views import (
     PostLikeFalseAPIView,
     PostLikeTrueAPIView,
@@ -66,6 +67,7 @@ urlpatterns = [
     ),
     path("admin/comments/<int:comment_id>/", AdminCommentDeleteAPIView.as_view(), name="admin-comment-delete"),
     # user
+    path("posts/<int:post_id>/", UserPostDetailAPIView.as_view(), name="post-detail"),
     path("posts/<int:post_id>/comments/create/", CommentCreateAPIView.as_view(), name="comment-create"),
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
     path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
