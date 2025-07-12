@@ -12,8 +12,10 @@ from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
     AdminTestListDeploymentSerializer,
+    UserTestDeploymentListSerializer,
     UserTestDeploymentSerializer,
 )
+from apps.tests.serializers.test_serializers import UserTestSerializer
 from apps.users.models import PermissionsStudent, User
 
 
@@ -182,6 +184,38 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
         validated_data["deployment"] = deployment
 
         return super().create(validated_data)
+
+
+# 사용자 쪽지 시험 목록 조회
+class UserTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
+    deployment = UserTestDeploymentListSerializer(read_only=True)
+
+    score = serializers.SerializerMethodField()
+    correct_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestSubmission
+        fields = ("id", "deployment", "score", "correct_count")
+
+    def get_score(self, obj: TestSubmission):
+        # 응시한 경우만 점수 반환
+        return obj.score
+
+    def get_correct_count(self, obj: TestSubmission):
+        return obj.correct_count
+
+
+# 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
+class TestSubmissionListFilterSerializer(serializers.Serializer):
+    course_title = serializers.CharField(required=False, allow_blank=True)
+    generation_number = serializers.IntegerField(required=False)
+    submission_status = serializers.ChoiceField(
+        choices=[
+            ("completed", "응시완료"),
+            ("not_submitted", "미응시"),
+        ],
+        required=False,
+    )
 
 
 # 사용자 쪽지 시험 결과 조회

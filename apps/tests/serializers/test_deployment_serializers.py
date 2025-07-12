@@ -1,7 +1,4 @@
-import json
 from typing import Any, Dict, List
-
-# url
 from urllib.parse import urlparse
 
 from rest_framework import serializers
@@ -10,9 +7,10 @@ from rest_framework.exceptions import ValidationError
 from apps.courses.models import Course, Generation
 from apps.tests.core.utils.grading import (
     calculate_total_score,
+    get_questions_snapshot_from_deployment,
     get_questions_snapshot_from_submission,
 )
-from apps.tests.models import Test, TestDeployment, TestQuestion
+from apps.tests.models import Test, TestDeployment, TestQuestion, TestSubmission
 from apps.tests.serializers.test_question_serializers import (
     UserTestQuestionStartSerializer,
 )
@@ -114,6 +112,29 @@ class UserTestDeploymentSerializer(serializers.ModelSerializer[TestDeployment]):
         ordered_questions = [id_to_question[qid] for qid in question_ids if qid in id_to_question]
 
         return UserTestQuestionStartSerializer(ordered_questions, many=True).data
+
+
+# 사용자 쪽지시험 목록조회
+class UserTestDeploymentListSerializer(serializers.ModelSerializer[TestDeployment]):
+    test = UserTestSerializer(read_only=True)
+
+    question_score = serializers.SerializerMethodField()
+    submission_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestDeployment
+        fields = ("test", "question_count", "question_score", "submission_status")
+
+    def get_question_score(self, obj: TestDeployment) -> int:
+        snapshot = get_questions_snapshot_from_deployment(obj)
+        return sum(question.get("point") for question in snapshot)
+
+    def get_submission_status(self, obj):
+        student = self.context.get("student")
+        if not student:
+            return "확인 불가"
+        has_submission = obj.submissions.filter(student=student).exists()  # prefetch_related 활용 가능
+        return "응시 완료" if has_submission else "미응시"
 
 
 # 🔹 공통 timestamp serializer (선택적)

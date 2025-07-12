@@ -1,5 +1,6 @@
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiExample, extend_schema
+from drf_spectacular.utils import OpenApiExample
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,7 @@ from apps.tests.core.utils.grading import (
     get_questions_snapshot_from_submission,
     validate_answers_json_format,
 )
+from apps.tests.core.utils.filters import filter_test_submissions_list
 from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.permissions import IsStudent
 from apps.tests.serializers.test_deployment_serializers import (
@@ -20,7 +22,9 @@ from apps.tests.serializers.test_deployment_serializers import (
     UserTestStartSerializer,
 )
 from apps.tests.serializers.test_submission_serializers import (
+    TestSubmissionListFilterSerializer,
     UserTestResultSerializer,
+    UserTestSubmissionListSerializer,
     UserTestSubmitSerializer,
 )
 from apps.users.models import PermissionsStudent
@@ -28,7 +32,7 @@ from apps.users.models import PermissionsStudent
 
 # 수강생 쪽지 시험 응시
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestStartSerializer,
 )
 class TestStartView(APIView):
@@ -66,7 +70,7 @@ class TestStartView(APIView):
 
 # 수강생 쪽지 시험 제출
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestSubmitSerializer,
     examples=[
         OpenApiExample(
@@ -125,8 +129,71 @@ class TestSubmissionSubmitView(APIView):
         return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
 
 
+# 수강생 쪽지 시험 목록 조회
+@extend_schema(
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
+    parameters=[
+        OpenApiParameter(
+            name="course_title",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            description="과정명으로 응시내역 조회",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="generation_number",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            description="과정명, 기수 고유 ID로 특정 기수의 응시내역 조회",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="submission_status",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            enum=["completed", "not_submitted"],
+            description="정렬 기준: 응시완료(submitted), 미응시(not_submitted)",
+        ),
+    ],
+)
+class TestSubmissionListView(APIView):
+    permission_classes = [IsAuthenticated, IsStudent]
+    serializer_class = UserTestSubmissionListSerializer
+
+    def get(self, request: Request) -> Response:
+        """
+        쪽지 시험 목록 조회 API
+        """
+        student = get_object_or_404(PermissionsStudent, user=request.user)
+
+        queryset = TestSubmission.objects.filter(student=student).select_related(
+            "deployment__test", "deployment__generation__course"
+        )
+
+        filter_serializer = TestSubmissionListFilterSerializer(data=request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        filters = filter_serializer.validated_data
+        submission_status = filters.get("submission_status")
+
+        filtered_submissions = filter_test_submissions_list(queryset, filters, student)
+
+        if not filtered_submissions.exists():
+            if submission_status == "completed":
+                return Response({"detail": "응시한 시험이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            elif submission_status == "not_submitted":
+                return Response({"detail": "모든 시험에 응시하셨습니다."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                return Response({"detail": "시험 목록이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.serializer_class(filtered_submissions, many=True, context={"student": student})
+        return Response(
+            {"message": "쪽지시험 응시내역 목록 조회 완료", "data": serializer.data}, status=status.HTTP_200_OK
+        )
+
+
 # 수강생 쪽지 시험 결과 조회
-@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
+@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"])
 class TestSubmissionResultView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestResultSerializer

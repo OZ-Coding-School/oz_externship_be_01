@@ -1,6 +1,5 @@
 import json
 import uuid
-from typing import Any, Dict
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -225,6 +224,15 @@ class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
         fields = ("title",)
 
 
+# 관리자 쪽지 시험 응시 전체 목록 조회
+class AdminTestListSerializer(serializers.ModelSerializer[Test]):
+    subject = CommonSubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("subject", "title")
+
+
 # 관리자 쪽지 시험 응시 상세 조회
 class AdminTestDetailSerializer(serializers.ModelSerializer[Test]):
     subject = CommonSubjectSerializer(read_only=True)
@@ -234,19 +242,10 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[Test]):
         fields = ("subject", "title", "created_at", "updated_at")
 
 
-# 사용자 쪽지 시험 응시
+# 사용자 쪽지 시험 응시, 목록조회
 class UserTestSerializer(serializers.ModelSerializer[Test]):
     subject = CommonSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test
         fields = ("subject", "title", "thumbnail_img_url")
-
-
-# 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminTestListSerializer(serializers.ModelSerializer[Test]):
-    subject = CommonSubjectSerializer(read_only=True)
-
-    class Meta:
-        model = Test
-        fields = ("subject", "title")
