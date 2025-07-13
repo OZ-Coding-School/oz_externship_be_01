@@ -101,29 +101,6 @@ class AdminQuestionListPaginationSerializer(serializers.Serializer):
     results = AdminQuestionListSerializer(many=True)
 
 
-# 질의 응답 상세 조회
-class AdminQuestionDetailSerializer(serializers.ModelSerializer[Question]):
-    images = AdminQuestionImageSerializer(many=True, read_only=True)
-    answers = AdminAnswerSerializer(many=True, read_only=True)
-    category = AdminCategoryListSerializer(read_only=True)
-
-    class Meta:
-        model = Question
-        fields = [
-            "id",
-            "title",
-            "content",
-            "author",
-            "category",
-            "view_count",
-            "created_at",
-            "updated_at",
-            "images",
-            "answers",
-            "category",
-        ]
-
-
 # 질의응답 카테고리 질문 등록
 class AdminCategoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -169,3 +146,56 @@ class AdminCategoryCreateSerializer(serializers.ModelSerializer):
             validated_data["category_type"] = "minor"
 
         return super().create(validated_data)
+
+
+# 질문 삭제 응답용 시리얼라이저
+class AdminQuestionDeleteResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    deleted_question = serializers.DictField()
+    deleted_related_data = serializers.DictField()
+
+
+# 질문 삭제 시 반환 시리얼라이저
+class AdminDeletedQuestionInfoSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    content = serializers.CharField()
+    author_nickname = serializers.CharField(allow_null=True)
+    category_name = serializers.CharField(allow_null=True)
+    view_count = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+
+
+# 삭제된 관련 데이터 개수 시리얼라이저
+class AdminDeletedQuestionRelatedDataSerializer(serializers.Serializer):
+    answers_count = serializers.IntegerField()
+    answer_comments_count = serializers.IntegerField()
+    answer_images_count = serializers.IntegerField()
+    question_images_count = serializers.IntegerField()
+    question_ai_answers_count = serializers.IntegerField()
+
+
+# 답변 삭제 응답용 시리얼라이저
+class AdminAnswerDeleteResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    deleted_answer = serializers.DictField()
+    deleted_related_data = serializers.DictField()
+
+
+# 답변 삭제 시 반환 시리얼라이저
+class AdminDeletedAnswerInfoSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    question_id = serializers.IntegerField()
+    question_title = serializers.CharField()
+    author_nickname = serializers.CharField(allow_null=True)
+    content = serializers.CharField()
+    is_adopted = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+
+
+# 삭제된 관련 데이터 정보 시리얼라이저
+class AdminDeletedRelatedDataSerializer(serializers.Serializer):
+    comments_count = serializers.IntegerField()
+    images_count = serializers.IntegerField()
