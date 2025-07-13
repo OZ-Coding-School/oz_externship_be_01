@@ -6,7 +6,6 @@ from django.db.models import BooleanField, Case, Count, Q, When
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +20,7 @@ from apps.qna.models import (
     QuestionCategory,
     QuestionImage,
 )
+from apps.qna.permissions import IsAdminPermission, IsStaffPermission
 from apps.qna.serializers.admin_serializers import (
     AdminCategoryCreateSerializer,
     AdminCategoryListSerializer,
@@ -33,7 +33,7 @@ dummy.load_dummy_data()
 
 # 카테고리 등록(POST)
 class AdminCategoryCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -53,7 +53,7 @@ class AdminCategoryCreateView(APIView):
 
 # 카테고리 삭제(DELETE)
 class AdminCategoryDeleteView(APIView):
-    permission_classes = [AllowAny]  # ⚠️ 추후 관리자 권한으로 변경 필요
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -137,7 +137,7 @@ class AdminCategoryDeleteView(APIView):
 
 # 카테고리 목록 조회(GET)
 class AdminCategoryListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -189,7 +189,7 @@ class AdminCategoryListView(APIView):
 
 # 질문 목록 조회(GET)
 class AdminQuestionListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -284,7 +284,7 @@ class AdminQuestionListView(APIView):
 
 # 질문 삭제(DELETE)
 class AdminQuestionDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -355,7 +355,7 @@ class AdminQuestionDeleteView(APIView):
 
 # 답변 삭제(DELETE)
 class AdminAnswerDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
