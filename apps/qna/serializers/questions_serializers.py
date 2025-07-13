@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from apps.qna.models import Question, QuestionCategory, QuestionImage
 from apps.qna.serializers.answers_serializers import AnswerListSerializer
+from apps.qna.serializers.images_serializers import QuestionImageMixin
 
 
 # 질문 이미지
@@ -16,42 +17,44 @@ class QuestionImageSerializer(serializers.ModelSerializer):
 
 
 # 질문 생성
-class QuestionCreateSerializer(serializers.ModelSerializer):
-    image_urls = serializers.ListField(child=serializers.URLField(), write_only=True, required=False, max_length=5)
+class QuestionCreateSerializer(serializers.ModelSerializer, QuestionImageMixin):
+    images = QuestionImageSerializer(many=True, read_only=True)
     category_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Question
-        fields = ["title", "content", "category_id", "image_urls"]
+        fields = ["title", "content", "category_id", "images"]
 
-    def validate_image_urls(self, value):
-        if len(value) > 5:
-            raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
-        return value
+    def validate_category_id(self, value):
+        try:
+            category = QuestionCategory.objects.get(pk=value)
+        except QuestionCategory.DoesNotExist:
+            raise serializers.ValidationError("해당 카테고리가 존재하지 않습니다.")
+        if category.category_type != "minor":
+            raise serializers.ValidationError("카테고리는 소분류만 가능합니다.")
+        return category
 
     def create(self, validated_data):
-        image_urls = validated_data.pop("image_urls", [])
+        content = validated_data["content"]
+        image_urls = list(dict.fromkeys(self._extract_image_urls_from_content(content)))
+        if len(image_urls) > 5:
+            raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
         category = validated_data.pop("category_id")
-        author = validated_data.pop("author")
+        author = validated_data.pop("author", None)
 
         with transaction.atomic():
             question = Question.objects.create(category=category, author=author, **validated_data)
-            for url in image_urls:
-                QuestionImage.objects.create(question=question, img_url=url)
+            self._save_question_images(question, image_urls)
         return question
 
-
 # 질문 수정
-class QuestionUpdateSerializer(serializers.ModelSerializer):
+class QuestionUpdateSerializer(serializers.ModelSerializer, QuestionImageMixin):
     images = QuestionImageSerializer(many=True, read_only=True)
-    image_urls = serializers.ListField(
-        child=serializers.URLField(), write_only=True, required=False, max_length=5
-    )
     category_id = serializers.IntegerField(required=False, write_only=True)
 
     class Meta:
         model = Question
-        fields = ["category", "category_id", "title", "content", "images", "image_urls"]
+        fields = ["category", "category_id", "title", "content", "images"]
         read_only_fields = ["category"]
         extra_kwargs = {
             "title": {"required": False},
@@ -68,23 +71,21 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("카테고리 변경은 소분류만 가능합니다.")
         return category
 
-    def validate_image_urls(self, value):
-        if len(value) > 5:
-            raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
-        return value
-
     def update(self, instance, validated_data):
         for field in ["title", "content"]:
             if field in validated_data:
                 setattr(instance, field, validated_data[field])
-        if "category_id" in validated_data:
-            instance.category = validated_data["category_id"]
 
-        if "image_urls" in validated_data:
-            new_image_urls = validated_data["image_urls"]
+        if "category_id" in validated_data:
+            instance.category = validated_data["category_id"]  # 이미 객체!
+
+        if "content" in validated_data:
+            content = validated_data["content"]
+            image_urls = list(dict.fromkeys(self._extract_image_urls_from_content(content)))  # 순서 보존
+            if len(image_urls) > 5:
+                raise serializers.ValidationError("이미지는 최대 5개까지만 업로드할 수 있습니다.")
             instance.images.all().delete()
-            for url in new_image_urls:
-                QuestionImage.objects.create(question=instance, img_url=url)
+            self._save_question_images(instance, image_urls)
 
         instance.save()
         return instance

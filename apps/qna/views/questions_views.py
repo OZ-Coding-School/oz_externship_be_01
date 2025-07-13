@@ -143,7 +143,8 @@ class QuestionCreateView(APIView):
                 cached["results"] = cached["results"][:10]
             cache.set(page1_key, cached, timeout=3600)
 
-        return Response({"id": question.id}, status=status.HTTP_201_CREATED)
+        response_data = QuestionDetailSerializer(question).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 # 4. 질문 부분 수정 (PATCH)
