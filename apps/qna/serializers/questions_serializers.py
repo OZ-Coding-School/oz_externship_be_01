@@ -47,6 +47,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer, QuestionImageMixin):
             self._save_question_images(question, image_urls)
         return question
 
+
 # 질문 수정
 class QuestionUpdateSerializer(serializers.ModelSerializer, QuestionImageMixin):
     images = QuestionImageSerializer(many=True, read_only=True)
