@@ -185,38 +185,6 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
         return super().create(validated_data)
 
 
-# 사용자 쪽지 시험 목록 조회
-class UserTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
-    deployment = UserTestDeploymentListSerializer(read_only=True)
-
-    score = serializers.SerializerMethodField()
-    correct_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TestSubmission
-        fields = ("id", "deployment", "score", "correct_count")
-
-    def get_score(self, obj: TestSubmission):
-        # 응시한 경우만 점수 반환
-        return obj.score
-
-    def get_correct_count(self, obj: TestSubmission):
-        return obj.correct_count
-
-
-# 사용자 쪽지 시험 목록 조회
-class TestSubmissionListFilterSerializer(serializers.Serializer):
-    course_title = serializers.CharField(required=False, allow_blank=True)
-    generation_number = serializers.IntegerField(required=False)
-    submission_status = serializers.ChoiceField(
-        choices=[
-            ("completed", "응시완료"),
-            ("not_submitted", "미응시"),
-        ],
-        required=False,
-    )
-
-
 # 사용자 쪽지 시험 결과 조회
 class UserTestResultSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = UserTestDeploymentSerializer(read_only=True)

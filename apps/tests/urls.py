@@ -53,9 +53,9 @@ urlpatterns = [
     ),
     # 쪽지 시험 목록 조회
     path(
-        "test/submissions",
+        "test/deployments",
         TestSubmissionListView.as_view(),
-        name="submission_list",
+        name="deployment_list",
     ),
     # 쪽지 시험 결과 조회
     path(
