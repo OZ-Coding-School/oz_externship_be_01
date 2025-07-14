@@ -4,6 +4,7 @@ import os
 import httpx
 from channels.db import database_sync_to_async  # type: ignore
 from channels.generic.websocket import AsyncWebsocketConsumer  # type: ignore
+
 from apps.qna.utils.redis import get_ai_count, increment_ai_count
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
