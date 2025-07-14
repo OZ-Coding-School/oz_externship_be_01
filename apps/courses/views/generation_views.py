@@ -25,6 +25,7 @@ from apps.courses.serializers.generation_serializer import (
     MonthlyCourseSerializer,
 )
 from apps.tests.permissions import IsAdminOrStaff
+from apps.users.models.permissions import PermissionsStudent
 from apps.users.models.student_enrollment import StudentEnrollmentRequest
 
 
@@ -34,7 +35,7 @@ from apps.users.models.student_enrollment import StudentEnrollmentRequest
 )
 # 기수 등록 API
 class GenerationCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrStaff]
+    permission_classes = [AllowAny]
     serializer_class = GenerationCreateSerializer
 
     @extend_schema(
@@ -278,7 +279,7 @@ class GenerationDeleteView(generics.DestroyAPIView):
 
     # perform_destroy 메서드를 오버라이드하여 삭제 전 조건 검사 추가!
     def perform_destroy(self, instance: Generation):
-        if instance.enrollment_requests.exists():
+        if instance.students.exists():
             raise ValidationError("해당 기수에 등록된 수강생이 있어 삭제할 수 없습니다.")
 
         instance.delete()
