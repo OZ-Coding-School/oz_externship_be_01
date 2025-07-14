@@ -1,17 +1,14 @@
-from datetime import datetime
-from typing import Any, Dict, List, Optional, cast
-from uuid import uuid4
+from typing import Any, Optional
 
 from django.db import transaction
-from django.db.models import Avg, Count, Q
-from django.shortcuts import get_object_or_404
+from django.db.models import Count, Q
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tests.core.utils.grading import get_questions_snapshot_from_deployment
 from apps.tests.models import TestDeployment
 from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
@@ -21,97 +18,6 @@ from apps.tests.serializers.test_deployment_serializers import (
     DeploymentListSerializer,
     DeploymentStatusUpdateSerializer,
 )
-
-# 🔹 시험 데이터 (test.id 기준)
-MOCK_TESTS: Dict[int, Dict[str, Any]] = {
-    1: {"id": 1, "title": "HTML 기초", "subject": {"title": "웹프로그래밍"}},
-    2: {"id": 2, "title": "CSS 심화", "subject": {"title": "웹디자인"}},
-}
-# 🔹 배포 데이터 (deployment.id 기준)
-MOCK_GENERATIONS: Dict[int, Dict[str, Any]] = {
-    1: {"id": 1, "name": "5기", "course": {"id": 1, "title": "웹프로그래밍"}},
-    2: {"id": 2, "name": "4기", "course": {"id": 2, "title": "웹디자인"}},
-}
-
-
-# 🔹 배포 데이터 (deployment.id 기준)
-MOCK_DEPLOYMENTS: Dict[int, Dict[str, Any]] = {
-    101: {
-        "id": 101,
-        "test": MOCK_TESTS[1],
-        "generation": MOCK_GENERATIONS[1],
-        "total_participants": 15,
-        "average_score": 85.6,
-        "duration_time": 60,
-        "access_code": "aB3dE9",
-        "status": "Activated",
-        "open_at": datetime.now().isoformat(),
-        "close_at": datetime.now().isoformat(),
-        "questions_snapshot_json": {
-            "1": {
-                "question": "3 + 5 = ?",
-                "choices": ["6", "7", "8"],
-                "answer": "8",
-            }
-        },
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    },
-    102: {
-        "id": 102,
-        "test": MOCK_TESTS[1],
-        "generation": MOCK_GENERATIONS[2],
-        "total_participants": 10,
-        "average_score": 78.2,
-        "duration_time": 90,
-        "access_code": "fG7hJ2",
-        "status": "Deactivated",
-        "open_at": datetime.now().isoformat(),
-        "close_at": datetime.now().isoformat(),
-        "questions_snapshot_json": {
-            "1": {
-                "question": "CSS Flexbox의 주 용도는?",
-                "choices": ["레이아웃", "애니메이션", "폼 제어"],
-                "answer": "레이아웃",
-            }
-        },
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    },
-}
-
-
-# @extend_schema(
-#     tags=["[Admin] Test - Deployment(쪽지시험 배포 생성/삭제/조회/활성화)"],
-#     request=AdminCodeValidationSerializer,
-#     responses={200: dict, 400: dict, 404: dict},
-# )
-# # 참가코드 검증( 어드민 )
-# class TestValidateCodeAdminView(APIView):
-#
-#     permission_classes = [AllowAny]
-#     serializer_class = AdminCodeValidationSerializer
-#
-#     def post(self, request: Request) -> Response:
-#         serializer = AdminCodeValidationSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         deployment_id = serializer.validated_data["deployment_id"]
-#         access_code = serializer.validated_data["access_code"]
-#
-#         deployment: Optional[Dict[str, Any]] = MOCK_DEPLOYMENTS.get(deployment_id)
-#         if not deployment:
-#             return Response({"detail": "존재하지 않는 배포입니다."}, status=status.HTTP_404_NOT_FOUND)
-#
-#         if deployment["access_code"] == access_code and deployment["status"] == "Activated":
-#             return Response(
-#                 {
-#                     "message": "참가코드가 유효합니다.",
-#                     "test_title": deployment["test"]["title"],
-#                     "deployment_id": deployment_id,
-#                     "duration_time": deployment["duration_time"],
-#                 }
-#             )
-#         return Response({"detail": "유효하지 않은 참가코드입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
@@ -252,7 +158,7 @@ class DeploymentListView(APIView):
 )
 # 쪽지시험 배포 상세 조회
 class DeploymentDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrStaff]
     serializer_class = DeploymentDetailSerializer
 
     def get(self, request: Request, deployment_id: int, *args: Any, **kwargs: Any) -> Response:
@@ -296,6 +202,11 @@ class TestDeploymentCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         # serializer.save()를 호출하면 생성된 TestDeployment 인스턴스가 반환
         deployment = serializer.save()
+
+        snapshot = get_questions_snapshot_from_deployment(deployment)
+        deployment.question_count = len(snapshot)
+        deployment.save(update_fields=["question_count"])
+
         # 응답 데이터
         responses_data = {
             "deployment_id": deployment.id,

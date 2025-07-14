@@ -1,16 +1,12 @@
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.tests.core.utils.filters import (
-    filter_deployments_by_course_and_generation,
-    filter_deployments_by_submission_status,
-)
 from apps.tests.core.utils.grading import (
     calculate_correct_count,
     calculate_total_score,
@@ -20,8 +16,6 @@ from apps.tests.core.utils.grading import (
 from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.permissions import IsStudent
 from apps.tests.serializers.test_deployment_serializers import (
-    TestSubmissionListFilterSerializer,
-    UserTestDeploymentListSerializer,
     UserTestDeploymentSerializer,
     UserTestStartSerializer,
 )
@@ -129,60 +123,6 @@ class TestSubmissionSubmitView(APIView):
             return Response({"detail": auto_msg}, status=200)
 
         return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
-
-
-# 수강생 쪽지 시험 목록 조회
-@extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
-    parameters=[
-        OpenApiParameter(
-            name="submission_status",
-            type=str,
-            location=OpenApiParameter.QUERY,
-            required=False,
-            enum=["completed", "not_submitted"],
-            description="정렬 기준: 응시완료(submitted), 미응시(not_submitted)",
-        ),
-    ],
-)
-class TestSubmissionListView(APIView):
-    permission_classes = [AllowAny]
-    # permission_classes = [IsAuthenticated, IsStudent]
-    serializer_class = UserTestDeploymentListSerializer
-
-    def get(self, request: Request) -> Response:
-        """
-        쪽지 시험 목록 조회 API
-        """
-        student = get_object_or_404(PermissionsStudent, user=request.user)
-
-        filter_serializer = TestSubmissionListFilterSerializer(data=request.query_params)
-        filter_serializer.is_valid(raise_exception=True)
-        filters = filter_serializer.validated_data
-
-        deployments = (
-            TestDeployment.objects.filter(generation=student.generation)
-            .select_related("test", "generation__course")
-            .prefetch_related("submissions")
-        )
-
-        deployments = filter_deployments_by_course_and_generation(deployments, filters)
-        deployments = filter_deployments_by_submission_status(deployments, student, filters.get("submission_status"))
-
-        if not deployments.exists():
-            msg = "시험 목록이 존재하지 않습니다."
-            submission_status = filters.get("submission_status")
-            if submission_status == "completed":
-                msg = "응시한 시험이 없습니다."
-            elif submission_status == "not_submitted":
-                msg = "모든 시험에 응시하셨습니다."
-            return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.serializer_class(deployments, many=True, context={"student": student})
-        return Response(
-            {"message": "쪽지시험 응시내역 목록 조회 완료", "data": serializer.data},
-            status=status.HTTP_200_OK,
-        )
 
 
 # 수강생 쪽지 시험 결과 조회
