@@ -102,7 +102,10 @@ jobs:
               --name nginx \
               -v static-volume:/vol/web/static \
               -v media-volume:/vol/web/media \
+              -v certbot-conf:/etc/letsencrypt \
+              -v certbot-www:/var/www/certbot \
               -p 80:80 \
+              -p 443:443 \
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:nginx-dev
             
             docker image prune -af
