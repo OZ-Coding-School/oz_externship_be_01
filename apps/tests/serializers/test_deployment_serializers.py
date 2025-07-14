@@ -250,7 +250,7 @@ class DeploymentListSerializer(serializers.ModelSerializer[Any]):
 
         # 각 제출을 반복하며 점수를 계산하고 합산합니다.
         for submission in submissions:
-            snapshot = get_questions_snapshot_from_submission(obj)
+            snapshot = get_questions_snapshot_from_submission(submission)
             submission_score = calculate_total_score(submission.answers_json, snapshot)
             total_scores_sum += submission_score
 
