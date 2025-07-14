@@ -135,7 +135,7 @@ class UserTestDeploymentListSerializer(serializers.ModelSerializer[TestDeploymen
 
     def get_question_score(self, obj: TestDeployment) -> int:
         snapshot = get_questions_snapshot_from_deployment(obj)
-        return sum(question.get("point") for question in snapshot)
+        return sum(question.get("point", 0) for question in snapshot)
 
     def get_submission_status(self, obj):
         student = self.context.get("student")
