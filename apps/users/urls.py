@@ -39,7 +39,7 @@ from apps.users.views.auth.phone_auth import (
     SendPhoneCodeAPIView,
     VerifyPhoneCodeAPIView,
 )
-from apps.users.views.auth.signup import SignUpAPIView
+from apps.users.views.auth.signup import SignUpAPIView, SignupNicknameCheckAPIView
 from apps.users.views.auth.social_login import (
     KakaoLoginAPIView,
     NaverLoginAPIView,
@@ -73,7 +73,7 @@ urlpatterns = [
     path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
     path("profile/", UserProfileView.as_view(), name="user-profile"),
     path("profile/update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
-    path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
+    path("profile/nickname-check/", SignupNicknameCheckAPIView.as_view(), name="nickname-check"),
     # admin 유저 관리
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
