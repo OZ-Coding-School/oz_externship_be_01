@@ -3,6 +3,61 @@
 ## 과정 관리 어드민 (1팀)
 
 ## 회원 기능 및 회원 관리 어드민 (2팀)
+## 📖 프로젝트 소개
+
+단순한 교육을 넘어, 더 나은 학습 환경을 만드는 것
+**OZ CodingSchool LMS**는 다양한 학습 콘텐츠를 제공하는 온라인 교육 플랫폼입니다.
+그리고 그 중심에는 안정적이고 효율적인 회원 관리 시스템이 존재합니다.
+
+백엔드 2조는 이 프로젝트에서
+수강생, 조교, 운영자 등의 회원 권한 관리 및
+프로필 수정, 회원 탈퇴, 활동 통계 조회 등
+프로젝트의 전반적인 회원 관리 기능을 담당하고 있습니다.
+---
+## :link: 배포 링크
+
+> ### [⛪ 배포 링크](https://api.ozcoding.site/api/schema/swagger-ui/)
+
+---
+
+## 🖥️ 서비스 소개
+> **로그인 API**: 소셜 로그인(카카오, 네이버), 이메일 로그인 API를 통해 사용자에게 로그인 기능을 제공합니다. <br>
+> **어드민 회원 관리 API**: 관리자 전용 회원 정보 조회, 수정, 삭제 등 전반적인 회원 관리 및 수강신청 관리 기능을 제공합니다. <br>
+> **회원 대시보드 API**: 관리자에게 수강생 전환 추이, 회원가입 통계, 탈퇴율 등 다양한 회원 관련 지표를 그래프 형태로 제공합니다. <br>
+> **회원가입 API**: Gmail 및 Twilio 기반 이메일·휴대폰 인증 기능을 통해 안전한 회원가입 프로세스를 지원합니다.
+--- 
+
+## 팀 동료
+
+### BE
+
+| <a href=https://github.com/somineda/><img src="https://avatars.githubusercontent.com/u/191089828?v=4" width=100px/><br/><sub><b>@somineda</b></sub></a><br/> | <a href=https://github.com/kyukyu300><img src="https://avatars.githubusercontent.com/u/201066910?v=4" width=100px/><br/><sub><b>@kyukyu300</b></sub></a><br/> | <a href=https://github.com/harry99990><img src="https://avatars.githubusercontent.com/u/199310256?v=4" width=100px/><br/><sub><b>@harry99990</b></sub></a><br/> | <a href=https://github.com/jee1021><img src="https://avatars.githubusercontent.com/u/201070374?v=4" width=100px/><br/><sub><b>@jee1021</b></sub></a><br/> |
+|:----------------------------------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------:|
+|                윤소민                 |    김규진     |                                                                            김상협                                                                            |    임지원     |                                                                      박00                                                                             |                                                                            이00                                                                             |                                          한00                                           |
+
+## 📑 프로젝트 규칙
+
+### Code Convention
+>BE
+> - 패키지명 전체 소문자
+> - 클래스명, 인터페이스명 CamelCase
+> - 클래스 이름 명사 사용
+> - 상수명 SNAKE_CASE
+
+### Communication Rules
+> - Discord 활용 
+> - 데일리 스크럼
+
+
+## :clipboard: Documents
+> [📜 API 명세서](https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80)
+> 
+> [📜 요구사항 정의서](https://docs.google.com/spreadsheets/d/160YZn8-2RPGI8gRJQiHObgKXF0VQn1DiIjJp6aPkFic/edit?gid=0#gid=0)
+> 
+> [📜 ERD](https://www.notion.so/ERD-209caf5650aa812a913ccc3aad08aba8)
+> 
+> [📜 테이블 명세서](https://www.notion.so/209caf5650aa8152a00cd26e4bb05f7a)
+
 
 ## 질의응답 기능 및 관리 어드민 (3팀)
 
