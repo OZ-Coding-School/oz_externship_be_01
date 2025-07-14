@@ -1,14 +1,16 @@
-from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIClient
-from django.test import TestCase, Client
-from django.urls import reverse
-
-from apps.community.models import Post, PostCategory
-from django.contrib.auth import get_user_model
-import PIL.Image
 from io import BytesIO
 
+import PIL.Image
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+
+from apps.community.models import Post, PostCategory
+
 User = get_user_model()
+
 
 def create_test_image():
     image = PIL.Image.new("RGB", (100, 100), color="blue")
@@ -27,24 +29,17 @@ class AdminPostAPITest(TestCase):
             nickname="seoungwon",
             phone_number="01099998888",
             password="adminpass",
-            role="ADMIN"
+            role="ADMIN",
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.admin)
 
         self.category = PostCategory.objects.create(name="카테고리")
         self.attachment = SimpleUploadedFile(
-            "test.txt",
-            "첨부파일 내용입니다.".encode("utf-8"),
-            content_type="text/plain"
+            "test.txt", "첨부파일 내용입니다.".encode("utf-8"), content_type="text/plain"
         )
         self.image = create_test_image()
-        self.post = Post.objects.create(
-            title="기존 게시글",
-            content="본문",
-            category=self.category,
-            author=self.admin
-        )
+        self.post = Post.objects.create(title="기존 게시글", content="본문", category=self.category, author=self.admin)
 
     def test_admin_post_list(self):
         url = reverse("admin-posts-list")
