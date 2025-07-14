@@ -98,7 +98,6 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
         if not is_phone_verified(normalized_phone):
             raise ValidationError("휴대폰 인증이 완료되지 않았습니다.")
 
-
         profile_image_file = validated_data.pop("profile_image_file", None)
         if profile_image_file:
             s3_uploader = S3Uploader()
