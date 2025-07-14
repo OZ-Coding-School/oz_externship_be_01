@@ -40,47 +40,6 @@ class TestQuestionCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# 목록 조회
-class TestQuestionListView(APIView):
-    permission_classes = [AllowAny]
-
-    @extend_schema(
-        tags=["[Admin/Mock] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
-        description="Mock - 수강생이 속한 기수에 배포된 쪽지시험 목록을 조회합니다.",
-        responses={
-            200: OpenApiResponse(response=TestListItemSerializer(many=True), description="시험 목록 조회 성공"),
-            400: OpenApiResponse(description="기수 정보 누락 또는 요청 오류"),
-        },
-    )
-    def get(self, request: Request) -> Response:
-        status_param = request.query_params.get("status")
-
-        mock_data = [
-            {
-                "test_id": 12,
-                "test_title": "HTML/CSS 기초",
-                "thumbnail_img_url": "https://example.com/image.png",
-                "subject_title": "웹프로그래밍",
-                "question_count": 10,
-                "total_score": 100,
-                "submission_status": "submitted",
-                "score": 85,
-                "correct_count": 8,
-            },
-            {
-                "test_id": 13,
-                "test_title": "JavaScript 문법 테스트",
-                "thumbnail_img_url": "https://example.com/image2.png",
-                "subject_title": "프론트엔드",
-                "question_count": 12,
-                "total_score": 120,
-                "submission_status": "not_submitted",
-            },
-        ]
-
-        return Response(mock_data, status=status.HTTP_200_OK)
-
-
 # 문제 수정
 class TestQuestionUpdateDeleteView(APIView):
     # permission_classes = [AllowAny]

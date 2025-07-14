@@ -5,6 +5,10 @@ def get_questions_snapshot_from_submission(submission):
     return submission.deployment.questions_snapshot_json
 
 
+def get_questions_snapshot_from_deployment(deployment):
+    return deployment.questions_snapshot_json
+
+
 def validate_answers_json_format(answers_json, snapshot=None):
     if not isinstance(answers_json, dict):
         raise ValidationError("answers_json은 딕셔너리 형식이어야 합니다.")

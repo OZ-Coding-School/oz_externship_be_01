@@ -28,7 +28,7 @@ from apps.users.models import PermissionsStudent
 
 # 수강생 쪽지 시험 응시
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestStartSerializer,
 )
 class TestStartView(APIView):
@@ -66,7 +66,7 @@ class TestStartView(APIView):
 
 # 수강생 쪽지 시험 제출
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestSubmitSerializer,
     examples=[
         OpenApiExample(
@@ -126,7 +126,7 @@ class TestSubmissionSubmitView(APIView):
 
 
 # 수강생 쪽지 시험 결과 조회
-@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
+@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"])
 class TestSubmissionResultView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestResultSerializer

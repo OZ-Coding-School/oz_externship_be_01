@@ -2,12 +2,6 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.tests.core.utils.grading import (
-    calculate_correct_count,
-    calculate_total_score,
-    get_questions_snapshot_from_submission,
-    validate_answers_json_format,
-)
 from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
@@ -108,25 +102,6 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
         if delta.total_seconds() < 0:
             raise ValidationError("시험 종료 시간이 시작 시간보다 빠릅니다.")
         return int(delta.total_seconds() // 60)
-
-    # 총 점수
-    # def get_total_score(self, obj):
-    #     snapshot = get_questions_snapshot_from_submission(obj)
-    #     validate_answers_json_format(obj.answers_json, snapshot)
-    #     return calculate_total_score(obj.answers_json, snapshot)
-
-    # 맞은 문제 수
-    # def get_correct_count(self, obj):
-    #     snapshot = get_questions_snapshot_from_submission(obj)
-    #     validate_answers_json_format(obj.answers_json, snapshot)
-    #     return calculate_correct_count(obj.answers_json, snapshot)
-
-    # 총 문제 수
-    # def get_total_questions(self, obj):
-    #     snapshot = get_questions_snapshot_from_submission(obj)
-    #     if not isinstance(snapshot, list):
-    #         raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
-    #     return len(snapshot)
 
 
 # 수강생 쪽지 시험 제출
