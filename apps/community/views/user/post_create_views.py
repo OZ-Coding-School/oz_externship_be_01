@@ -4,7 +4,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,7 +17,7 @@ User = get_user_model()
 
 
 class PostCreateAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
@@ -26,8 +26,8 @@ class PostCreateAPIView(APIView):
             201: OpenApiResponse(description="게시글 등록되었습니다."),
             400: OpenApiResponse(description="입력값 유효하지 않습니다."),
         },
-        tags=["community - 게시글"],
-        summary="게시글 등록",
+        tags=["[User] Community - Posts ( 게시글 )"],
+        summary="게시글 등록 (기능구현 완료)",
         description="게시글 제목, 내용, 카테고리, 이미지를 생성한 예시입니다.",
     )
     def post(self, request: Request) -> Response:

@@ -3,7 +3,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,13 +13,13 @@ from apps.community.serializers.post_list_serializers import PostListViewSeriali
 
 
 class PostListAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
-        summary="게시글 목록 조회 '",
+        summary="게시글 목록 조회 (기능구현 완료)",
         description="게시글 목록을 정렬 조건과 함께 페이징하여 조회합니다.",
-        tags=["community - 게시글"],
+        tags=["[User] Community - Posts ( 게시글 )"],
         parameters=[
             OpenApiParameter(
                 name="ordering", description="정렬 기준 (recent, old, views, likes)", required=False, type=str

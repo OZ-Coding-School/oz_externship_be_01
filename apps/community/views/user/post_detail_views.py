@@ -18,8 +18,8 @@ class UserPostDetailAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
-        summary="게시글 상세 조회",
-        tags=["[User] Community - Posts"],
+        summary="게시글 상세 조회 (기능구현 완료)",
+        tags=["[User] Community - Posts ( 게시글 )"],
         responses=PostDetailSerializer,
         examples=[
             OpenApiExample(
