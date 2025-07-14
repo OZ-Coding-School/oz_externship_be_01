@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -6,11 +7,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.tests.models import TestQuestion
+from apps.tests.models import Test, TestQuestion
 from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_question_serializers import (
     TestListItemSerializer,
+    TestQuestionBulkCreateSerializer,
     TestQuestionCreateSerializer,
+    TestQuestionSimpleSerializer,
     TestQuestionUpdateSerializer,
 )
 from apps.users.models import User
@@ -129,3 +132,26 @@ class TestQuestionUpdateDeleteView(APIView):
 
         question.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TestQuestionBulkUpdateAPIView(APIView):
+    permission_classes = [IsAdminOrStaff]
+
+    @extend_schema(
+        tags=["[Admin] Test - Question (쪽지시험문제 생성/조회/수정/삭제)"],
+        description="어드민이 쪽지시험 문제를 한번에 수정 할 수 있습니다.",
+        request=TestQuestionBulkCreateSerializer(),
+        responses={
+            201: OpenApiResponse(response=TestQuestionSimpleSerializer(many=True), description="문제 생성 성공"),
+            400: OpenApiResponse(description="요청 오류"),
+        },
+    )
+    def post(self, request):
+        serializer = TestQuestionBulkCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        created_questions = serializer.create(serializer.validated_data)  # → bulk_create() 리턴값
+
+        response_data = TestQuestionSimpleSerializer(created_questions, many=True).data
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
