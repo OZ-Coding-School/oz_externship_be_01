@@ -1,52 +1,57 @@
 from urllib.parse import parse_qs
 
 import jwt
+from asgiref.sync import sync_to_async
 from channels.middleware import BaseMiddleware  # type: ignore
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+
+
+@sync_to_async
+def get_user(user_id):
+    try:
+        return get_user_model().objects.get(id=user_id)
+    except get_user_model().DoesNotExist:
+        return None
 
 
 class JWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
         query_string = scope.get("query_string", b"").decode()
         token_list = parse_qs(query_string).get("token")
+
         if not token_list:
-            await self.close_with_code(send, 4001, "인증 토큰 누락")
-            return
+            # 비로그인 사용자: 익명 사용자로 처리
+            scope["user"] = AnonymousUser()
+            return await super().__call__(scope, receive, send)
+
         token = token_list[0]
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            # 토큰 타입 체크 (access 토큰만 허용)
+
             if payload.get("type") != "access":
-                await self.close_with_code(send, 4004, "잘못된 토큰 타입")
+                await self.close_connection(send, 4004, "잘못된 토큰 타입")
                 return
 
-            # 유저 조회 부분 주석 처리 (임시로 무조건 인증 성공 처리)
-            # user_id = payload.get("user_id")
-            # user = await get_user(user_id)
-            # if user is None:
-            #     await self.close_with_code(send, 4003, "유효하지 않은 사용자")
-            #     return
-            # scope["user"] = user
+            user_id = payload.get("user_id")
+            user = await get_user(user_id)
+            if user is None:
+                await self.close_connection(send, 4003, "사용자를 찾을 수 없음")
+                return
 
-            # 대신 scope에 임의의 익명 유저 객체 넣기 (optional)
-            scope["user"] = "anonymous"  # 혹은 그냥 payload 넣어도 됨
+            scope["user"] = user
 
         except ExpiredSignatureError:
-            await self.close_with_code(send, 4002, "토큰 만료")
+            await self.close_connection(send, 4001, "토큰이 만료되었습니다")
             return
         except InvalidTokenError:
-            await self.close_with_code(send, 4004, "유효하지 않은 토큰")
+            await self.close_connection(send, 4002, "유효하지 않은 토큰입니다")
             return
 
         return await super().__call__(scope, receive, send)
 
-    async def close_with_code(self, send, code, reason):
-        await send(
-            {
-                "type": "websocket.close",
-                "code": code,
-                "reason": reason,
-            }
-        )
+    async def close_connection(self, send, code, message):
+        await send({"type": "websocket.close", "code": code, "text": message})
