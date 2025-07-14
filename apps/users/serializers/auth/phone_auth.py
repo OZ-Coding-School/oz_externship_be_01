@@ -18,9 +18,9 @@ class VerifyPhoneCodeSerializer(serializers.Serializer):
     def validate(self, attrs):
         phone = attrs.get("phone")
         code = attrs.get("code")
-        phone = normalize_phone_number(phone)
-        result = check_verification_code(phone_number=phone, code=code)
-        if not result:
-            raise serializers.ValidationError("invalid verification code.")
-        mark_phone_verified(attrs.get("phone"))
+        normalized_phone = normalize_phone_number(phone)
+        status = check_verification_code(phone_number=normalized_phone, code=code)
+        if status != "approved":
+            raise serializers.ValidationError("인증번호가 올바르지 않습니다.")
+        mark_phone_verified(phone)
         return attrs
