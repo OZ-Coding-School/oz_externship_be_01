@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 from rest_framework.exceptions import ValidationError
 
@@ -37,8 +37,8 @@ class QuestionValidator:
 
     def validate_short_answer_question(self, data: dict[str, Any]) -> dict[str, Any]:
         answer = data.get("answer")
-        if not answer:
-            raise ValidationError("주관식 단답형은 answer(정답)이 필요합니다.")
+        if not isinstance(answer, list) or len(answer) != 1:
+            raise ValidationError("주관식 단답형 문제는 정답을 하나만 담은 문자열 리스트 형식이어야 합니다.")
 
         data["options_json"] = None
         data["prompt"] = None
@@ -65,25 +65,37 @@ class QuestionValidator:
         return data
 
     def validate_fill_in_blank_question(self, data: dict[str, Any]) -> dict[str, Any]:
-        if not data.get("prompt"):
-            raise ValidationError("빈칸 채우기 문제는 prompt(지문)이 필요합니다.")
-        if not data.get("blank_count") or data["blank_count"] < 1:
-            raise ValidationError("빈칸 개수는 1개 이상이어야 합니다.")
-        if not data.get("answer"):
-            raise ValidationError("빈칸 채우기 문제는 answer(정답)이 필요합니다.")
-        data["options_json"] = None
+        prompt = data.get("prompt")
+        blank_count = data.get("blank_count")
+        answer = data.get("answer")
 
+        if not prompt:
+            raise ValidationError("빈칸 채우기 문제는 prompt(지문)이 필요합니다.")
+
+        if blank_count is None or not isinstance(blank_count, int) or blank_count < 1:
+            raise ValidationError("빈칸 개수(blank_count)는 1 이상 정수여야 합니다.")
+
+        if not isinstance(answer, list) or len(answer) != blank_count:
+            raise ValidationError("answer는 blank_count 개수와 같은 문자열 리스트여야 합니다.")
+
+        if not all(isinstance(a, str) for a in answer):
+            raise ValidationError("answer는 문자열로 이루어진 리스트여야 합니다.")
+
+        data["options_json"] = None
         return data
 
     def validate_ox_question(self, data: dict[str, Any]) -> dict[str, Any]:
         answer_list = data.get("answer")
-        # answer는 반드시 문자열 형태로 하나의 값만 포함해야 함
-        if not isinstance(answer_list, str):
-            raise ValidationError("OX 퀴즈는 정답을 하나만 문자열로 입력해야 합니다.")
-        # 정답 값 검증
+
+        # 리스트 형식, 길이 1인지 체크
+        if not isinstance(answer_list, list) or len(answer_list) != 1:
+            raise ValidationError("OX 퀴즈는 정답을 하나만 담은 문자열 리스트 형식이어야 합니다.")
+
+        # 정답 값이 'O' 또는 'X'인지 (대소문자 허용)
         answer_value = answer_list[0]
-        if answer_value not in ["O", "X", "o", "x"]:
+        if answer_value.upper() not in ["O", "X"]:
             raise ValidationError("OX 퀴즈 정답은 'O' 또는 'X' 형식이어야 합니다.")
+
         # 필요 없는 필드 초기화
         data["options_json"] = None
         data["prompt"] = None
@@ -119,27 +131,20 @@ class QuestionValidator:
     def validate_question_by_type(self, data: dict[str, Any]) -> dict[str, Any]:
         q_type = data.get("type")
 
-        if q_type == "fill_in_blank":
-            return self.validate_fill_in_blank_question(data=data)
+        if not isinstance(q_type, str):
+            raise ValidationError("문제 유형(type)은 문자열이어야 합니다.")
 
-        # 다지선다형 문제
-        elif q_type == "multiple_choice_single":  # 단일
-            return self.validate_multiple_choice_single_question(data=data)
+        type_to_validator: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+            "fill_in_blank": self.validate_fill_in_blank_question,
+            "multiple_choice_single": self.validate_multiple_choice_single_question,
+            "multiple_choice_multi": self.validate_multiple_choice_multi_question,
+            "short_answer": self.validate_short_answer_question,
+            "ordering": self.validate_ordering_question,
+            "ox": self.validate_ox_question,
+        }
 
-        elif q_type == "multiple_choice_multi":  # 다중
-            return self.validate_multiple_choice_multi_question(data=data)
+        validator = type_to_validator.get(q_type)
+        if validator is None:
+            raise ValidationError(f"지원하지 않는 문제 유형입니다: {q_type}")
 
-        # 주관식 단답형 문제
-        elif q_type == "short_answer":
-            return self.validate_short_answer_question(data=data)
-
-        # 순서 정렬 문제
-        elif q_type == "ordering":
-            return self.validate_ordering_question(data=data)
-
-        elif q_type == "ox":
-            print(f"OX 문제 처리 필요, q_type 타입: {type(q_type)}")
-            return self.validate_ox_question(data=data)
-
-        else:
-            raise ValidationError(f"문제 유형(type)은 {TestQuestion.QuestionType.choices} 중에서 선택해야합니다.")
+        return validator(data)

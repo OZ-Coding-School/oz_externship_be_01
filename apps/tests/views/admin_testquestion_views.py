@@ -13,6 +13,7 @@ from apps.tests.serializers.test_question_serializers import (
     TestListItemSerializer,
     TestQuestionBulkCreateSerializer,
     TestQuestionCreateSerializer,
+    TestQuestionSimpleSerializer,
     TestQuestionUpdateSerializer,
 )
 from apps.users.models import User
@@ -141,7 +142,7 @@ class TestQuestionBulkUpdateAPIView(APIView):
         description="어드민이 쪽지시험 문제를 한번에 수정 할 수 있습니다.",
         request=TestQuestionBulkCreateSerializer(),
         responses={
-            201: OpenApiResponse(description="문제 생성 성공"),
+            201: OpenApiResponse(response=TestQuestionSimpleSerializer(many=True), description="문제 생성 성공"),
             400: OpenApiResponse(description="요청 오류"),
         },
     )
@@ -149,4 +150,8 @@ class TestQuestionBulkUpdateAPIView(APIView):
         serializer = TestQuestionBulkCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Successfully created."}, status=status.HTTP_201_CREATED)
+        created_questions = serializer.create(serializer.validated_data)  # → bulk_create() 리턴값
+
+        response_data = TestQuestionSimpleSerializer(created_questions, many=True).data
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
