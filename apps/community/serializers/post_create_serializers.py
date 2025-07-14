@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from apps.community.models import Post, PostAttachment, PostCategory, PostImage
+from apps.community.serializers.fields import FileListField
 from apps.community.serializers.post_author_serializers import AuthorSerializer
 from core.utils.s3_file_upload import S3Uploader
 from core.utils.validators import (
@@ -16,11 +17,15 @@ from core.utils.validators import (
 class PostCreateSerializer(serializers.ModelSerializer):
     category_id = serializers.IntegerField()
     author = AuthorSerializer(read_only=True)
-    attachments = serializers.ListField(
-        child=serializers.FileField(), max_length=5, write_only=True, required=False, default=list
+    attachments = FileListField(
+        child=serializers.FileField(),
+        required=False,
+        write_only=True,
     )
-    images = serializers.ListField(
-        child=serializers.ImageField(), max_length=5, write_only=True, required=False, default=list
+    images = FileListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
     )
 
     class Meta:
@@ -73,6 +78,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("images", [])
         validated_data["author"] = self.context["request"].user
         validated_data["category"] = get_object_or_404(PostCategory, id=validated_data.pop("category_id"))
+
         uploader = S3Uploader()
 
         # 첨부파일 업로드
