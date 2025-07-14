@@ -4,7 +4,7 @@ from typing import List
 from django.conf import settings
 from rest_framework import serializers
 
-from apps.qna.models import Answer, AnswerImage
+from apps.qna.models import Answer, AnswerImage, QuestionImage
 
 
 class ImageURLSerializer(serializers.ModelSerializer[AnswerImage]):
@@ -73,3 +73,13 @@ class AnswerImageMixin(ImageURLExtractFromMarkdown):
         """AnswerImage 객체들을 생성하여 DB에 저장"""
         for img_url in image_urls:
             AnswerImage.objects.create(answer=answer, img_url=img_url)
+
+
+class QuestionImageMixin(ImageURLExtractFromMarkdown):
+    """질문 이미지 URL 저장을 위한 믹스인 클래스"""
+
+    @staticmethod
+    def _save_question_images(question, image_urls: List[str]) -> None:
+        """QuestionImage 객체들을 생성하여 DB에 저장"""
+        for img_url in image_urls:
+            QuestionImage.objects.create(question=question, img_url=img_url)
