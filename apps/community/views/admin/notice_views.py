@@ -22,7 +22,7 @@ class NoticeCreateAPIView(APIView):
         operation_id="admin_notice_create",
         request=NoticeCreateSerializer,
         responses=NoticeResponseSerializer,
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 공지사항 등록(기능 구현)",
     )
     def post(self, request: Request) -> Response:

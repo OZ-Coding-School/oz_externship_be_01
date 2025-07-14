@@ -49,7 +49,7 @@ class AdminPostListView(APIView):
                 description="정렬: 최신순( 기본값 ) | 오래된 순  | 조회수 많은 순 | 좋아요가 많은 순 ",
             ),
         ],
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 게시글 목록 조회 (기능 구현)",
     )
     def get(self, request: Request) -> Response:
@@ -119,7 +119,7 @@ class AdminPostDetailView(APIView):
         operation_id="admin_post_detail",
         request=None,
         responses=PostDetailSerializer,
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 게시글 상세 조회(기능 구현)",
     )
     def get(self, request: Request, post_id: int) -> Response:
@@ -146,7 +146,7 @@ class AdminPostUpdateView(APIView):
         operation_id="admin_post_update",
         request=PostUpdateSerializer,
         responses=PostDetailSerializer,
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 게시글 수정(기능 구현)",
     )
     def patch(self, request: Request, post_id: int) -> Response:
@@ -170,7 +170,7 @@ class AdminPostDeleteView(APIView):
         operation_id="admin_post_delete",
         request=None,
         responses={"204": None},
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 게시글 삭제(기능 구현)",
     )
     def delete(self, request, post_id: int) -> Response:
@@ -201,7 +201,7 @@ class AdminPostVisibilityToggleView(APIView):
                 description="게시글 노출 상태가 정상적으로 변경되었습니다.", response=PostDetailSerializer
             )
         },
-        tags=["[Admin] Community - Posts(게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록"],
+        tags=["[Admin] Community - Posts (게시글 목록조회, 상세조회, 수정, 삭제, 노출 on/off, 공지사항 등록)"],
         summary="관리자 게시글 노출 on/off(기능 구현)",
     )
     def patch(self, request, post_id: int) -> Response:
