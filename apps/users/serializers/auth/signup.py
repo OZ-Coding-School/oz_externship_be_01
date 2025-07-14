@@ -3,7 +3,6 @@ from typing import Any
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.core.files.storage import default_storage
 from django_redis import get_redis_connection
 from rest_framework import serializers
 
@@ -13,6 +12,17 @@ from apps.users.utils.redis_utils import (
     is_signup_email_verified,
 )
 from core.utils.s3_file_upload import S3Uploader
+
+
+def normalize_phone_number(phone: str) -> str:
+    # 전화 번호 사이 - 빼버리기.
+    return phone.replace("-", "").strip()
+
+
+def is_valid_phone_format(phone: str) -> bool:
+    # 010 으로 시작 하는지, 숫자 11자리 맞는지 검사.
+    phone = normalize_phone_number(phone)
+    return phone.startswith("010") and len(phone) == 11 and phone.isdigit()
 
 
 class SignUpSerializer(serializers.ModelSerializer[Any]):
@@ -53,11 +63,18 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
         return value
 
     def validate_phone_number(self, value):  # 중복 + 인증 여부
-        if User.objects.filter(phone_number=value).exists():
+        normalized = normalize_phone_number(value)
+
+        if not is_valid_phone_format(value):
+            raise serializers.ValidationError("휴대폰 번호 형식이 올바르지 않습니다. (예: 01012345678)")
+
+        if User.objects.filter(phone_number=normalized).exists():
             raise serializers.ValidationError("이미 존재하는 휴대폰 번호입니다.")
-        if not is_phone_verified(value):
+
+        if not is_phone_verified(normalized):
             raise serializers.ValidationError("휴대폰 인증이 완료되지 않았습니다.")
-        return value
+
+        return normalized
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         pw, pw2 = attrs.get("password"), attrs.pop("password_confirm", None)
@@ -70,11 +87,25 @@ class SignUpSerializer(serializers.ModelSerializer[Any]):
         return attrs
 
     def create(self, validated_data):
+
+        email = validated_data.get("email")
+        phone = validated_data.get("phone_number")
+
+        if not is_signup_email_verified(email):
+            raise ValidationError("이메일 인증이 완료되지 않았습니다.")
+
+        normalized_phone = normalize_phone_number(phone)
+        if not is_phone_verified(normalized_phone):
+            raise ValidationError("휴대폰 인증이 완료되지 않았습니다.")
+
+
         profile_image_file = validated_data.pop("profile_image_file", None)
         if profile_image_file:
             s3_uploader = S3Uploader()
             file_url = s3_uploader.upload(file=profile_image_file, directory="profile_images")
             validated_data["profile_image_url"] = file_url
+
+        validated_data["phone_number"] = normalize_phone_number(validated_data["phone_number"])
 
         password = validated_data.pop("password")
         user = User(**validated_data)
