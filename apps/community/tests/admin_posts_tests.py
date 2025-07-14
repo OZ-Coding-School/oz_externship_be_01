@@ -20,7 +20,7 @@ def create_test_image():
     return SimpleUploadedFile("test.jpg", buffer.read(), content_type="image/jpeg")
 
 
-class AdminPostAPITest(TestCase):
+class AdminPostAPITestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.admin = User.objects.create_user(
