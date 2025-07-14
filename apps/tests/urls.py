@@ -52,14 +52,14 @@ urlpatterns = [
         name="submission_submit",
     ),
     path(
-        "test/deployments",
-        TestDeploymentListView.as_view(),
-        name="deployment_list",
-    ),
-    path(
         "test/submissions/<int:submission_id>/result/",
         TestSubmissionResultView.as_view(),
         name="submission_result",
+    ),
+    path(
+        "test/deployments",
+        TestDeploymentListView.as_view(),
+        name="deployment_list",
     ),
     # 참가 코드 검증
     path("tests/<int:test_deployment_id>/validate/", UserCodeValidationView.as_view(), name="user-code-validate"),
@@ -80,6 +80,9 @@ urlpatterns = [
         "admin/test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"
     ),
     path(
+        "admin/tests-questions/bulk-update/", TestQuestionBulkUpdateAPIView.as_view(), name="test-question-bulk-update"
+    ),
+    path(
         "admin/test-submissions/",
         AdminTestSubmissionsView.as_view(),
         name="admin_submission_List",
@@ -94,30 +97,6 @@ urlpatterns = [
         AdminTestSubmissionDeleteView.as_view(),
         name="admin_submission_delete",
     ),
-    path("admin/tests/<int:test_id>/delete/", AdminTestDeleteAPIView.as_view(), name="admin-test-delete"),
-    path("admin/tests/<int:test_id>/update/", AdminTestUpdateAPIView.as_view(), name="admin-test-update"),
-    path("admin/tests/<int:test_id>/", AdminTestDetailAPIView.as_view(), name="test-detail"),
-    path("admin/tests/", AdminTestListView.as_view(), name="admin-test-list"),
-    path("admin/tests/create/", AdminTestCreateAPIView.as_view(), name="test-create"),
-    path("admin/test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
-    path(
-        "admin/test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"
-    ),
-    path(
-        "admin/tests-questions/bulk-update/", TestQuestionBulkUpdateAPIView.as_view(), name="test-question-bulk-update"
-    ),
-    path("admin/test-list/", TestQuestionListView.as_view(), name="test-question-list"),
-    path("test-questions/", TestQuestionCreateView.as_view(), name="test-question-create"),
-    path("test-questions/<int:question_id>/", TestQuestionUpdateDeleteView.as_view(), name="test-question-detail"),
-    path("tests/", TestQuestionListView.as_view(), name="test-question-list"),
-    path(
-        "tests/<int:test_deployment_id>/validate-status/",
-        UserTestDeploymentStatusView.as_view(),
-        name="user-test-deployment-status",
-    ),
-    path("validate-status/<int:test_deployment_id>/", TestDeploymentStatusView.as_view(), name="validate-test-status"),
-    # 참가 코드 검증 (user용)
-    path("tests/<int:test_deployment_id>/validate/", UserCodeValidationView.as_view(), name="user-code-validate"),
     # 배포 상태 변경 (Activated ↔ Deactivated)
     path(
         "admin/test-deployments/<int:deployment_id>/status/",
