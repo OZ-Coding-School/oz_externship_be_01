@@ -146,8 +146,8 @@ class AdminTestDetailAPIView(APIView):
     summary="쪽지시험 목록조회 API",
     description=(
         "관리자/스태프 권한으로 등록된 쪽지시험 목록을 조회합니다.\n\n"
-        "- generation_id(과정별 필터링), search(시험명/과목명 검색), ordering(정렬: recent/alphabetical) 지원\n"
-        "- 페이지네이션 적용"
+        "- course_id(과정별 필터링), search(시험명/과목명 검색), ordering(정렬: 생성일/제목 기준 오름차순·내림차순) 지원\n"
+        "- 페이지네이션 적용 (page, page_size)"
     ),
     parameters=[
         OpenApiParameter(
@@ -166,8 +166,14 @@ class AdminTestDetailAPIView(APIView):
             name="ordering",
             type=str,
             location=OpenApiParameter.QUERY,
-            enum=["recent", "alphabetical"],
-            description="정렬 옵션: recent(최신순, 기본), alphabetical(가나다순)",
+            enum=["created_at", "-created_at", "title", "-title"],
+            description=(
+                "정렬 옵션:\n"
+                "- created_at: 생성일 오름차순 (오래된순)\n"
+                "- -created_at: 생성일 내림차순 (최신순, 기본)\n"
+                "- title: 제목 오름차순 (가나다순)\n"
+                "- -title: 제목 내림차순 (역가나다순)"
+            ),
         ),
         OpenApiParameter(
             name="page",
@@ -213,12 +219,14 @@ class AdminTestListView(APIView):
                 | Q(subject__title__iexact=search)
             )
 
-        # 정렬: 최신순(기본), 가나다순
-        ordering = request.query_params.get("ordering", "recent")
-        if ordering == "alphabetical":
-            queryset = queryset.order_by("title")
-        else:  # 기본 최신순
-            queryset = queryset.order_by("-created_at")
+        ordering_param = request.query_params.get("ordering", "-created_at")
+
+        # 허용된 필드만 필터링 / 가나다, 최신순, 오름차순, 내림차순 적용
+        allowed_orderings = ["created_at", "-created_at", "title", "-title"]
+        if ordering_param in allowed_orderings:
+            queryset = queryset.order_by(ordering_param)
+        else:
+            queryset = queryset.order_by("-created_at")  # 기본값
 
         # 페이지네이션
         paginator = AdminTestListPagination()
