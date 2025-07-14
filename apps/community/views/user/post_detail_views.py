@@ -61,6 +61,9 @@ class UserPostDetailAPIView(APIView):
         except Post.DoesNotExist:
             return Response({"detail": "게시글을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
+        if not post.is_visible:
+            return Response({"detail": "블라인드 처리된 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
+
         is_liked = False
         if request.user.is_authenticated:
             is_liked = PostLike.objects.filter(post=post, user=request.user, is_liked=True).exists()
