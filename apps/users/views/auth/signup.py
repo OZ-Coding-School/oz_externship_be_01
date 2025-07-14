@@ -6,14 +6,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
 from apps.users.serializers.auth.signup import (
     SignupNicknameCheckSerializer,
     SignUpSerializer,
 )
 from apps.users.utils.nickname_validators import is_nickname_duplicated
-from rest_framework.parsers import MultiPartParser, FormParser
-from apps.users.serializers.auth.signup import SignUpSerializer
 
 
 class SignUpAPIView(APIView):
