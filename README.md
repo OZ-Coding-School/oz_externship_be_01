@@ -51,35 +51,6 @@
 
 BE (Backend)
 
-언어: Python
-
-프레임워크: Django
-
-데이터베이스: PostgreSQL (PgAdmin4는 PostgreSQL을 관리하는 도구)
-
-ORM: Django ORM (Django의 내장 ORM)
-
-보안: JWT (토큰 기반 인증/인가)
-
-클라우드: AWS (Amazon Web Services)
-
-- 애플리케이션 배포: AWS EC2
-    
-- 파일 저장: AWS S3
-    
-- 데이터베이스: AWS RDS (PostgreSQL)
-    
-- DNS 관리: AWS Route 53
-
-API 문서화: Django REST Swagger / drf-spectacular (Swagger UI를 통해 API 명세 제공)
-
-테스트: Pytest, unittest (단위 및 통합 테스트)
-
-빌드 도구: Pip, Poetry (Python 패키지 관리 및 빌드)
-
-유틸리티: Django Crispy Forms, Django Debug Toolbar 등 (Django 생태계 유틸리티)
-
-CI/CD: GitHub Actions (예시)
 
 ## 팀 동료
 ### BE (Backend)
@@ -107,61 +78,7 @@ CI/CD: GitHub Actions (예시)
   </tr>
 </table>  
 
-## 📑 프로젝트 규칙 
-
-### Branch Strategy: 브랜치 관리 전략
-
-우리 프로젝트는 다음 브랜치 전략을 따릅니다.
-
-main 브랜치는 프로덕션(배포) 가능한 **안정적인 코드를 관리**합니다.
-
-dev 브랜치는 개발 진행 중인 **최신 코드를 관리**합니다.
-
-**main 브랜치와 dev 브랜치로의 직접 push는 엄격히 제한**됩니다.
-
-모든 기능 개발 및 버그 수정은 별도의 **기능/수정 브랜치(feature/fix-branches)**에서 진행합니다.
-
-**예시**: feature/login-page, fix/bug-on-quiz
-
-새로운 브랜치는 주로 **dev 브랜치에서 파생**합니다.
-
-작업이 완료되면 **dev 브랜치로 **Pull Request (PR)**를 생성하여 병합**합니다.
-
-PR 생성 전에 **최소 2인 이상의 코드 리뷰 승인이 필수**입니다.
-
-**Git Convention**: 커밋 메시지 접두사
-### 커밋 메시지는 변경 사항을 명확하게 나타내도록 다음 접두사를 사용합니다. 메시지 내용 뒤에는 관련 이슈 번호(#이슈 번호)를 명시하여 이슈 트래킹 시스템과 연결합니다.
-
-## 접두사 설명
-
-### Feat 새로운 기능 구현
-
-### Add 에셋 파일, 리소스 등 추가
-  
-### Fix 버그 수정
-
-### Docs 문서 추가 및 수정 (README, 주석 등)
-
-### Style 코드 포맷팅, 스타일 변경 (동작 변경 없음)
-
-### Refactor 코드 구조 개선 (동작 변경 없음)
-
-### Test 테스트 코드 추가 또는 수정
-
-### Deploy 배포 관련 작업
-
-### Conf 빌드, 환경 설정 변경
-
-### Chore 기타 작업 (위 분류에 해당하지 않는 작업)
-
-## Pull Request (PR)
-**Title**: [Feat] 홈 페이지 구현과 같이 [접두사] 작업 내용 형식으로 작성합니다.
-
-**PR Type**: 위 Git Convention의 접두사 중 하나를 선택합니다.
-
-**Description**: 해당 PR에서 수행한 구체적인 작업 내용을 상세히 작성합니다. 필요하다면 관련 스크린샷이나 GIF 이미지를 첨부하면 이해도를 높일 수 있습니다. 👍
-
-**Discussion**: PR 승인 전 논의가 필요한 사항이나 질문을 작성합니다.
+## 📑 프로젝트 규칙
 
 ## Code Convention
 BE (백엔드)
