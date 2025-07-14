@@ -1,10 +1,15 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
+
 from apps.community.models import (
-    Post, PostCategory, PostAttachment, PostImage, PostLike
+    Post,
+    PostAttachment,
+    PostCategory,
+    PostImage,
+    PostLike,
 )
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -12,11 +17,7 @@ User = get_user_model()
 class PostExtraTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email='user1@test.com',
-            name='정승원',
-            nickname='seoungwon',
-            phone_number='01011112222',
-            password='testpass'
+            email="user1@test.com", name="정승원", nickname="seoungwon", phone_number="01011112222", password="testpass"
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
@@ -45,7 +46,7 @@ class PostExtraTestCase(TestCase):
         PostAttachment.objects.create(post=self.post, file_url="http://test.com/file1.pdf", file_name="file1.pdf")
         PostImage.objects.create(post=self.post, image_url="http://test.com/img.jpg", image_name="img.jpg")
 
-        url = reverse('post-detail', kwargs={"post_id": self.post.id})
+        url = reverse("post-detail", kwargs={"post_id": self.post.id})
         response = self.client.get(url)
         data = response.data
 
