@@ -101,6 +101,7 @@ class CommentCreateAPIView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # post_id = request.data.get("post_id")
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
@@ -109,11 +110,11 @@ class CommentCreateAPIView(APIView):
         comment = serializer.save(post=post, author=request.user)
 
         content = serializer.validated_data.get("content", "")
-        tag_usernames = re.findall(r"@(\w+)", content)
+        tag_nicknames = re.findall(r"@(\w+)", content)
 
-        for username in tag_usernames:
+        for nickname in tag_nicknames:
             try:
-                tagged_user = User.objects.get(username=username)
+                tagged_user = User.objects.get(nickname=nickname)
                 CommentTags.objects.create(comment=comment, tagged_user=tagged_user)
             except User.DoesNotExist:
                 continue
