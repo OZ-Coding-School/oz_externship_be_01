@@ -16,7 +16,7 @@
 ---
 ## :link: 배포 링크
 
-> ### [⛪ 배포 링크](http://13.124.239.91/api/schema/swagger-ui/)
+> ### [⛪ 배포 링크](https://api.ozcoding.site/api/schema/swagger-ui/)
 
 ---
 
