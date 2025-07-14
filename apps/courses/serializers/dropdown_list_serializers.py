@@ -43,8 +43,3 @@ class GenerationDropdownSerializer(serializers.ModelSerializer[Generation]):
 
     def get_name(self, obj: Generation) -> str:
         return f"{obj.number}기"
-
-    def to_representation(self, instance: Generation) -> dict[str, Any]:
-        representation = super().to_representation(instance)
-        representation.pop("number", None)
-        return representation
