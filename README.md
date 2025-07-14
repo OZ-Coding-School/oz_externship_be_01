@@ -61,6 +61,95 @@
 
 ## 질의응답 기능 및 관리 어드민 (3팀)
 
+## 📖 프로젝트 소개
+
+**OZ CodingSchool LMS**의 질의응답 시스템은 수강생, 조교, 운영진, 관리자 간의 학습 커뮤니케이션을 지원합니다.  
+3팀은 질문/답변 기능부터 카테고리 및 댓글 시스템, 관리자 전용 어드민 기능, AI 챗봇 기능까지 전반적인 **Q&A 관리 시스템**을 개발하였습니다.
+
+---
+
+## 🔗 배포 링크
+
+> ### [📌 Swagger 문서 바로가기](https://api.ozcoding.site/api/schema/swagger-ui/)
+
+---
+
+## 🖥️ 서비스 소개
+
+> **질문/답변 API**: 수강생은 질문을 등록하고, 수강생·조교·운영진은 답변을 작성할 수 있습니다. 질문자는 답변을 채택할 수 있으며, 댓글 기능도 지원합니다.  
+> **카테고리 관리 API**: 관리자 및 스태프는 대·중·소분류의 Q&A 카테고리를 등록, 조회, 삭제할 수 있습니다.  
+> **Q&A 어드민 API**: 관리자 및 스태프는 질문/답변을 조회 및 삭제하고, 상세 내역을 확인할 수 있습니다.  
+> **AI 챗봇 API**: 사용자는 질문 상세 페이지에서 AI에게 답변을 요청하거나, 대화를 이어갈 수 있습니다.  
+
+---
+
+## 👨‍👩‍👧‍👦 팀 동료
+
+| <a href="https://github.com/choismjames23"><img src="https://avatars.githubusercontent.com/u/200033221?v=4" width=100px/><br/><sub><b>@choismjames23</b></sub></a> | <a href="https://github.com/leejiyun1"><img src="https://avatars.githubusercontent.com/u/201066873?v=4" width=100px/><br/><sub><b>@leejiyun1</b></sub></a> | <a href="https://github.com/hoonii111"><img src="https://avatars.githubusercontent.com/u/201067127?v=4" width=100px/><br/><sub><b>@hoonii111</b></sub></a> | <a href="https://github.com/aidoneus9"><img src="https://avatars.githubusercontent.com/u/155718337?v=4" width=100px/><br/><sub><b>@aidoneus9</b></sub></a> |
+|:------------------------------------------------------------:|:-------------------------------------------------------------:|:-------------------------------------------------------------:|:-------------------------------------------------------------:|
+| 최승민 | 이지윤 | 정명훈 | 이동경 |
+
+---
+
+## 🧰 사용 스택
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <br>
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Amazon_AWS_S3-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white" />
+  <img src="https://img.shields.io/badge/Gemini-000000?style=for-the-badge&logo=gemini&logoColor=white" />
+</div>
+
+
+## 📑 프로젝트 규칙
+
+### 📌 Branch 전략
+- `main`, `develop` 브랜치에 직접 push 금지
+- `develop` 브랜치로부터 `feat/qna_각자맡은기능` 브랜치를 분기하여 작업
+- PR 시 최소 2인 이상 리뷰 승인 필수
+
+### 📌 Git 커밋 컨벤션
+- 커밋 메시지에 적절한 접두사 작성  
+- 주요 접두사 및 설명
+
+| 접두사   | 설명                   |
+| -------- | ---------------------- |
+| ✨ Feat     | 새로운 기능 구현       |
+| 🐛 Fix      | 버그 수정             |
+| 📝 Docs     | 문서 추가 및 수정      |
+| ♻️ Refactor | 코드 리팩토링 (동작 변경 없음) |
+| 💡 Chore    | 기타 작업(주석, 코드 포매팅 스크립트)|
+
+### 📌 Code Convention
+
+- 패키지명 전체 소문자 (ex. apps/qna/serializers/questions_serializers.py)
+- 클래스명, 인터페이스명 CamelCase (ex. IsStudentOrStaffOrAdminPermission)
+- 클래스 이름 명사 사용 (ex. AnswerCommentCreateView)
+- 상수명 SNAKE_CASE (ex. AWS_STORAGE_BUCKET_NAME)
+- service 계층 메서드명 create, update, get, delete로 CRUD 통일 (ex. get_minor_ids) 
+
+### 📌 Communication Rules
+
+- **주요 채널**: zep 채널 활용(화면공유)
+- **정기 회의**: 매일 오전 10시 15분 스크럼 / 매주 금요일 주간 스프린트, KPT 회고 진행
+
+---
+
+## 📋 Documents
+
+- [📜 API 명세서](https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80)
+- [📜 요구사항 정의서](https://docs.google.com/spreadsheets/d/160YZn8-2RPGI8gRJQiHObgKXF0VQn1DiIjJp6aPkFic/edit#gid=0)
+- [📜 ERD](https://www.notion.so/ERD-209caf5650aa812a913ccc3aad08aba8)
+- [📜 테이블 명세서](https://www.notion.so/209caf5650aa8152a00cd26e4bb05f7a)
+- [📜 Figma - User 화면 정의서](https://www.figma.com/design/ZM6OVhYKhH30XTPKMC7BaC/%EC%9D%B5%EC%8A%A4%ED%84%B4%EC%8B%AD--user-design-?node-id=23-3&p=f&t=UeVTlWEtia0pJqTb-0)
+- [📜 Figma - Admin 화면 정의서](https://www.figma.com/design/QmpoIuImIkAtVMHbH7HGg1/%EC%9D%B5%EC%8A%A4%ED%84%B4%EC%8B%AD--admin-design-?node-id=0-1&p=f&t=Elply8Zo81rjKsrs-0)
+
+---
+
 ## 커뮤니티 기능 및 관리 어드민 (4팀)
 
 ## 쪽지시험 기능 및 관리 어드민 (5팀)
