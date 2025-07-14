@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -14,10 +15,11 @@ from apps.users.utils.nickname_validators import is_nickname_duplicated
 
 class SignUpAPIView(APIView):
     permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
 
-    @extend_schema(request=SignUpSerializer, responses={201: None, 400: None}, tags=["auth"])
+    @extend_schema(request=SignUpSerializer, responses={201: None, 400: None}, tags=["auth"], summary="회원가입")
     def post(self, request: Request) -> Response:
-        serializer = SignUpSerializer(data=request.data)
+        serializer = SignUpSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
