@@ -49,13 +49,6 @@
 
 ### 🔧 **시스템 아키텍처 다이어그램**
 
-graph TD
-    A[클라이언트 앱] --> B(Nginx - 웹 서버/프록시)
-    B --> C(백엔드 서버 - Django)
-    C -- 데이터 영속성 --> D(PostgreSQL)
-    C -- 파일 저장 --> E(로컬 Docker 볼륨)
-    C -- 캐싱/메시징 --> F(Redis)
-
 BE (Backend)
 
 언어: Python
@@ -115,74 +108,62 @@ CI/CD: GitHub Actions (예시)
 </table>  
 
 ## 📑 프로젝트 규칙 
-Branch Strategy
-**main / dev 브랜치를 기본으로 생성**합니다.
 
-**main과 dev 브랜치로의 직접 push는 제한**됩니다.
+### Branch Strategy: 브랜치 관리 전략
 
-Pull Request (PR)를 생성하기 전에 최소 1인 이상의 코드 리뷰 승인이 필수입니다.
+우리 프로젝트는 다음 브랜치 전략을 따릅니다.
 
-Git Convention
-적절한 커밋 접두사를 사용하여 커밋 목적을 명확히 합니다.
+main 브랜치는 프로덕션(배포) 가능한 **안정적인 코드를 관리**합니다.
 
-커밋 메시지 내용은 변경 사항에 대한 구체적인 설명을 포함합니다.
+dev 브랜치는 개발 진행 중인 **최신 코드를 관리**합니다.
 
-메시지 내용 뒤에 관련 **이슈 번호(#이슈 번호)**를 명시하여 이슈 트래킹 시스템과 연결합니다.
+**main 브랜치와 dev 브랜치로의 직접 push는 엄격히 제한**됩니다.
 
-접두사
+모든 기능 개발 및 버그 수정은 별도의 **기능/수정 브랜치(feature/fix-branches)**에서 진행합니다.
 
-설명
+**예시**: feature/login-page, fix/bug-on-quiz
 
-Feat
+새로운 브랜치는 주로 **dev 브랜치에서 파생**합니다.
 
-새로운 기능 구현
+작업이 완료되면 **dev 브랜치로 **Pull Request (PR)**를 생성하여 병합**합니다.
 
-Add
+PR 생성 전에 **최소 2인 이상의 코드 리뷰 승인이 필수**입니다.
 
-에셋 파일, 리소스 등 추가
+**Git Convention**: 커밋 메시지 접두사
+### 커밋 메시지는 변경 사항을 명확하게 나타내도록 다음 접두사를 사용합니다. 메시지 내용 뒤에는 관련 이슈 번호(#이슈 번호)를 명시하여 이슈 트래킹 시스템과 연결합니다.
 
-Fix
+## 접두사 설명
 
-버그 수정
+### Feat 새로운 기능 구현
 
-Docs
+### Add 에셋 파일, 리소스 등 추가
+  
+### Fix 버그 수정
 
-문서 추가 및 수정 (README, 주석 등)
+### Docs 문서 추가 및 수정 (README, 주석 등)
 
-Style
+### Style 코드 포맷팅, 스타일 변경 (동작 변경 없음)
 
-코드 포맷팅, 스타일 변경 (동작 변경 없음)
+### Refactor 코드 구조 개선 (동작 변경 없음)
 
-Refactor
+### Test 테스트 코드 추가 또는 수정
 
-코드 구조 개선 (동작 변경 없음)
+### Deploy 배포 관련 작업
 
-Test
+### Conf 빌드, 환경 설정 변경
 
-테스트 코드 추가 또는 수정
+### Chore 기타 작업 (위 분류에 해당하지 않는 작업)
 
-Deploy
+## Pull Request (PR)
+**Title**: [Feat] 홈 페이지 구현과 같이 [접두사] 작업 내용 형식으로 작성합니다.
 
-배포 관련 작업
+**PR Type**: 위 Git Convention의 접두사 중 하나를 선택합니다.
 
-Conf
+**Description**: 해당 PR에서 수행한 구체적인 작업 내용을 상세히 작성합니다. 필요하다면 관련 스크린샷이나 GIF 이미지를 첨부하면 이해도를 높일 수 있습니다. 👍
 
-빌드, 환경 설정 변경
+**Discussion**: PR 승인 전 논의가 필요한 사항이나 질문을 작성합니다.
 
-Chore
-
-기타 작업 (위 분류에 해당하지 않는 작업)
-
-Pull Request (PR)
-Title: [Feat] 홈 페이지 구현과 같이 [접두사] 작업 내용 형식으로 작성합니다.
-
-PR Type: 위 Git Convention의 접두사 중 하나를 선택합니다.
-
-Description: 해당 PR에서 수행한 구체적인 작업 내용을 상세히 작성합니다. 필요하다면 관련 스크린샷이나 GIF 이미지를 첨부하면 이해도를 높일 수 있습니다. 👍
-
-Discussion: PR 승인 전 논의가 필요한 사항이나 질문을 작성합니다.
-
-Code Convention
+## Code Convention
 BE (백엔드)
 **패키지명**: 전체 소문자를 사용합니다. (예: com.example.project.domain.member)
 
@@ -198,10 +179,10 @@ BE (백엔드)
 
 **Test 클래스**: 클래스명 앞에 Test 접두사를 사용합니다. (예: TestMemberService)
 
-Communication Rules
-주요 소통 채널: Discord를 통해 실시간 소통 및 중요 공지를 진행합니다.
+## Communication Rules
+**주요 소통 채널**: zep을 이용하여 원격으로 소통을 원활하게 합니다
 
-정기 회의: 매주 주 5일 (월,화,수,목,금) 10시 15분에 간단한 회의 진행
+**정기 회의**: 매주 주 5일 (월,화,수,목,금) 10시 15분에 간단한 회의 진행
 ## 📋 Documents
 ### 📜 **API 명세서**: https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80
 
