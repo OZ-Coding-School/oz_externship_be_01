@@ -20,19 +20,16 @@ def get_user(user_id):
 class JWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
         query_string = scope.get("query_string", b"").decode()
-        token_list = parse_qs(query_string).get("token")
+        token = parse_qs(query_string).get("token")
 
-        if not token_list:
+        if not token:
             # 비로그인 사용자: 익명 사용자로 처리
             scope["user"] = AnonymousUser()
             return await super().__call__(scope, receive, send)
 
-        token = token_list[0]
-
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-            if payload.get("type") != "access":
+            payload = jwt.decode(token[0], settings.SECRET_KEY, algorithms=["HS256"])
+            if payload.get("token_type") != "access":
                 await self.close_connection(send, 4004, "잘못된 토큰 타입")
                 return
 

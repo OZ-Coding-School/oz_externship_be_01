@@ -82,7 +82,7 @@ jobs:
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev \
               sh -c "python manage.py migrate && \
                 python manage.py collectstatic --noinput && \
-                gunicorn --workers 3 --bind 0.0.0.0:8000 config.wsgi:application"
+                gunicorn --workers 3 --worker-class=uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 config.asgi:application"
             
             docker run -d \
               --name celery \

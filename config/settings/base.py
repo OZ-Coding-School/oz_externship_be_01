@@ -18,7 +18,6 @@ DEBUG = True
 
 # Application definition
 DJANGO_APPS = [
-    "daphne",
     "channels",
     "django.contrib.auth",
     "django.contrib.contenttypes",

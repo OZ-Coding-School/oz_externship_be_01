@@ -1,9 +1,11 @@
 import json
 import os
+import uuid
 
 import httpx
 from channels.db import database_sync_to_async  # type: ignore
 from channels.generic.websocket import AsyncWebsocketConsumer  # type: ignore
+from django.contrib.auth.models import AnonymousUser
 
 from apps.qna.utils.redis import get_ai_count, increment_ai_count
 
@@ -12,13 +14,16 @@ GEMINI_API_URL = os.getenv("GEMINI_API_URL")
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
         await self.accept()
         self.user = self.scope.get("user")
-        self.session = self.scope.get("session")
-        self.session_key = self.session.session_key or "anonymous"
 
+        if not isinstance(self.user, AnonymousUser):
+            user_type = "login_user"
+            session_key = self.user.email
+        else:
+            user_type = "anonymous_user"
+            session_key = uuid.uuid4().hex
         # 인사말 및 기본 메뉴 전송
         await self.send(
             text_data=json.dumps(
@@ -26,6 +31,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "type": "greeting",
                     "message": "What's Up, Dickie?",
                     "menu": [{"id": "guide", "label": "홈페이지 사용법"}, {"id": "ai", "label": "AI 질문하기"}],
+                    "user_type": user_type,
+                    "session_key": session_key,
                 }
             )
         )
@@ -37,7 +44,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_message = data.get("message")
 
         user = self.scope.get("user")
-        session_key = self.session_key
         user_type = getattr(user, "role", "guest")
 
         # 홈페이지 사용법 메뉴
@@ -69,7 +75,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # AI 질문 실행
         elif action == "ai_question":
-            is_limited_user = not user.is_authenticated or getattr(user, "role", "GENERAL") == "GENERAL"
+            is_limited_user = isinstance(user, AnonymousUser) or getattr(user, "role", "GENERAL") == "GENERAL"
+            session_key = data.get("session_key")
+
+            if not session_key:
+                await self.send(text_data=json.dumps({"type": "error", "message": "ai_question need a session key."}))
+                return
 
             if is_limited_user:
                 count = await self.get_ai_count_async(session_key)
@@ -113,12 +124,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             submenu_id = data.get("submenu_id")
             await self.send(text_data=json.dumps(self.get_submenu_response(submenu_id)))
 
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard("room_name", self.channel_name)
-
     # Gemini API 요청
     async def ask_gemini_stream(self, prompt):
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        system_prompt = "당신은 유능한 개발자입니다. 사용자 질문이 개발과 관련이 있을 때만 답변을 생성하고, 사용자의 질문이 개발 주제와 관련이 없을 경우 '이 서비스는 개발 관련 질문만 응답합니다.' 라고만 답변해야 합니다."
+
+        payload = {
+            "contents": [
+                {"role": "user", "parts": [{"text": (system_prompt)}]},
+                {"role": "user", "parts": [{"text": prompt}]},
+            ]
+        }
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
