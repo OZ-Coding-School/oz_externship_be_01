@@ -35,7 +35,7 @@ from apps.users.models.student_enrollment import StudentEnrollmentRequest
 )
 # 기수 등록 API
 class GenerationCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated,IsAdminOrStaff]
     serializer_class = GenerationCreateSerializer
 
     @extend_schema(
