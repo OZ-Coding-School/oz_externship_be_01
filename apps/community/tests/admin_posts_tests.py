@@ -20,7 +20,7 @@ def create_test_image():
     return SimpleUploadedFile("test.jpg", buffer.read(), content_type="image/jpeg")
 
 
-class AdminPostAPITestCase(TestCase):
+class AdminPostTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.admin = User.objects.create_user(
@@ -66,6 +66,12 @@ class AdminPostAPITestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.post.refresh_from_db()
         self.assertEqual(self.post.title, "수정된 제목")
+
+    def test_admin_post_delete(self):
+        url = reverse("admin-post-delete", kwargs={"post_id": self.post.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Post.objects.filter(id=self.post.id).exists())
 
     def test_admin_post_toggle_visibility(self):
         self.assertTrue(self.post.is_visible)
