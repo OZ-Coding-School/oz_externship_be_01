@@ -52,7 +52,7 @@ class UserPostTestCase(TestCase):
         self.assertEqual(self.post.title, "수정된 제목")
 
     def test_user_post_delete(self):
-        url = reverse("user-post-delete", kwargs={"post_id": self.post.id})
+        url = reverse("post-delete", kwargs={"post_id": self.post.id})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Post.objects.filter(id=self.post.id).exists())
