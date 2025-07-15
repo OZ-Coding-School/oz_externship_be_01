@@ -33,11 +33,8 @@
 - CI/CD: GitHub Actions (예정)
 
 > 전체 아키텍처는 아래 다이어그램을 참고하세요.
+![system-architecture](system-architecture.png)
 <img width="1004" height="579" alt="image" src="https://github.com/user-attachments/assets/3b5cbd35-65f1-4eb8-b8ac-dfefa0f87c44" />
-
-
-
-
 
 ---
 
@@ -344,6 +341,7 @@ oz_externship/
 - [📜 API 명세서](https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80)
 - [📜 요구사항 정의서](https://docs.google.com/spreadsheets/d/160YZn8-2RPGI8gRJQiHObgKXF0VQn1DiIjJp6aPkFic/edit#gid=0)
 - [📜 ERD](https://www.notion.so/ERD-209caf5650aa812a913ccc3aad08aba8)
+
 
 ## 쪽지시험 기능 및 관리 어드민 (5팀)
 
