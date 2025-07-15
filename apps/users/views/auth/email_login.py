@@ -17,16 +17,24 @@ class EmailLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=EmailLoginSerializer, responses={200: None, 401: None}, tags=["auth"], summary="이메일 로그인"
+        request=EmailLoginSerializer,
+        responses={200: None, 401: None, 403: None},
+        tags=["auth"],
+        summary="이메일 로그인",
     )
     def post(self, request):
         serializer = EmailLoginSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data["email"]
             password = serializer.validated_data["password"]
-            user = authenticate(request, email=email, password=password)
 
-            if user is not None:
+            try:
+                user = User.objects.get(email=email)
+                if not user.is_active:
+                    return Response({"detail": "탈퇴한 계정입니다."}, status=403)
+                if not user.check_password(password):
+                    return Response({"detail": "이메일 또는 비밀번호가 올바르지 않습니다."}, status=401)
+
                 refresh = RefreshToken.for_user(user)
                 user_data = EmailLoginResponseSerializer(user).data
 
@@ -40,6 +48,6 @@ class EmailLoginAPIView(APIView):
                     },
                     status=status.HTTP_200_OK,
                 )
-
-            return Response({"detail": "이메일 또는 비밀번호가 올바르지 않습니다."}, status=401)
+            except User.DoesNotExist:
+                return Response({"detail": "이메일 또는 비밀번호가 올바르지 않습니다."}, status=401)
         return Response(serializer.errors, status=400)
