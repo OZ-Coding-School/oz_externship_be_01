@@ -72,11 +72,10 @@ urlpatterns = [
     path("comments/<int:comment_id>/update/", CommentUpdateAPIView.as_view(), name="comment-update"),
     path("comments/<int:comment_id>/delete/", CommentDeleteAPIView.as_view(), name="comment-delete"),
     path("posts/<int:post_id>/comments/", CommentListAPIView.as_view(), name="comment-list"),
-    path("admin/notices/", NoticeCreateAPIView.as_view(), name="admin-notice"),  # 공지사항
     path("posts/create/", PostCreateAPIView.as_view(), name="post-create"),
     path("posts/<int:post_id>/like/", PostLikeTrueAPIView.as_view(), name="post-like"),
     path("posts/<int:post_id>/unlike/", PostLikeFalseAPIView.as_view(), name="post-unlike"),
     path("posts/list", PostListAPIView.as_view(), name="post-list"),
     path("posts/<int:post_id>/update/", UserPostUpdateView.as_view(), name="post-update"),
-    path("posts/<int:post_id>/delete/", PostDeleteAPIView.as_view(), name="user-post-delete"),
+    path("posts/<int:post_id>/delete/", PostDeleteAPIView.as_view(), name="post-delete"),
 ]
