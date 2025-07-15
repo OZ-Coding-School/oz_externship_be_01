@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -27,16 +28,18 @@ from apps.users.utils.social_auth import (
 
 class SocialLoginRedirectUriMixin:
     def _get_redirect_uri(self, request: Request, provider: str) -> str:
-        client_host = None
         referer = request.META.get("HTTP_REFERER")
         origin = request.META.get("HTTP_ORIGIN")
-        
+
         if referer:
             parsed = urlparse(referer)
             client_host = f"{parsed.scheme}://{parsed.netloc}"
         elif origin:
             parsed = urlparse(origin)
             client_host = f"{parsed.scheme}://{parsed.netloc}"
+        else:
+            raise APIException("요청에는 Origin 또는 Referer 헤더가 포함되어야 합니다.")
+
         return f"{client_host}/auth/callback/{provider}"
 
 
@@ -143,7 +146,7 @@ class NaverLoginAPIView(APIView, SocialLoginRedirectUriMixin):
         redirect_uri = self._get_redirect_uri(request, "naver")
 
         # access token 발급
-        access_token = get_naver_access_token(code, state, redirect_uri)
+        access_token = get_naver_access_token(code, redirect_uri, state)
         if access_token is None:
             return Response({"detail": "네이버 토큰 발급에 실패했습니다. 잠시 후 다시 시도해주세요."}, status=400)
 
