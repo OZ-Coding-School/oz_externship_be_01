@@ -42,6 +42,8 @@ class PostCreateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer.save()
+        post = serializer.save()
 
-        return Response({"detail": "게시글이 성공적으로 등록되었습니다."}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"detail": "게시글이 성공적으로 등록되었습니다.", "data": {"id": post.id}}, status=status.HTTP_201_CREATED
+        )
