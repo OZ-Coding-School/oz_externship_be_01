@@ -3,11 +3,10 @@ from typing import Any
 from django.db import transaction
 from rest_framework import serializers
 
-from apps.users.models import User
-
 from apps.qna.models import Question, QuestionCategory, QuestionImage
 from apps.qna.serializers.answers_serializers import AnswerListSerializer
 from apps.qna.serializers.images_serializers import QuestionImageMixin
+from apps.users.models import User
 
 
 # 질문 이미지
