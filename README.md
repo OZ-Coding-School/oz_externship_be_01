@@ -91,6 +91,7 @@ oz_externship/
 ├── manage.py                                # Django 명령행 유틸
 └── requirements.txt                         # 프로젝트 의존성 패키지 목록
 ```
+<img width="1004" height="579" alt="image" src="https://github.com/user-attachments/assets/92a3dfbc-8129-4b85-8322-c1867400f158" />
 
 ---
 
