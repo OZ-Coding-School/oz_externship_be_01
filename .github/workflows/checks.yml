@@ -101,15 +101,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-      
-      - name: Check for test functions
-        id: check-tests
-        run: |
-          if find apps -type f \( -name "tests.py" -o -name "test_*.py" \) -exec grep -q "def test_" {} +; then
-            echo "has_tests=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_tests=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Cache Poetry
         id: cache-poetry
@@ -147,9 +138,25 @@ jobs:
         run: |
           poetry run python manage.py migrate
 
-      # run test
-      - name: Test python project
-        if: steps.check-tests.outputs.has_tests == 'true'
+      - name: Check each app has test & Run coverage
         run: |
-          poetry run coverage run manage.py test
-          poetry run coverage report -m
+          ran_tests=false
+      
+          for app_path in apps/*; do
+            if [ -d "$app_path" ]; then
+              app_name=$(basename "$app_path")
+              if find "$app_path" -type f \( -name "tests.py" -o -name "test_*.py" \) -exec grep -q "def test_" {} +; then
+                echo "✅ Running tests for $app_name"
+                poetry run coverage run --source="$app_path" --append manage.py test "apps.$app_name"
+                ran_tests=true
+              else
+                echo "⚠️  No test functions found in $app_name"
+              fi
+            fi
+          done
+      
+          if [ "$ran_tests" = true ]; then
+            poetry run coverage report -m
+          else
+            echo "🚫 No tests were run. Skipping coverage report."
+          fi
