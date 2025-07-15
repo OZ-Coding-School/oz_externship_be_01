@@ -132,7 +132,8 @@ jobs:
 
       - name: Set multiline environment variable
         run: |
-          echo "${{ secrets.DJANGO_ENVS }}" >> $GITHUB_ENV
+          mkdir envs
+          echo "${{ secrets.DJANGO_ENVS }}" >> envs/.local.env
 
       # run migration
       - name: Run Django Migration
