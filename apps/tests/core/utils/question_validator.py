@@ -1,3 +1,4 @@
+import json
 from typing import Any, Callable
 
 from rest_framework.exceptions import ValidationError
@@ -18,6 +19,13 @@ class QuestionValidator:
         if answer[0] not in options:
             raise ValidationError(f"정답 '{answer[0]}'이 보기 목록에 없습니다.")
 
+        # 필수: 문자열 변환
+        data["options_json"] = json.dumps(options)
+
+        # 불필요 필드 제거
+        data["prompt"] = None
+        data["blank_count"] = None
+
         return data
 
     def validate_multiple_choice_multi_question(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -33,6 +41,11 @@ class QuestionValidator:
         if invalid_answers:
             raise ValidationError(f"다음 정답은 보기 목록에 없습니다: {invalid_answers}")
 
+        data["prompt"] = None
+        data["blank_count"] = None
+
+        data["options_json"] = json.dumps(options)
+
         return data
 
     def validate_short_answer_question(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -41,7 +54,7 @@ class QuestionValidator:
             raise ValidationError("주관식 단답형 문제는 정답을 하나만 담은 문자열 리스트 형식이어야 합니다.")
 
         data["options_json"] = None
-        data["prompt"] = None
+
         data["blank_count"] = None
 
         return data
@@ -61,6 +74,7 @@ class QuestionValidator:
 
         data["prompt"] = None
         data["blank_count"] = None
+        data["options_json"] = json.dumps(options)
 
         return data
 
@@ -97,9 +111,10 @@ class QuestionValidator:
             raise ValidationError("OX 퀴즈 정답은 'O' 또는 'X' 형식이어야 합니다.")
 
         # 필요 없는 필드 초기화
-        data["options_json"] = None
+
         data["prompt"] = None
         data["blank_count"] = None
+        data["options_json"] = json.dumps(data.get("options_json", ["O", "X"]))
 
         return data
 
