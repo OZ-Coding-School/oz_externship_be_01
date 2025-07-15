@@ -3,6 +3,8 @@ from typing import Any
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.users.models import User
+
 from apps.qna.models import Question, QuestionCategory, QuestionImage
 from apps.qna.serializers.answers_serializers import AnswerListSerializer
 from apps.qna.serializers.images_serializers import QuestionImageMixin
@@ -114,9 +116,12 @@ class CategoryNameSerializer(serializers.ModelSerializer):
 
 
 # 작성자 정보
-class AuthorInfoSerializer(serializers.Serializer):
-    nickname = serializers.CharField()
-    profile_image_url = serializers.CharField()
+class AuthorInfoSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ["id", "nickname", "profile_image_url"]
+        read_only_fields = fields
 
 
 # 질문 목록 조회
