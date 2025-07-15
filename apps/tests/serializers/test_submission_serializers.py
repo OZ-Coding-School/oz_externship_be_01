@@ -131,15 +131,6 @@ class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
         data = validated_data.copy()
         data["score"] = calculate_total_score(validated_data["answers_json"], snapshot)
         data["correct_count"] = calculate_correct_count(validated_data["answers_json"], snapshot)
-
-        deployment = self.context.get("deployment")
-        student = self.context.get("student")
-
-        if deployment:
-            data["deployment"] = deployment
-        if student:
-            data["student"] = student
-
         submission = TestSubmission.objects.create(**data)
         return submission
 

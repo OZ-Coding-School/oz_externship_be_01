@@ -118,8 +118,6 @@ class TestSubmissionSubmitView(APIView):
             data=request.data,
             context={
                 "snapshot": get_questions_snapshot_from_deployment(deployment),
-                "deployment": deployment,
-                "student": student_permission,
             },
         )
         serializer.is_valid(raise_exception=True)
