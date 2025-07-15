@@ -1,6 +1,7 @@
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -8,10 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.core.utils.grading import (
-    calculate_correct_count,
-    calculate_total_score,
-    get_questions_snapshot_from_submission,
-    validate_answers_json_format,
+    get_questions_snapshot_from_deployment,
 )
 from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.permissions import IsStudent
@@ -96,31 +94,34 @@ class TestSubmissionSubmitView(APIView):
         """
         쪽지 시험 제출 API
         """
-        deployment = get_object_or_404(TestDeployment, id=deployment_id)
-        student = get_object_or_404(PermissionsStudent, user=request.user)
+        try:
+            deployment = TestDeployment.objects.get(id=deployment_id)
+        except TestDeployment.DoesNotExist:
+            return Response(
+                {"detail": f"배포된 시험 ID {deployment_id}가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND
+            )
+        if deployment.close_at and deployment.close_at < timezone.now():
+            return Response({"detail": "시험 제출 시간이 지났습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not request.user.is_authenticated:
+            raise PermissionDenied("로그인이 필요합니다.")
+
+        try:
+            student_permission = PermissionsStudent.objects.get(user=request.user, generation=deployment.generation)
+        except PermissionsStudent.DoesNotExist:
+            return Response(
+                {"detail": f"{request.user}는 generation {deployment.generation}에 대한 학생 권한이 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = self.serializer_class(
             data=request.data,
             context={
-                "request": request,
-                "deployment": deployment,
-                "student": student,
+                "snapshot": get_questions_snapshot_from_deployment(deployment),
             },
         )
         serializer.is_valid(raise_exception=True)
-        submission = serializer.save()
-
-        snapshot = get_questions_snapshot_from_submission(submission)
-        validate_answers_json_format(submission.answers_json, snapshot)
-
-        submission.score = calculate_total_score(submission.answers_json, snapshot)
-        submission.correct_count = calculate_correct_count(submission.answers_json, snapshot)
-        submission.save(update_fields=["score", "correct_count"])
-
-        # 자동 제출 메시지로 응답
-        auto_msg = getattr(serializer, "auto_submit_message", None)
-        if auto_msg:
-            return Response({"detail": auto_msg}, status=200)
+        serializer.save(deployment=deployment, student=student_permission)
 
         return Response({"message": "시험 제출이 완료되었습니다."}, status=status.HTTP_200_OK)
 

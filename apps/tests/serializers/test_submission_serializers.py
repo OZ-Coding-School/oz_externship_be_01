@@ -1,7 +1,11 @@
-from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from apps.tests.core.utils.grading import (
+    calculate_correct_count,
+    calculate_total_score,
+    validate_answers_json_format,
+)
 from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
@@ -106,57 +110,29 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
 
 # 수강생 쪽지 시험 제출
 class UserTestSubmitSerializer(serializers.ModelSerializer[TestSubmission]):
-    student = serializers.PrimaryKeyRelatedField(queryset=PermissionsStudent.objects.all())
     answers_json = serializers.DictField(child=serializers.ListField(child=serializers.CharField()))
 
     class Meta:
         model = TestSubmission
         fields = (
-            "student",
             "started_at",
             "cheating_count",
             "answers_json",
         )
 
-    def validate(self, data):
-        deployment = self.context["deployment"]
-        permission_student = self.context["student"]
-        user = self.context["request"].user
-        now = timezone.now()
+    def validate_answers_json(self, value):
+        snapshot = self.context["snapshot"]
+        validate_answers_json_format(value, snapshot)
 
-        if permission_student.user != user:
-            raise serializers.ValidationError("인증된 사용자와 수강생 정보가 일치하지 않습니다.")
-
-        if permission_student.id != data.get("student").id:
-            raise serializers.ValidationError("사용자의 수강생 ID와 일치하지 않습니다.")
-
-        if not data.get("answers_json"):
-            raise serializers.ValidationError("모든 답안이 제출되지 않았습니다.")
-
-        if deployment is None:
-            raise serializers.ValidationError("시험 정보가 없습니다.")
-
-        if deployment.close_at and deployment.close_at < now:
-            raise serializers.ValidationError("시험 제출 시간이 지났습니다.")
-
-        return data
+        return value
 
     def create(self, validated_data):
-        deployment = self.context["deployment"]
-        now = timezone.now()
-
-        # 자동 제출 조건 처리
-        self.auto_submit_message = None
-        cheating_count = validated_data.get("cheating_count", 0)
-
-        if deployment.close_at and deployment.close_at < now:
-            self.auto_submit_message = "시험 제출 시간이 지나 자동 제출 되었습니다."
-        elif int(cheating_count) >= 3:
-            self.auto_submit_message = "부정행위 3회 이상 적발되어 자동 제출 처리되었습니다."
-
-        validated_data["deployment"] = deployment
-
-        return super().create(validated_data)
+        snapshot = self.context["snapshot"]
+        data = validated_data.copy()
+        data["score"] = calculate_total_score(validated_data["answers_json"], snapshot)
+        data["correct_count"] = calculate_correct_count(validated_data["answers_json"], snapshot)
+        submission = TestSubmission.objects.create(**data)
+        return submission
 
 
 # 사용자 쪽지 시험 결과 조회
