@@ -148,7 +148,8 @@ jobs:
           for app_name in $apps; do
             app_path="apps/$app_name"
             if [ -d "$app_path" ]; then
-              if find "$app_path" -type f \( -name "tests.py" -o -name "test_*.py" \) -exec grep -q "def test_" {} +; then
+              test_files=$(find "$app_path" -type f \( -name "tests.py" -o -name "test_*.py" \))
+              if [ -n "$test_files" ] && grep -q "def test_" $test_files 2>/dev/null; then
                 echo "✅ Running tests for $app_name"
                 poetry run coverage run --source="$app_path" --append manage.py test "apps.$app_name"
                 ran_tests=true
