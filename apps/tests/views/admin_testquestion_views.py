@@ -12,6 +12,7 @@ from apps.tests.permissions import IsAdminOrStaff
 from apps.tests.serializers.test_question_serializers import (
     TestListItemSerializer,
     TestQuestionBulkCreateSerializer,
+    TestQuestionCreateResponseSerializer,
     TestQuestionCreateSerializer,
     TestQuestionSimpleSerializer,
     TestQuestionUpdateSerializer,
@@ -36,7 +37,7 @@ class TestQuestionCreateView(APIView):
         serializer = TestQuestionCreateSerializer(data=request.data)
         if serializer.is_valid():
             question = serializer.save()
-            return Response(TestQuestionCreateSerializer(question).data, status=status.HTTP_201_CREATED)
+            return Response(TestQuestionCreateResponseSerializer(question).data, status=201)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -111,6 +112,6 @@ class TestQuestionBulkUpdateAPIView(APIView):
         serializer.save()
         created_questions = serializer.create(serializer.validated_data)  # → bulk_create() 리턴값
 
-        response_data = TestQuestionSimpleSerializer(created_questions, many=True).data
+        response_data = TestQuestionCreateResponseSerializer(created_questions, many=True).data
 
         return Response(response_data, status=status.HTTP_201_CREATED)

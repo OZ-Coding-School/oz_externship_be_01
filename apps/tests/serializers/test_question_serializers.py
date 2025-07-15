@@ -170,3 +170,43 @@ class TestQuestionSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestQuestion
         fields = ["id", "question", "type", "point"]
+
+
+class TestQuestionCreateResponseSerializer(serializers.ModelSerializer):
+    """
+    [생성 응답 전용 시리얼라이저]
+
+    - 쪽지시험 문제 생성 후 클라이언트에게 반환할 응답 형식을 정의함
+    - 모델에는 options_json이 문자열(str)로 저장되어 있지만,
+      클라이언트에는 list 형식으로 반환되도록 가공함
+    - answer 역시 문제 유형에 따라 list or string으로 가공해 반환함
+    - 상세조회용 시리얼라이저와는 별도로, 생성 직후 응답 전용 출력 구조를 담당함
+    """
+
+    answer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestQuestion
+        fields = (
+            "id",
+            "test",
+            "type",
+            "question",
+            "point",
+            "prompt",
+            "blank_count",
+            "options_json",
+            "answer",
+            "explanation",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_answer(self, obj):
+        if obj.type in {
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI,
+            TestQuestion.QuestionType.ORDERING,
+            TestQuestion.QuestionType.FILL_IN_BLANK,
+        }:
+            return obj.answer if isinstance(obj.answer, list) else [obj.answer]
+        return obj.answer
