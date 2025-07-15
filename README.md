@@ -1,6 +1,138 @@
 # OZ CodingSchool LMS - 백엔드
 
 ## 과정 관리 어드민 (1팀)
+# 🎓 Externship 수강관리 시스템
+
+> Externship 백엔드 시스템은 관리자와 학생을 위한 수강 관리 기능을 제공합니다.  
+> 과정 등록부터 수강 신청, 상태 관리까지 다양한 기능을 제공합니다.
+
+---
+## 📌 목차
+
+1. [기술 스택](#-기술-스택)
+2. [주요 기능](#-주요-기능)
+3. [ERD](#-erd)
+4. [프로젝트 구조](#-프로젝트-구조)
+5. [API 문서](#-api-문서)
+6. [테이블 명세서](#-테이블-명세서)
+7. [팀원](#-팀원)
+
+---
+
+## 🔧 기술 스택
+
+- Python 3.12  
+- Django 4.x  
+- Django REST Framework (DRF)  
+- PostgreSQL  
+- Redis  
+- OAuth2 / JWT 인증  
+- drf-spectacular (Swagger/OpenAPI 자동 문서화)  
+- Docker, Nginx, Gunicorn, Uvicorn  
+- AWS S3 (썸네일 이미지 업로드)  
+- CI/CD: GitHub Actions (예정)
+
+> 전체 아키텍처는 아래 다이어그램을 참고하세요.
+
+![system-architecture](system-architecture.png)
+
+
+
+---
+
+## 📌 주요 기능
+
+### 관리자
+- 과정 등록 / 수정 / 삭제
+- 생성기수(Generation) 등록 및 관리
+- 과목(Subject) 관리
+- 드롭다운 리스트 제공
+
+### 학생
+- (예정) 수강 신청, 취소, 이력 조회
+
+---
+
+## 🖼 ERD
+
+> 전체 데이터베이스 구조는 아래 링크에서 확인하실 수 있습니다.
+
+📌 [ERD 보기 (dbdiagram)](https://dbdiagram.io/d/6823ff4e5b2fc4582f7c2afa/?utm_source=dbdiagram_embed&utm_medium=bottom_open)
+
+---
+
+## 📁 프로젝트 구조
+
+```bash
+oz_externship/
+├── apps/
+│   └── courses/
+│       ├── __init__.py                        # courses 앱 초기화 모듈
+│       ├── apps.py                            # Django 앱 설정 파일
+│       ├── models.py                          # Course, Generation, Subject 모델 정의
+│       ├── test.py                            # courses 관련 테스트 코드
+│       ├── urls.py                            # courses 앱 내 URL 라우팅 정의
+│       ├── views.py                           # 뷰 초기화 또는 공통 설정 용도
+│       ├── core/                              # 공통 유틸 또는 상속용 클래스 디렉토리
+│       ├── migrations/                        # 마이그레이션 파일 저장 폴더
+│       ├── serializers/                       # DRF용 데이터 직렬화 클래스 모음
+│       │   ├── course_serializers.py              # 과정 등록/조회용 시리얼라이저
+│       │   ├── generation_serializer.py           # 생성기수 관련 시리얼라이저
+│       │   ├── subject_serializers.py             # 과목 관련 시리얼라이저
+│       │   └── dropdown_list_serializers.py       # 드롭다운 선택용 리스트 시리얼라이저
+│       └── views/                             # 기능별 API View 클래스 정의
+│           ├── __init__.py                        # views 모듈 초기화
+│           ├── course_views.py                   # 과정 관련 CRUD API
+│           ├── generation_views.py               # 생성기수 관련 CRUD API
+│           ├── subject_views.py                  # 과목 관련 CRUD API
+│           └── dropdown_list_views.py            # 드롭다운 리스트 조회 API
+├── core/                                    # 프로젝트 전역 유틸, 공통 상속 클래스, S3 업로드 등
+├── config/                                  # Django 설정 파일 모음
+├── manage.py                                # Django 명령행 유틸
+└── requirements.txt                         # 프로젝트 의존성 패키지 목록
+```
+
+---
+
+## 🧪 API 문서
+
+- Swagger UI: http://localhost:8000/api/schema/swagger-ui/
+- 📄 [API 명세서 (Notion)](https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80)
+
+---
+
+## 📊 테이블 명세서
+
+> 전체 테이블 구조 및 컬럼 정보는 아래 구글 시트에서 확인하실 수 있습니다.
+
+📄 [테이블 명세서 (Google Sheets)](https://docs.google.com/spreadsheets/d/1Ys_HVx7IofC3FF9eEb-9bVpB7nZTHQhIRiPNF85SXIA/edit?gid=684962824#gid=684962824)
+
+---
+
+## 👥 팀원
+<table align="center">
+  <tr>
+    <th style="text-align: center;">이형묵</th>
+    <th style="text-align: center;">장지훈</th>
+    <th style="text-align: center;">양지운</th>
+  </tr>
+  <tr>
+    <td style="text-align: center;">
+      <img src="https://avatars.githubusercontent.com/u/201066886?v=4" width="100"/>
+    </td>
+    <td style="text-align: center;">
+      <img src="https://avatars.githubusercontent.com/u/201066874?v=4" width="100"/>
+    </td>
+    <td style="text-align: center;">
+      <img src="https://avatars.githubusercontent.com/u/144764519?v=4" width="100"/>
+    </td>
+  </tr>
+  <tr>
+    <td style="text-align: center;">@brojelly</td>
+    <td style="text-align: center;">@yeduen</td>
+    <td style="text-align: center;">@yangjiun00</td>
+  </tr>
+</table>
 
 ## 회원 기능 및 회원 관리 어드민 (2팀)
 ## 📖 프로젝트 소개
