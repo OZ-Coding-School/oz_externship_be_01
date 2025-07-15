@@ -13,7 +13,7 @@ from apps.community.serializers.post_list_serializers import PostListViewSeriali
 
 
 class PostListAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
