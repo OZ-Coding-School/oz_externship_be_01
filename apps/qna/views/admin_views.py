@@ -1,21 +1,30 @@
-from typing import Any
+from datetime import datetime
 
+from django.core.paginator import EmptyPage, Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import BooleanField, Case, Count, Q, When
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.qna.dummy import dummy
-from apps.qna.models import QuestionCategory
+from apps.qna.models import (
+    Answer,
+    AnswerComment,
+    AnswerImage,
+    Question,
+    QuestionAIAnswer,
+    QuestionCategory,
+    QuestionImage,
+)
+from apps.qna.permissions import IsAdminPermission, IsStaffPermission
 from apps.qna.serializers.admin_serializers import (
     AdminCategoryCreateSerializer,
     AdminCategoryListSerializer,
-    AdminQuestionImageSerializer,
+    AdminQuestionListPaginationSerializer,
     AdminQuestionListSerializer,
 )
 
@@ -24,7 +33,7 @@ dummy.load_dummy_data()
 
 # 카테고리 등록(POST)
 class AdminCategoryCreateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -44,48 +53,91 @@ class AdminCategoryCreateView(APIView):
 
 # 카테고리 삭제(DELETE)
 class AdminCategoryDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
-        description="카테고리를 삭제합니다. 하위 카테고리나 질문이 있는 경우 삭제가 제한됩니다.(미완성)",
-        summary="미완성",
-        request=AdminCategoryListSerializer,
-        responses=AdminCategoryListSerializer,
+        summary="카테고리 삭제",
+        description="카테고리 삭제 (Hard Delete) - 하위 카테고리 및 질문 일반질문으로 이동",
+        responses={
+            200: {"description": "삭제 성공"},
+            404: {"description": "카테고리를 찾을 수 없음"},
+            400: {"description": "일반질문 카테고리는 삭제할 수 없음"},
+        },
     )
-    def delete(self, request: Request, category_id: int) -> Response:
+    def delete(self, request, category_id: int):
         try:
-            category = QuestionCategory.objects.prefetch_related("subcategories", "questions").get(id=category_id)
+            # category_id로 카테고리 조회
+            category = QuestionCategory.objects.prefetch_related("subcategories", "subcategories__subcategories").get(
+                id=category_id
+            )
 
-            # 하위 카테고리 존재 확인
-            if category.subcategories.exists():
-                return Response(
-                    {"detail": "하위 카테고리가 존재하여 삭제할 수 없습니다. 먼저 하위 카테고리를 삭제해주세요."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            if category.category_type == "general":
+                return Response({"error": "일반질문 카테고리는 삭제할 수 없습니다."}, status=400)
 
-            # 해당 카테고리에 속한 질문 존재 확인
-            if category.questions.exists():
+            # 일반질문 카테고리 확보 (없으면 생성)
+            general_category, created = QuestionCategory.objects.get_or_create(
+                category_type="general",
+                defaults={
+                    "name": "일반질문",
+                    "parent": None,
+                },
+            )
+
+            with transaction.atomic():
+                # 삭제할 카테고리들 수집 (하위 카테고리 포함)
+                categories_to_delete = self._collect_delete_ids(category)
+
+                # 해당 카테고리 및 하위 카테고리에 속한 질문 일반 카테고리로 이동
+                questions_to_move = Question.objects.filter(category__in=categories_to_delete)
+                questions_to_move.update(category=general_category)
+
+                # 카테고리 삭제 - QuerySet의 delete() 메서드 사용
+                QuestionCategory.objects.filter(id__in=categories_to_delete).delete()
+
                 return Response(
                     {
-                        "detail": "해당 카테고리에 질문이 존재하여 삭제할 수 없습니다. 먼저 질문을 다른 카테고리로 이동하거나 삭제해주세요."
+                        "success": True,
+                        "message": "카테고리가 성공적으로 삭제되었습니다.",
+                        "deleted_category": {
+                            "id": category.id,
+                            "name": category.name,
+                            "category_type": category.category_type,
+                        },
+                        "moved_to_category": {
+                            "id": general_category.id,
+                            "name": general_category.name,
+                        },
                     },
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=200,
                 )
 
-            # 삭제 실행
-            with transaction.atomic():
-                category.delete()
-
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
         except QuestionCategory.DoesNotExist:
-            return Response({"detail": "해당 카테고리가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "해당 카테고리를 찾을 수 없습니다."}, status=404)
+        except Exception as e:
+            return Response({"error": f"카테고리 삭제 중 오류가 발생했습니다: {str(e)}"}, status=500)
+
+    def _collect_delete_ids(self, category):
+        collected_ids = [category.id]
+
+        if category.category_type == "major":
+            middle_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in middle_categories])
+
+            for middle in middle_categories:
+                minor_categories = middle.subcategories.all()
+                collected_ids.extend([c.id for c in minor_categories])
+
+        elif category.category_type == "middle":
+            minor_categories = category.subcategories.all()
+            collected_ids.extend([c.id for c in minor_categories])
+
+        return collected_ids
 
 
 # 카테고리 목록 조회(GET)
 class AdminCategoryListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
     @extend_schema(
         tags=["QnA (Admin)"],
@@ -135,134 +187,227 @@ class AdminCategoryListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# 질의응답 상세 조회
-class AdminQnaDetailView(APIView):
-    permission_classes = [AllowAny]
+# 질문 목록 조회(GET)
+class AdminQuestionListView(APIView):
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
-    @extend_schema(tags=["QnA (Admin)"], description="조회할 질의응답 ID", summary="미완성")
-    def get(self, request: Request, question_id: int, *args: Any, **kwargs: Any) -> Response:
-        # 1. 질문 찾기
-        question = next((q for q in dummy.DUMMY_QUESTIONS if q.id == question_id), None)
-        if not question:
-            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+    @extend_schema(
+        tags=["QnA (Admin)"],
+        summary="질문 목록 조회",
+        responses={200: AdminQuestionListPaginationSerializer},
+    )
+    def get(self, request: Request) -> Response:
+        q = request.query_params
+        page = int(q.get("page", 1))
+        page_size = min(int(q.get("page_size", 20)), 100)
 
-        # 2. 카테고리
-        category = question.category
-        category_data = {
-            "id": category.id,
-            "name": category.name,
-            "parent": category.parent.id if category.parent else None,
-            "type": "parent" if category.parent is None else "child",
-            "created_at": category.created_at,
-            "updated_at": category.updated_at,
-        }
+        queryset = (
+            Question.objects.select_related("category", "category__parent", "category__parent__parent", "author")
+            .prefetch_related("images", "answers")
+            .annotate(
+                answer_count=Count("answers", distinct=True),
+                has_answer=Case(
+                    When(answers__isnull=False, then=True),
+                    default=False,
+                    output_field=BooleanField(),
+                ),
+            )
+        )
 
-        # 3. 질문 이미지들
-        images = [
+        # 검색
+        if search := q.get("search", "").strip():
+            search_type = q.get("search_type", "title_content")
+            if search_type == "author":
+                queryset = queryset.filter(author__nickname__icontains=search)
+            elif search_type == "title":
+                queryset = queryset.filter(title__icontains=search)
+            elif search_type == "content":
+                queryset = queryset.filter(content__icontains=search)
+            else:
+                queryset = queryset.filter(Q(title__icontains=search) | Q(content__icontains=search))
+
+        # 필터
+        if cid := q.get("category_id"):
+            try:
+                queryset = queryset.filter(category_id=int(cid))
+            except ValueError:
+                pass
+        if ans := q.get("has_answer"):
+            queryset = queryset.filter(answer_count__gt=0 if ans == "Y" else 0)
+
+        # 날짜 필터
+        for field in ["created", "updated"]:
+            for suffix in ["start", "end"]:
+                param = f"{field}_{suffix}"
+                if val := q.get(param):
+                    lookup = f"{field}_at__date__{'gte' if suffix == 'start' else 'lte'}"
+                    parsed = self._parse_date(val)
+                    if parsed:
+                        queryset = queryset.filter(**{lookup: parsed})
+
+        # 정렬
+        ordering = q.get("ordering", "-created_at")
+        if ordering not in ["created_at", "-created_at", "view_count", "-view_count"]:
+            ordering = "-created_at"
+        queryset = queryset.order_by(ordering)
+
+        # 페이지네이션
+        paginator = Paginator(queryset, page_size)
+        try:
+            questions = paginator.page(page)
+        except EmptyPage:
+            questions = paginator.page(paginator.num_pages)
+
+        serializer = AdminQuestionListSerializer(questions, many=True)
+        return Response(
             {
-                "id": img.id,
-                "img_url": img.img_url,
-                "created_at": img.created_at,
-                "updated_at": img.updated_at,
+                "count": paginator.count,
+                "next": self._page_url(request, questions.next_page_number()) if questions.has_next() else None,
+                "previous": (
+                    self._page_url(request, questions.previous_page_number()) if questions.has_previous() else None
+                ),
+                "results": serializer.data,
             }
-            for img in dummy.DUMMY_QUESTION_IMAGES
-            if getattr(img.question, "id", None) == question_id
-        ]
+        )
 
-        # 4. 답변들 (답변 이미지 + 댓글 포함)
-        answers = []
-        for answer in dummy.DUMMY_ANSWERS:
-            if getattr(answer.question, "id", None) != question_id:
-                continue
+    def _parse_date(self, value):
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except Exception:
+            return None
 
-            # 답변 이미지 (id 포함)
-            answer_images = [
+    def _page_url(self, request, page_number):
+        query = request.query_params.copy()
+        query["page"] = page_number
+        return f"{request.build_absolute_uri('?')}?{query.urlencode()}"
+
+
+# 질문 삭제(DELETE)
+class AdminQuestionDeleteView(APIView):
+    permission_classes = [IsAdminPermission | IsStaffPermission]
+
+    @extend_schema(
+        tags=["QnA (Admin)"],
+        summary="질문 삭제",
+        description="질문 삭제 (Hard Delete)",
+        responses={
+            200: {"description": "삭제 성공"},
+            404: {"description": "질문을 찾을 수 없음"},
+            500: {"description": "서버 오류"},
+        },
+    )
+    def delete(self, request: Request, question_id: int) -> Response:
+        try:
+            question = Question.objects.select_related("category", "author").get(id=question_id)
+
+            question_info = {
+                "id": question.id,
+                "title": question.title,
+                "content": question.content[:100] + "..." if len(question.content) > 100 else question.content,
+                "author_nickname": question.author.nickname if question.author else None,
+                "category_name": question.category.name if question.category else None,
+                "view_count": question.view_count,
+                "created_at": question.created_at,
+            }
+
+            answers = Answer.objects.filter(question=question)
+            answer_ids = list(answers.values_list("id", flat=True))
+
+            # 사전 삭제 수 카운트 (한 번의 filter 호출로 처리)
+            answer_comments_qs = AnswerComment.objects.filter(answer_id__in=answer_ids)
+            answer_images_qs = AnswerImage.objects.filter(answer_id__in=answer_ids)
+            question_images_qs = QuestionImage.objects.filter(question=question)
+            question_ai_answers_qs = QuestionAIAnswer.objects.filter(question=question)
+
+            deleted_counts = {
+                "answers_count": answers.count(),
+                "answer_comments_count": answer_comments_qs.count(),
+                "answer_images_count": answer_images_qs.count(),
+                "question_images_count": question_images_qs.count(),
+                "question_ai_answers_count": question_ai_answers_qs.count(),
+            }
+
+            with transaction.atomic():
+                answer_comments_qs.delete()
+                answer_images_qs.delete()
+                answers.delete()
+                question_images_qs.delete()
+                question_ai_answers_qs.delete()
+                question.delete()
+
+            return Response(
                 {
-                    "id": img.id,
-                    "img_url": img.img_url,
-                    "created_at": img.created_at,
-                    "updated_at": img.updated_at,
-                }
-                for img in dummy.DUMMY_ANSWER_IMAGES
-                if img.answer.id == answer.id
-            ]
-
-            # 답변 댓글
-            answer_comments = [
-                {
-                    "content": comment.content,
-                    "author": comment.author.id if comment.author else None,
-                    "created_at": comment.created_at,
-                    "updated_at": comment.updated_at,
-                }
-                for comment in dummy.DUMMY_ANSWER_COMMENTS
-                if comment.answer.id == answer.id
-            ]
-
-            answers.append(
-                {
-                    "id": answer.id,
-                    "content": answer.content,
-                    "author": answer.author.id if answer.author else None,
-                    "is_adopted": answer.is_adopted,
-                    "created_at": answer.created_at,
-                    "images": answer_images,
-                    "comments": answer_comments,
-                }
+                    "success": True,
+                    "message": "질문과 관련된 모든 데이터가 성공적으로 삭제되었습니다.",
+                    "deleted_question": question_info,
+                    "deleted_related_data": deleted_counts,
+                },
+                status=status.HTTP_200_OK,
             )
 
-        # 5. 최종 응답
-        data = {
-            "id": question.id,
-            "title": question.title,
-            "content": question.content,
-            "author": question.author.id if question.author else None,
-            "view_count": question.view_count,
-            "created_at": question.created_at,
-            "updated_at": question.updated_at,
-            "category": category_data,
-            "images": images,
-            "answers": answers,
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
+        except Question.DoesNotExist:
+            return Response({"error": "해당 질문을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"질문 삭제 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
-# 질문 목록 조회
-class AdminQuestionListView(APIView):
-    permission_classes = [AllowAny]
-
-    @extend_schema(tags=["QnA (Admin)"], description="조회할 질문 ID", summary="미완성")
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = AdminQuestionListSerializer(dummy.DUMMY_QUESTIONS, many=True)
-        resp_data = serializer.data
-        for data in resp_data:
-            images = [image for image in dummy.DUMMY_QUESTION_IMAGES if data["id"] == image.question.id]
-            data["images"] = AdminQuestionImageSerializer(images, many=True).data
-        return Response(resp_data, status=status.HTTP_200_OK)
-
-
-# 질문 삭제
-class AdminQuestionDeleteView(APIView):
-    permission_classes = [AllowAny]
-
-    @extend_schema(tags=["QnA (Admin)"], description="삭제할 질문 ID", summary="미완성")
-    def delete(self, request: Request, question_id: int) -> Response:
-        if not any(q.id == question_id for q in dummy.DUMMY_QUESTIONS):
-            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-        # 원래는 이런 방식이 아닌데 더미라서 orm을 사용할 수 없기에 이렇게 합니다.
-        dummy.DUMMY_QUESTIONS = [q for q in dummy.DUMMY_QUESTIONS if q.id != question_id]
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# 답변 삭제
+# 답변 삭제(DELETE)
 class AdminAnswerDeleteView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminPermission | IsStaffPermission]
 
-    @extend_schema(tags=["QnA (Admin)"], description="삭제할 답변 ID", summary="미완성")
+    @extend_schema(
+        tags=["QnA (Admin)"],
+        summary="답변 삭제",
+        description="답변 삭제 (Hard Delete)",
+        responses={
+            200: {"description": "삭제 성공"},
+            404: {"description": "답변을 찾을 수 없음"},
+            500: {"description": "서버 오류"},
+        },
+    )
     def delete(self, request: Request, answer_id: int) -> Response:
-        if not any(q.id == answer_id for q in dummy.DUMMY_ANSWERS):
-            return Response({"detail" "해당 답변이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-        # 원래는 이런 방식이 아닌데 더미라서 orm을 사용할 수 없기에 이렇게 합니다.
-        dummy.DUMMY_ANSWERS = [q for q in dummy.DUMMY_ANSWERS if q.id != answer_id]
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            answer = Answer.objects.select_related("question", "author").get(id=answer_id)
+
+            answer_info = {
+                "id": answer.id,
+                "question_id": answer.question.id,
+                "question_title": answer.question.title,
+                "author_nickname": answer.author.nickname if answer.author else None,
+                "content": answer.content[:50] + "..." if len(answer.content) > 50 else answer.content,
+                "is_adopted": answer.is_adopted,
+                "created_at": answer.created_at,
+            }
+
+            answer_comments_qs = AnswerComment.objects.filter(answer=answer)
+            answer_images_qs = AnswerImage.objects.filter(answer=answer)
+
+            deleted_comments_count = answer_comments_qs.count()
+            deleted_images_count = answer_images_qs.count()
+
+            with transaction.atomic():
+                answer_comments_qs.delete()
+                answer_images_qs.delete()
+                answer.delete()
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "답변이 성공적으로 삭제되었습니다.",
+                    "deleted_answer": answer_info,
+                    "deleted_related_data": {
+                        "comments_count": deleted_comments_count,
+                        "images_count": deleted_images_count,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Answer.DoesNotExist:
+            return Response({"error": "해당 답변을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {"error": f"답변 삭제 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

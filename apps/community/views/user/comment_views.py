@@ -101,6 +101,7 @@ class CommentCreateAPIView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # post_id = request.data.get("post_id")
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
@@ -109,11 +110,11 @@ class CommentCreateAPIView(APIView):
         comment = serializer.save(post=post, author=request.user)
 
         content = serializer.validated_data.get("content", "")
-        tag_usernames = re.findall(r"@(\w+)", content)
+        tag_nicknames = re.findall(r"@(\w+)", content)
 
-        for username in tag_usernames:
+        for nickname in tag_nicknames:
             try:
-                tagged_user = User.objects.get(username=username)
+                tagged_user = User.objects.get(nickname=nickname)
                 CommentTags.objects.create(comment=comment, tagged_user=tagged_user)
             except User.DoesNotExist:
                 continue
@@ -143,6 +144,9 @@ class CommentUpdateAPIView(APIView):
             comment = Comment.objects.get(id=comment_id)
         except Comment.DoesNotExist:
             return Response({"detail": "댓글이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment.author != request.user:
+            return Response({"detail": "해당 댓글을 수정할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = CommentUpdateSerializer(comment, data=request.data, partial=True)
         if not serializer.is_valid():
@@ -180,4 +184,4 @@ class CommentDeleteAPIView(APIView):
             return Response({"detail": "해당 댓글을 삭제할 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
         comment.delete()
-        return Response({"detail": "댓글이 삭제 되었습니다."}, status=status.HTTP_200_OK)
+        return Response({"detail": "댓글이 삭제 되었습니다."}, status=status.HTTP_204_NO_CONTENT)

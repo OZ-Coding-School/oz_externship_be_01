@@ -1,51 +1,26 @@
 from typing import Any
 
 from django.core.cache import cache
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, permissions, status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ...users.models import User
-from ..models import Question, QuestionCategory, QuestionImage
+from ..models import Question, QuestionCategory
+from ..permissions import IsStudentPermission
 from ..serializers.questions_serializers import (
+    MajorQnACategorySerializer,
     QuestionCreateSerializer,
     QuestionDetailSerializer,
-    QuestionImageSerializer,
     QuestionListSerializer,
     QuestionUpdateSerializer,
 )
-
-# 1. 더미 사용자
-DUMMY_USER = User(id=1, email="mock@example.com", nickname="oz_student", profile_image_url="/media/mock_user.png")
-# 2. 더미 질문 + 이미지 포함
-DUMMY_QUESTIONS = []
-DUMMY_QUESTION_IMAGES = []
-for i in range(1, 4):
-    question = Question(
-        id=i,
-        title=f"샘플 질문 제목 {i}",
-        content=f"샘플 질문 내용 {i}",
-        author=DUMMY_USER,
-        category=QuestionCategory(id=3, name="오류"),
-        created_at=timezone.now(),
-    )
-    DUMMY_QUESTIONS.append(question)
-
-for q in DUMMY_QUESTIONS:
-    # 더미 이미지 (2장씩)
-    DUMMY_QUESTION_IMAGES.append(
-        QuestionImage(id=1, question=q, img_url=f"/media/sample{i}_1.png", created_at=timezone.now())
-    )
-    DUMMY_QUESTION_IMAGES.append(
-        QuestionImage(id=2, question=q, img_url=f"/media/sample{i}_2.png", created_at=timezone.now())
-    )
 
 
 class QuestionPagination(PageNumberPagination):
@@ -66,7 +41,7 @@ class QuestionListView(ListAPIView):
         "title",
         "content",
     ]
-    ordering = ["-created_at", "-id"]  # 최신순, 2차: 최신순
+    ordering = ["-created_at", "-id"]
 
     def get_minor_ids(self, category):
         if category.category_type == "major":
@@ -102,17 +77,24 @@ class QuestionListView(ListAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs):
-        # 1. 캐시 키를 URL+쿼리 파라미터 조합으로 생성
-        cache_key = f"question_list:{request.get_full_path()}"
-        cached_response = cache.get(cache_key)
-        if cached_response:
-            return Response(cached_response)
+        query_params = request.query_params
+        param_keys = set(query_params.keys())
 
-        # 2. 캐시에 없으면 원래 로직대로 조회
-        response = super().list(request, *args, **kwargs)
-        # 3. 캐시 저장 (예: 2분간)
-        cache.set(cache_key, response.data, timeout=120)
-        return response
+        # 1페이지만 캐싱 (파라미터가 없거나 page=1만 있을 때만 캐싱)
+        is_main = param_keys == set() or (param_keys == {"page"} and query_params.get("page") == "1")
+
+        if is_main:
+            cache_key = f"question_list:/api/v1/qna/questions/"
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                return Response(cached_response)
+
+            response = super().list(request, *args, **kwargs)
+            cache.set(cache_key, response.data, timeout=3600)
+            return response
+        else:
+            # 나머지(검색, 필터, 2페이지~ 등)는 항상 DB에서
+            return super().list(request, *args, **kwargs)
 
 
 # 2. 질문 상세 조회 (GET)
@@ -132,8 +114,7 @@ class QuestionDetailView(APIView):
 
 # 3. 새 질문 생성 (POST)
 class QuestionCreateView(APIView):
-    permission_classes = [permissions.AllowAny]  # TODO: IsAuthenticated, IsStudentUser
-    parser_classes = [MultiPartParser]
+    permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
 
     @extend_schema(
         request=QuestionCreateSerializer,
@@ -142,24 +123,33 @@ class QuestionCreateView(APIView):
         tags=["questions"],
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        # 이미지가 빈 값이면 제거
-        data = request.data.copy()
-        if "image_files" in data:
-            images = data.getlist("image_files") if hasattr(data, "getlist") else data["image_files"]
-            if isinstance(images, list):
-                if hasattr(data, "setlist"):
-                    data.setlist("image_files", [img for img in images if img])
-                else:
-                    data["image_files"] = [img for img in images if img]
-        serializer = QuestionCreateSerializer(data=data, context={"request": request})
+        serializer = QuestionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         question = serializer.save(author=request.user)
-        return Response({"id": question.id}, status=status.HTTP_201_CREATED)
+
+        # "최신순 1페이지, 필터·검색 없는 상태" 키에만 반영
+        # 실제로 첫 페이지 요청시 쿼리파라미터 없는 경우 아래와 같이 캐시가 저장됨
+        page1_key = "question_list:/api/v1/qna/questions/"
+        cached = cache.get(page1_key)
+        if cached:
+            from ..serializers.questions_serializers import QuestionListSerializer
+
+            new_item = QuestionListSerializer(question).data
+            # 맨 앞에 추가
+            cached["results"].insert(0, new_item)
+            cached["count"] += 1
+            # 10개 유지
+            if len(cached["results"]) > 10:
+                cached["results"] = cached["results"][:10]
+            cache.set(page1_key, cached, timeout=3600)
+
+        response_data = QuestionDetailSerializer(question).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 # 4. 질문 부분 수정 (PATCH)
 class QuestionUpdateView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsStudentPermission]
 
     @extend_schema(
         request=QuestionUpdateSerializer,
@@ -168,32 +158,31 @@ class QuestionUpdateView(APIView):
         tags=["questions"],
     )
     def patch(self, request: Request, question_id: int) -> Response:
-        # 1. 해당 mock 질문 찾기
-        question = next((q for q in DUMMY_QUESTIONS if q.id == question_id), None)
-        if not question:
-            return Response({"detail": "해당 질문이 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        question = get_object_or_404(Question, pk=question_id)
 
-        # 2. 데이터 검증
-        serializer = QuestionUpdateSerializer(data=request.data, partial=True, context={"request": request})
+        serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        serializer.save()
 
-        # 3. mock 질문 내용 수정
-        if "title" in validated:
-            question.title = validated["title"]
-        if "content" in validated:
-            question.content = validated["content"]
-        if "category_id" in validated:
-            question.category = QuestionCategory(id=validated["category_id"], name="카테고리 예시")
-
-        # 4. mock 이미지 수정 (단순 교체)
-        if "image_files" in validated:
-            for i, img in enumerate(DUMMY_QUESTION_IMAGES):
-                if img.question.id == question_id and i < len(validated["image_files"]):
-                    img.img_url = f"/media/{validated['image_files'][i].name}"
-
-        # 5. 응답
         response_data = QuestionDetailSerializer(question).data
-        images = [img for img in DUMMY_QUESTION_IMAGES if img.question.id == question_id]
-        response_data["images"] = QuestionImageSerializer(images, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+# 5. 카테고리 목록 조회
+class CategoryListView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        responses=MajorQnACategorySerializer(many=True),
+        description="Q&A 카테고리 목록 조회",
+        tags=["questions"],
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        queryset = (
+            QuestionCategory.objects.all()
+            .prefetch_related("subcategories", "subcategories__subcategories")
+            .filter(Q(parent__isnull=True) & Q(subcategories__isnull=False))
+            .distinct()
+        )
+        serializer = MajorQnACategorySerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -1,6 +1,6 @@
 from django.db import models
 
-from apps import users
+from apps.users.models import User
 
 
 class QuestionCategory(models.Model):

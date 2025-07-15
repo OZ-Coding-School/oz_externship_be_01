@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import PositiveSmallIntegerField
 
 
 class Test(models.Model):
@@ -68,7 +69,7 @@ class TestDeployment(models.Model):
     questions_snapshot_json = models.JSONField()
     # 기존 choices=TEST_STATUS_CHOICES → choices=TestStatus.choices로 변경
     status = models.CharField(max_length=50, choices=TestStatus.choices, default=TestStatus.ACTIVATED)
-
+    question_count = PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -86,6 +87,8 @@ class TestSubmission(models.Model):
     started_at = models.DateTimeField()
     cheating_count = models.PositiveSmallIntegerField(default=0)
     answers_json = models.JSONField()
+    score = models.PositiveSmallIntegerField(default=0)
+    correct_count = PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

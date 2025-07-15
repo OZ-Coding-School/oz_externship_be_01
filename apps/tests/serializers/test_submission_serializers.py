@@ -2,11 +2,6 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.tests.core.utils.grading import (
-    calculate_correct_count,
-    calculate_total_score,
-    validate_answers_json_format,
-)
 from apps.tests.models import TestSubmission
 from apps.tests.serializers.test_deployment_serializers import (
     AdminTestDeploymentSerializer,
@@ -52,15 +47,11 @@ class AdminListStudentSerializer(serializers.ModelSerializer[PermissionsStudent]
 class AdminTestSubmissionListSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestListDeploymentSerializer(read_only=True)
     student = AdminListStudentSerializer(read_only=True)
-    total_score = serializers.SerializerMethodField()
+    # total_score = serializers.SerializerMethodField()
 
     class Meta:
         model = TestSubmission
-        fields = ("id", "deployment", "student", "cheating_count", "total_score", "started_at", "created_at")
-
-    def get_total_score(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_total_score(obj.answers_json)
+        fields = ("id", "deployment", "student", "cheating_count", "score", "started_at", "created_at")
 
 
 # 관리자 쪽지 시험 응시 전체 목록 조회 검색 필터
@@ -77,6 +68,7 @@ class TestSubmissionFilterSerializer(serializers.Serializer):
         default="latest",
         required=False,
     )
+    score = serializers.IntegerField(required=False, min_value=0)
     page = serializers.IntegerField(min_value=1, default=1, required=False)
     page_size = serializers.IntegerField(min_value=1, max_value=100, default=10, required=False)
 
@@ -86,9 +78,6 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
     deployment = AdminTestDeploymentSerializer(read_only=True)
     student = StudentSerializer(read_only=True)
 
-    total_score = serializers.SerializerMethodField()
-    correct_count = serializers.SerializerMethodField()
-    total_questions = serializers.SerializerMethodField()
     duration_minute = serializers.SerializerMethodField()
 
     class Meta:
@@ -100,28 +89,10 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[TestSubmission]):
             "cheating_count",
             "started_at",
             "answers_json",
-            "total_score",
+            "score",
             "correct_count",
-            "total_questions",
             "duration_minute",
         )
-
-    # 총 점수
-    def get_total_score(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_total_score(obj.answers_json)
-
-    # 맞은 문제 수
-    def get_correct_count(self, obj):
-        validate_answers_json_format(obj.answers_json)
-        return calculate_correct_count(obj.answers_json)
-
-    # 총 문제 수
-    def get_total_questions(self, obj):
-        snapshot = obj.deployment.questions_snapshot_json
-        if not isinstance(snapshot, list):
-            raise ValidationError("questions_snapshot_json은 리스트 형식이어야 합니다.")
-        return len(snapshot)
 
     # 응시 소요 시간(분)
     def get_duration_minute(self, obj):

@@ -1,5 +1,5 @@
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +7,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tests.core.utils.grading import (
+    calculate_correct_count,
+    calculate_total_score,
+    get_questions_snapshot_from_submission,
+    validate_answers_json_format,
+)
 from apps.tests.models import TestDeployment, TestSubmission
 from apps.tests.permissions import IsStudent
 from apps.tests.serializers.test_deployment_serializers import (
@@ -22,7 +28,7 @@ from apps.users.models import PermissionsStudent
 
 # 수강생 쪽지 시험 응시
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestStartSerializer,
 )
 class TestStartView(APIView):
@@ -60,8 +66,27 @@ class TestStartView(APIView):
 
 # 수강생 쪽지 시험 제출
 @extend_schema(
-    tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"],
+    tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"],
     request=UserTestSubmitSerializer,
+    examples=[
+        OpenApiExample(
+            name="쪽지시험 제출 예시",
+            value={
+                "student": 1,
+                "started_at": "2025-07-11T13:30:09.042Z",
+                "cheating_count": 1,
+                "answers_json": {
+                    "1": ["A"],
+                    "2": ["x"],
+                    "3": ["<html>", "<head>", "<body>", "<title>"],
+                    "4": ["title"],
+                    "5": ["<title>", "<head>"],
+                    "6": ["A", "B"],
+                },
+            },
+            request_only=True,
+        )
+    ],
 )
 class TestSubmissionSubmitView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
@@ -83,7 +108,14 @@ class TestSubmissionSubmitView(APIView):
             },
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        submission = serializer.save()
+
+        snapshot = get_questions_snapshot_from_submission(submission)
+        validate_answers_json_format(submission.answers_json, snapshot)
+
+        submission.score = calculate_total_score(submission.answers_json, snapshot)
+        submission.correct_count = calculate_correct_count(submission.answers_json, snapshot)
+        submission.save(update_fields=["score", "correct_count"])
 
         # 자동 제출 메시지로 응답
         auto_msg = getattr(serializer, "auto_submit_message", None)
@@ -94,7 +126,7 @@ class TestSubmissionSubmitView(APIView):
 
 
 # 수강생 쪽지 시험 결과 조회
-@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/결과조회)"])
+@extend_schema(tags=["[User] Test - submission (쪽지시험 응시/제출/목록/결과)"])
 class TestSubmissionResultView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
     serializer_class = UserTestResultSerializer

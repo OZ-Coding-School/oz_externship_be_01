@@ -1,6 +1,5 @@
 import json
 import uuid
-from typing import Any, Dict
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -73,6 +72,7 @@ class TestQuestionSimpleSerializer(serializers.ModelSerializer["TestQuestion"]):
 # 쪽지시험 문제 단일 직렬화용
 class TestQuestionDetailSerializer(serializers.ModelSerializer):
     options = serializers.SerializerMethodField()
+    answer = serializers.SerializerMethodField()
 
     class Meta:
         model = TestQuestion
@@ -95,6 +95,18 @@ class TestQuestionDetailSerializer(serializers.ModelSerializer):
             except Exception:
                 return []
         return []
+
+    def get_answer(self, obj):
+        # array(string)로 내려야 하는 유형
+        if obj.type in {
+            TestQuestion.QuestionType.MULTIPLE_CHOICE_MULTI,
+            TestQuestion.QuestionType.ORDERING,
+            TestQuestion.QuestionType.FILL_IN_BLANK,
+        }:
+            answer = obj.answer
+            # 이미 리스트이면 그대로 반환, 아니면 단일 값이라도 리스트로 감쌈
+            return answer if isinstance(answer, list) else [answer]
+        return obj.answer  # string으로 유지
 
 
 # 쪽지시험 상세조회용 시리얼라이저
@@ -212,6 +224,15 @@ class CommonSubjectSerializer(serializers.ModelSerializer[Subject]):
         fields = ("title",)
 
 
+# 관리자 쪽지 시험 응시 전체 목록 조회
+class AdminTestListSerializer(serializers.ModelSerializer[Test]):
+    subject = CommonSubjectSerializer(read_only=True)
+
+    class Meta:
+        model = Test
+        fields = ("subject", "title")
+
+
 # 관리자 쪽지 시험 응시 상세 조회
 class AdminTestDetailSerializer(serializers.ModelSerializer[Test]):
     subject = CommonSubjectSerializer(read_only=True)
@@ -221,19 +242,10 @@ class AdminTestDetailSerializer(serializers.ModelSerializer[Test]):
         fields = ("subject", "title", "created_at", "updated_at")
 
 
-# 사용자 쪽지 시험 응시
+# 사용자 쪽지 시험 응시, 목록조회
 class UserTestSerializer(serializers.ModelSerializer[Test]):
     subject = CommonSubjectSerializer(read_only=True)
 
     class Meta:
         model = Test
         fields = ("subject", "title", "thumbnail_img_url")
-
-
-# 관리자 쪽지 시험 응시 전체 목록 조회
-class AdminTestListSerializer(serializers.ModelSerializer[Test]):
-    subject = CommonSubjectSerializer(read_only=True)
-
-    class Meta:
-        model = Test
-        fields = ("subject", "title")

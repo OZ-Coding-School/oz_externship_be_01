@@ -31,11 +31,15 @@ from apps.users.views.admin_withdrawal_restore_views import (
 )
 from apps.users.views.auth.email_auth import SendEmailCodeView, VerifyEmailCodeView
 from apps.users.views.auth.email_login import EmailLoginAPIView
+from apps.users.views.auth.find_email_phone_verification import (
+    EmailFindPhoneSendCodeAPIView,
+    EmailFindPhoneVerifyCodeAPIView,
+)
 from apps.users.views.auth.phone_auth import (
     SendPhoneCodeAPIView,
     VerifyPhoneCodeAPIView,
 )
-from apps.users.views.auth.signup import SignUpAPIView
+from apps.users.views.auth.signup import SignUpAPIView, SignupNicknameCheckAPIView
 from apps.users.views.auth.social_login import (
     KakaoLoginAPIView,
     NaverLoginAPIView,
@@ -69,7 +73,7 @@ urlpatterns = [
     path("users/restore/", UserRestoreView.as_view(), name="user-restore"),
     path("profile/", UserProfileView.as_view(), name="user-profile"),
     path("profile/update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
-    path("profile/nickname-check/", NicknameCheckView.as_view(), name="nickname-check"),
+    path("profile/nickname-check/", SignupNicknameCheckAPIView.as_view(), name="nickname-check"),
     # admin 유저 관리
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:user_id>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
@@ -99,6 +103,8 @@ urlpatterns = [
     path("account/send-reset-code/", PasswordResetEmailSendView.as_view(), name="send-reset-code"),
     path("account/verify-code/", PasswordResetVerifyCodeView.as_view(), name="verify-code"),
     path("account/change-password/", PasswordChangeView.as_view(), name="change-password"),
+    path("find/email/phone/send/", EmailFindPhoneSendCodeAPIView.as_view(), name="email-find-phone-send"),
+    path("find/email/phone/verify/", EmailFindPhoneVerifyCodeAPIView.as_view(), name="email-find-phone-verify"),
     path(
         "admin/users/student-enrollments/approve/",
         AdminApproveEnrollmentsView.as_view(),

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tests.core.utils.filters import filter_test_submissions
-from apps.tests.core.utils.sorting import annotate_total_score, sort_by_total_score
+from apps.tests.core.utils.sorting import sort_by_total_score
 from apps.tests.models import TestSubmission
 from apps.tests.pagination import AdminTestListPagination
 from apps.tests.permissions import IsAdminOrStaff
@@ -75,6 +75,7 @@ class AdminTestSubmissionsView(APIView):
         queryset = TestSubmission.objects.select_related(
             "student__user", "deployment__test", "deployment__generation__course"
         )
+
         filtered_qs = filter_test_submissions(queryset, filters)
 
         if any(filters.values()) and not filtered_qs.exists():
@@ -83,17 +84,13 @@ class AdminTestSubmissionsView(APIView):
                 status=404,
             )
 
-        submissions = list(filtered_qs)
-        submissions_with_scores = annotate_total_score(submissions)
-
         ordering = filters.get("ordering", "latest")
-        sorted_submissions = sort_by_total_score(submissions_with_scores, ordering)
+        sorted_submissions = sort_by_total_score(filtered_qs, ordering)
 
         paginator = AdminTestListPagination()
         page = paginator.paginate_queryset(sorted_submissions, request)  # type: ignore
 
         serializer = self.serializer_class(page, many=True)
-
         return Response(
             {"message": "쪽지시험 응시내역 목록 조회 완료", "data": serializer.data}, status=status.HTTP_200_OK
         )

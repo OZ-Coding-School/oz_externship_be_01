@@ -33,10 +33,8 @@
 - CI/CD: GitHub Actions (예정)
 
 > 전체 아키텍처는 아래 다이어그램을 참고하세요.
-
 ![system-architecture](system-architecture.png)
-
-
+<img width="1004" height="579" alt="image" src="https://github.com/user-attachments/assets/3b5cbd35-65f1-4eb8-b8ac-dfefa0f87c44" />
 
 ---
 
@@ -47,6 +45,9 @@
 - 생성기수(Generation) 등록 및 관리
 - 과목(Subject) 관리
 - 드롭다운 리스트 제공
+
+### 학생
+- (예정) 수강 신청, 취소, 이력 조회
 
 ---
 
@@ -280,6 +281,67 @@ oz_externship/
 ---
 
 ## 커뮤니티 기능 및 관리 어드민 (4팀)
+
+## 📖 프로젝트 소개
+
+지식은 나눌수록 커지는 법! 💬 OZ CodingSchool 커뮤니티는 다양한 학습자들이 자유롭게 소통하고, 함께 성장하는 온라인 커뮤니티 공간,
+함께 나누고, 질문하고, 응원하는 분위기 속에서 스터디, 질문, 잡담, 정보공유, 피드백 등 학습과 관련된 모든 소통이 가능하도록 개발해보았습니다.
+
+---
+
+> ### [⛪ 배포 링크](https://api.ozcoding.site/api/schema/swagger-ui/)
+
+---
+## 📑 API 소개
+
+- **📌 게시글 API**: 사용자가 게시글을 작성, 삭제, 수정, 조회, 좋아요 기능까지 구현해보았습니다.  
+- **📌 댓글 API**: 사용자가 특정 게시글의 댓글 목록 조회, 댓글 작성, 삭제, 수정을 할 수 있습니다.  
+- **📌 어드민 카테고리 관리 API**: 관리자가 카테고리 목록, 상세 조회, 카테고리 삭제, 수정, 생성, 상태 ON/OFF 기능을 관리 할 수 있습니다.  
+- **📌 어드민 게시글 관리 API**: 관리자가 공지사항 등록 및 게시글 목록 조회, 상세 조회, 삭제, 수정, 게시물 노출 ON/OFF 기능을 구현했습니다.  
+- **📌 어드민 댓글 관리 API**: 관리자가 사용자의 댓글을 삭제 할 수 있도록 구현했습니다.
+
+---
+
+## 팀 동료
+
+### BE
+
+| <a href=https://github.com/CJY9697/><img src="https://avatars.githubusercontent.com/u/199873650?v=4" width=100px/><br/><sub><b>@CJY9697</b></sub></a><br/> | <a href=https://github.com/yeontae519><img src="https://avatars.githubusercontent.com/u/201067110?s=400&u=bb9748af261a87d49c9cd231299d58a583beda03&v=4" width=100px/><br/><sub><b>@yeontae519</b></sub></a><br/> | <a href=https://github.com/jjustph121><img src="https://avatars.githubusercontent.com/u/201066875?v=4" width=100px/><br/><sub><b>@jjustph121</b></sub></a><br/> | <a href=https://github.com/enjore1201><img src="https://avatars.githubusercontent.com/u/186259196?v=4" width=100px/><br/><sub><b>@enjore1201</b></sub></a><br/> |
+|:----------------------------------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------:|
+|                최재영                 |    김태연     |                                                                            박 현                                                                            |    손건화     |                                                                      
+---
+
+## 📑 프로젝트 규칙
+
+### Code Convention
+> - 패키지명 전체 소문자 (ex. apps/community/views/admin/category_serializers.py)
+> - 클래스명, 인터페이스명 CamelCase
+> - 클래스 이름 명사 사용
+> - 상수명 SNAKE_CASE
+
+### Communication Rules
+> - zep 활용
+> - discord 활용
+
+## 기술 스택
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <br>
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Amazon_AWS_S3-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white" />
+  <img src="https://img.shields.io/badge/Gemini-000000?style=for-the-badge&logo=gemini&logoColor=white" />
+</div>
+
+## Documents
+
+- [📜 API 명세서](https://www.notion.so/API-209caf5650aa81788822c3094c8d4d80)
+- [📜 요구사항 정의서](https://docs.google.com/spreadsheets/d/160YZn8-2RPGI8gRJQiHObgKXF0VQn1DiIjJp6aPkFic/edit#gid=0)
+- [📜 ERD](https://www.notion.so/ERD-209caf5650aa812a913ccc3aad08aba8)
+
 
 ## 쪽지시험 기능 및 관리 어드민 (5팀)
 

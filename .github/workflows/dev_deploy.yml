@@ -67,6 +67,8 @@ jobs:
             
             docker stop ${{ secrets.DJANGO_CONTAINER_NAME }} || true
             docker rm ${{ secrets.DJANGO_CONTAINER_NAME }} || true
+            docker stop celery || true
+            docker rm celery || true
             docker rmi ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev
           
             docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev
@@ -80,7 +82,7 @@ jobs:
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:django-dev \
               sh -c "python manage.py migrate && \
                 python manage.py collectstatic --noinput && \
-                gunicorn --workers 3 --bind 0.0.0.0:8000 config.wsgi:application"
+                gunicorn --workers 3 --worker-class=uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 config.asgi:application"
             
             docker run -d \
               --name celery \
@@ -100,7 +102,10 @@ jobs:
               --name nginx \
               -v static-volume:/vol/web/static \
               -v media-volume:/vol/web/media \
+              -v certbot-conf:/etc/letsencrypt \
+              -v certbot-www:/var/www/certbot \
               -p 80:80 \
+              -p 443:443 \
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}:nginx-dev
             
             docker image prune -af

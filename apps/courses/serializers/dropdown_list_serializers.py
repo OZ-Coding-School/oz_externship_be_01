@@ -1,3 +1,5 @@
+from typing import Any
+
 from rest_framework import serializers
 
 from apps.courses.models import Course, Generation
@@ -29,7 +31,7 @@ class GenerationDropdownSerializer(serializers.ModelSerializer[Generation]):
     """
 
     id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Generation
@@ -38,3 +40,6 @@ class GenerationDropdownSerializer(serializers.ModelSerializer[Generation]):
             "name",
         ]
         read_only_fields = fields
+
+    def get_name(self, obj: Generation) -> str:
+        return f"{obj.number}기"
