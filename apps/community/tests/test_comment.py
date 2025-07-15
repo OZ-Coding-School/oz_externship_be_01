@@ -8,7 +8,7 @@ from apps.community.models import Comment, CommentTags, Post, PostCategory
 User = get_user_model()
 
 
-class TestUserComment(TestCase):
+class UserCommentTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
