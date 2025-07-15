@@ -33,8 +33,9 @@
 - CI/CD: GitHub Actions (예정)
 
 > 전체 아키텍처는 아래 다이어그램을 참고하세요.
+<img width="1004" height="579" alt="image" src="https://github.com/user-attachments/assets/3b5cbd35-65f1-4eb8-b8ac-dfefa0f87c44" />
 
-![system-architecture](system-architecture.png)
+
 
 
 
