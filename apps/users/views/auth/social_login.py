@@ -1,8 +1,10 @@
 from typing import Dict, Optional, cast
+from urllib.parse import urlparse
 
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,7 +26,24 @@ from apps.users.utils.social_auth import (
 )
 
 
-class KakaoLoginAPIView(APIView):
+class SocialLoginRedirectUriMixin:
+    def _get_redirect_uri(self, request: Request, provider: str) -> str:
+        referer = request.META.get("HTTP_REFERER")
+        origin = request.META.get("HTTP_ORIGIN")
+
+        if referer:
+            parsed = urlparse(referer)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
+        elif origin:
+            parsed = urlparse(origin)
+            client_host = f"{parsed.scheme}://{parsed.netloc}"
+        else:
+            raise APIException("요청에는 Origin 또는 Referer 헤더가 포함되어야 합니다.")
+
+        return f"{client_host}/auth/callback/{provider}"
+
+
+class KakaoLoginAPIView(APIView, SocialLoginRedirectUriMixin):
     permission_classes = [AllowAny]
 
     @extend_schema(
@@ -37,9 +56,9 @@ class KakaoLoginAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         code = serializer.validated_data["code"]
-
+        redirect_uri = self._get_redirect_uri(request, "kakao")
         # access_token 요청
-        access_token, error = get_kakao_access_token(code)
+        access_token, error = get_kakao_access_token(code, redirect_uri=redirect_uri)
 
         if not access_token:
             if "invalid_grant" in (error or ""):
@@ -110,7 +129,7 @@ class KakaoLoginAPIView(APIView):
         return Response(tokens, status=status.HTTP_200_OK)
 
 
-class NaverLoginAPIView(APIView):
+class NaverLoginAPIView(APIView, SocialLoginRedirectUriMixin):
     permission_classes = [AllowAny]
 
     @extend_schema(
@@ -124,9 +143,10 @@ class NaverLoginAPIView(APIView):
 
         code: str = serializer.validated_data["code"]
         state: Optional[str] = serializer.validated_data.get("state")
+        redirect_uri = self._get_redirect_uri(request, "naver")
 
         # access token 발급
-        access_token = get_naver_access_token(code, state)
+        access_token = get_naver_access_token(code, redirect_uri, state)
         if access_token is None:
             return Response({"detail": "네이버 토큰 발급에 실패했습니다. 잠시 후 다시 시도해주세요."}, status=400)
 
