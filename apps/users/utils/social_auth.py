@@ -15,11 +15,11 @@ def verify_kakao_token(access_token: str) -> dict[str, Any]:
 
 
 # 토큰 발급
-def get_naver_access_token(code: str, state: Optional[str] = None) -> Optional[str]:
+def get_naver_access_token(code: str, redirect_uri: str, state: Optional[str] = None) -> Optional[str]:
 
     client_id = os.getenv("NAVER_CLIENT_ID")
     client_secret = os.getenv("NAVER_CLIENT_SECRET")
-    redirect_uri = os.getenv("NAVER_REDIRECT_URI")
+    # redirect_uri = os.getenv("NAVER_REDIRECT_URI")
 
     params = {
         "grant_type": "authorization_code",

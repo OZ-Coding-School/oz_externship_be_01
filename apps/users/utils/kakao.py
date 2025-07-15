@@ -10,12 +10,12 @@ import requests
 from apps.users.models import User
 
 
-def get_kakao_access_token(code: str) -> Tuple[Optional[str], Optional[str]]:
+def get_kakao_access_token(code: str, redirect_uri: str) -> Tuple[Optional[str], Optional[str]]:
     url = "https://kauth.kakao.com/oauth/token"
     data = {
         "grant_type": "authorization_code",
         "client_id": os.environ.get("KAKAO_CLIENT_ID"),
-        "redirect_uri": os.environ.get("KAKAO_REDIRECT_URI"),
+        "redirect_uri": redirect_uri,
         "code": code,
     }
 
