@@ -34,13 +34,16 @@ class PostExtraTestCase(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(PostLike.objects.filter(post=self.post, user=self.user, is_liked=True).exists())
+        likes_count = PostLike.objects.filter(post=self.post, is_liked=True).count()
+        self.assertEqual(likes_count, 1)
 
     def test_unlike_post(self):
         self.client.post(reverse("post-like", kwargs={"post_id": self.post.id}))
-        url = reverse("post-unlike", kwargs={"post_id": self.post.id})
-        response = self.client.post(url)
+        response = self.client.post(reverse("post-unlike", kwargs={"post_id": self.post.id}))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(PostLike.objects.filter(post=self.post, user=self.user, is_liked=True).exists())
+        likes_count = PostLike.objects.filter(post=self.post, is_liked=True).count()
+        self.assertEqual(likes_count, 0)
 
     def test_post_detail_includes_attachments_and_thumbnail(self):
         PostAttachment.objects.create(post=self.post, file_url="http://test.com/file1.pdf", file_name="file1.pdf")
