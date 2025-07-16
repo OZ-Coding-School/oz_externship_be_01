@@ -86,7 +86,7 @@ class UserPostDetailAPIView(APIView):
         if request.user.is_authenticated:
             is_liked = PostLike.objects.filter(post=post, user=request.user, is_liked=True).exists()
 
-        like_data = PostLikeResponseSerializer({"liked": is_liked}).data
+        likes_count = PostLike.objects.filter(post=post, is_liked=True).count()
 
         serializer = PostDetailSerializer(post, context={"request": request})
         data = dict(serializer.data)
@@ -105,6 +105,6 @@ class UserPostDetailAPIView(APIView):
 
             comment_dict["tagged_user_nicknames"] = tagged_nicks
 
-        data.update(like_data)
+        data.update({"liked": is_liked, "likes_count": likes_count})
 
         return Response(data, status=status.HTTP_200_OK)
