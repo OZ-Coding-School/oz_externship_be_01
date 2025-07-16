@@ -2,9 +2,6 @@ name: Code Quality Checks
 
 # develop, main 브랜치를 상대로 풀 리퀘스트가 생성될 때 CI가 실행됩니다.
 on:
-  push:
-    branches:
-      - "feature/**"
   pull_request:
     branches:
       - "main"
@@ -62,7 +59,8 @@ jobs:
 
       - name: Set multiline environment variable
         run: |
-          echo "${{ secrets.DJANGO_ENVS }}" >> $GITHUB_ENV
+          mkdir envs
+          echo "${{ secrets.DJANGO_ENVS }}" >> envs/.local.env
 
       - name: Run Mypy
         run: poetry run mypy .
@@ -134,15 +132,37 @@ jobs:
 
       - name: Set multiline environment variable
         run: |
-          echo "${{ secrets.DJANGO_ENVS }}" >> $GITHUB_ENV
+          mkdir envs
+          echo "${{ secrets.DJANGO_ENVS }}" >> envs/.local.env
 
       # run migration
       - name: Run Django Migration
         run: |
           poetry run python manage.py migrate
 
-      # run test
-      - name: Test python project
+      - name: Check each app has test & Run coverage
         run: |
-          poetry run coverage run manage.py test
-          poetry run coverage report -m
+          ran_tests=false
+          apps="community courses qna tests users"
+
+          for app_name in $apps; do
+            app_path="apps/$app_name"
+            if [ -d "$app_path" ]; then
+              test_files=$(find "$app_path" -type f \( -name "tests.py" -o -name "test_*.py" \))
+              if [ -n "$test_files" ] && grep -q "def test_" $test_files 2>/dev/null; then
+                echo "✅ Running tests for $app_name"
+                poetry run coverage run --source="$app_path" --append manage.py test "apps.$app_name"
+                ran_tests=true
+              else
+                echo "⚠️  No test functions found in $app_name"
+              fi
+            else
+              echo "⛔️ Directory not found for $app_name"
+            fi
+          done
+
+          if [ "$ran_tests" = true ]; then
+            poetry run coverage report -m
+          else
+            echo "🚫 No tests were run. Skipping coverage report."
+          fi

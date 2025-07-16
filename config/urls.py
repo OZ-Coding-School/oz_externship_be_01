@@ -6,7 +6,13 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-urlpatterns: list[URLPattern | URLResolver] = []
+urlpatterns: list[URLPattern | URLResolver] = [
+    path("api/v1/qna/", include("apps.qna.urls")),
+    path("api/v1/community/", include("apps.community.urls")),
+    path("api/v1/admin/", include("apps.courses.urls")),
+    path("api/v1/auth/", include("apps.users.urls")),
+    path("api/v1/", include("apps.tests.urls", namespace="tests")),
+]
 
 if settings.DEBUG:
     if "debug_toolbar" in settings.INSTALLED_APPS:
