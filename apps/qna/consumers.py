@@ -29,11 +29,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             text_data=json.dumps(
                 {
                     "type": "greeting",
-                    "message": "What's Up, Dickie?",
+                    "message": "안녕하세요, 무엇을 도와드릴까요?",
                     "menu": [{"id": "guide", "label": "홈페이지 사용법"}, {"id": "ai", "label": "AI 질문하기"}],
                     "user_type": user_type,
                     "session_key": session_key,
-                }
+                },
+                ensure_ascii=False,
             )
         )
 
@@ -63,13 +64,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {"id": "auth", "label": "회원가입 및 로그인"},
                     {"id": "community", "label": "커뮤니티"},
                 ]
-            await self.send(text_data=json.dumps({"type": "submenu", "menu": submenu}))
+            await self.send(text_data=json.dumps({"type": "submenu", "menu": submenu}, ensure_ascii=False))
 
         # AI 질문 메뉴 선택
         elif menu_id == "ai":
             await self.send(
                 text_data=json.dumps(
-                    {"type": "ai_intro", "message": "대화를 시작할 수 있습니다! 궁금한 것들을 질문해보세요!"}
+                    {"type": "ai_intro", "message": "대화를 시작할 수 있습니다! 궁금한 것들을 질문해보세요!"},
+                    ensure_ascii=False,
                 )
             )
 
@@ -79,7 +81,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             session_key = data.get("session_key")
 
             if not session_key:
-                await self.send(text_data=json.dumps({"type": "error", "message": "ai_question need a session key."}))
+                await self.send(
+                    text_data=json.dumps(
+                        {"type": "error", "message": "ai_question need a session key."}, ensure_ascii=False
+                    )
+                )
                 return
 
             if is_limited_user:
@@ -90,14 +96,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             {
                                 "type": "limit",
                                 "message": "비회원 및 일반 유저는 AI와 최대 2회까지만 대화할 수 있습니다.",
-                            }
+                            },
+                            ensure_ascii=False,
                         )
                     )
                     return
                 await self.increment_ai_count_async(session_key)
 
             # 질문을 보낸 직후 입력 잠금 신호 전송
-            await self.send(text_data=json.dumps({"type": "input_lock", "status": True}))
+            await self.send(text_data=json.dumps({"type": "input_lock", "status": True}, ensure_ascii=False))
 
             # 질문 무관 메시지 필터링 (조건은 같지만 입력 잠금 해제 추가)
             if not self.is_relevant(user_message):
@@ -107,7 +114,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             "type": "irrelevant",
                             "message": "질문과 관련된 내용만 답변할 수 있습니다.",
                             "input_lock": False,  # 입력창 다시 활성화
-                        }
+                        },
+                        ensure_ascii=False,
                     )
                 )
                 return
@@ -117,12 +125,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({"type": "ai_stream", "message": char}, ensure_ascii=False))
 
             # 응답 끝난 뒤 입력창 다시 활성화
-            await self.send(text_data=json.dumps({"type": "input_lock", "status": False}))
+            await self.send(text_data=json.dumps({"type": "input_lock", "status": False}, ensure_ascii=False))
 
         # 세부 서브 메뉴 안내
         elif action == "select_submenu":
             submenu_id = data.get("submenu_id")
-            await self.send(text_data=json.dumps(self.get_submenu_response(submenu_id)))
+            await self.send(text_data=json.dumps(self.get_submenu_response(submenu_id), ensure_ascii=False))
 
     # Gemini API 요청
     async def ask_gemini_stream(self, prompt):
