@@ -39,9 +39,12 @@ def get_kakao_user_info(access_token: str) -> Optional[Dict[str, Optional[str]]]
     if response.status_code != 200:
         return None
 
-    kakao_account = response.json().get("kakao_account", {})
+    response_json = response.json()
+    kakao_account = response_json.get("kakao_account", {})
     profile = kakao_account.get("profile", {})
+
     return {
+        "kakao_id": response_json.get("id"),
         "email": kakao_account.get("email"),
         "nickname": profile.get("nickname"),
         "phone_number": kakao_account.get("phone_number"),
