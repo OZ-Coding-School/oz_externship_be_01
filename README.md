@@ -315,7 +315,7 @@ oz_externship/
 
 ### Code Convention
 > - 패키지명 전체 소문자 (ex. apps/community/views/admin/category_serializers.py)
-> - 클래스명, 인터페이스명 CamelCase
+> - 클래스명, 인터페이스명 Pascal case
 > - 클래스 이름 명사 사용
 > - 상수명 SNAKE_CASE
 

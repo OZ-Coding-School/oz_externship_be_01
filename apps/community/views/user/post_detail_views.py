@@ -1,6 +1,7 @@
 from typing import Any
 
 from drf_spectacular.utils import OpenApiExample, extend_schema
+from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -63,6 +64,23 @@ class UserPostDetailAPIView(APIView):
 
         if not post.is_visible:
             return Response({"detail": "블라인드 처리된 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        session_key = f'viewed_post_{post.id}'
+        last_view_time = request.session.get(session_key)
+
+        now = datetime.now()
+        allow_update = False
+        if last_view_time is None:
+            allow_update = True
+        else:
+            last = datetime.strptime(last_view_time, "%Y-%m-%d %H:%M:%S")
+            if now - last > timedelta(hours=1):
+                allow_update = True
+
+        if allow_update:
+            post.view_count += 1
+            post.save(update_fields=["view_count"])
+            request.session[session_key] = now.strftime("%Y-%m-%d %H:%M:%S")
 
         is_liked = False
         if request.user.is_authenticated:

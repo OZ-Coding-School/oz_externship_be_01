@@ -27,13 +27,13 @@ class PostLikeTrueAPIView(APIView):
         except Post.DoesNotExist:
             return Response({"detail": "존재하지 않는 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        like, _ = PostLike.objects.get_or_create(user=request.user, post=post)
+        like, created = PostLike.objects.get_or_create(user=request.user, post=post)
         if not like.is_liked:
             like.is_liked = True
-            like.save()
+            like.save(update_fields=["is_liked"])
+            post.likes_count += 1
+            post.save(update_fields=["likes_count"])
 
-        post.likes_count += 1
-        post.save()
 
         return Response({"liked": True}, status=status.HTTP_200_OK)
 
@@ -62,11 +62,10 @@ class PostLikeFalseAPIView(APIView):
             like = PostLike.objects.get(user=request.user, post=post)
             if like.is_liked:
                 like.is_liked = False
-                like.save()
+                like.save(update_fields=["is_liked"])
+                post.likes_count -= 1
+                post.save(update_fields=["likes_count"])
         except PostLike.DoesNotExist:
             pass  # 좋아요 기록이 없는 경우, 아무 것도 하지 않음
-
-        post.likes_count -= 1
-        post.save()
 
         return Response({"liked": False}, status=status.HTTP_200_OK)
