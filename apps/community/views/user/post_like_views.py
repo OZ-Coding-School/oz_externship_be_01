@@ -34,7 +34,6 @@ class PostLikeTrueAPIView(APIView):
             post.likes_count += 1
             post.save(update_fields=["likes_count"])
 
-
         return Response({"liked": True}, status=status.HTTP_200_OK)
 
 

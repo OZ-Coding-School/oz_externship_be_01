@@ -1,7 +1,7 @@
+from datetime import datetime, timedelta
 from typing import Any
 
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -65,7 +65,7 @@ class UserPostDetailAPIView(APIView):
         if not post.is_visible:
             return Response({"detail": "블라인드 처리된 게시글입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        session_key = f'viewed_post_{post.id}'
+        session_key = f"viewed_post_{post.id}"
         last_view_time = request.session.get(session_key)
 
         now = datetime.now()
